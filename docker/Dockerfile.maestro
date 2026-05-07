@@ -1,0 +1,12 @@
+ARG EMULATOR_TAG=emulator_13.0
+FROM budtmo/docker-android:${EMULATOR_TAG}
+
+ENV MAESTRO_HOME=/root/.maestro \
+    PATH=/root/.maestro/bin:$PATH
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        curl ca-certificates jq \
+    && rm -rf /var/lib/apt/lists/* \
+    && curl -Ls "https://get.maestro.mobile.dev" | bash
+
+WORKDIR /tests

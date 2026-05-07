@@ -1,0 +1,39 @@
+services:
+  build:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.build
+    volumes:
+      - .:/workspace
+      - gradle-cache:/root/.gradle
+      - cargo-registry:/root/.cargo/registry
+      - cargo-target:/workspace/rust/target
+    environment:
+      OTTJNI_SKIP_NIX: "1"
+    command: ["./gradlew", ":androidApp:assembleDebug"]
+
+  maestro:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.maestro
+      args:
+        EMULATOR_TAG: ${EMULATOR_TAG:-emulator_13.0}
+    privileged: true
+    devices:
+      - "/dev/kvm:/dev/kvm"
+    volumes:
+      - ./.maestro:/tests:ro
+      - ./androidApp/build/outputs/apk/debug:/apk:ro
+      - ./docker/run-maestro.sh:/run-maestro.sh:ro
+      - maestro-out:/root/.maestro/tests
+    environment:
+      EMULATOR_DEVICE: "${EMULATOR_DEVICE:-Samsung Galaxy S10}"
+      EMULATOR_VERSION: "${EMULATOR_VERSION:-13.0}"
+      WEB_VNC: "false"
+    entrypoint: ["/bin/bash", "/run-maestro.sh"]
+
+volumes:
+  gradle-cache:
+  cargo-registry:
+  cargo-target:
+  maestro-out:

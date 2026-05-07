@@ -12,6 +12,8 @@ on:
       - "build.gradle.kts"
       - "settings.gradle.kts"
       - ".maestro/**"
+      - "docker/**"
+      - "docker-compose.yml"
       - ".github/workflows/maestro.yml"
   pull_request:
     branches: [ "main" ]
@@ -24,6 +26,8 @@ on:
       - "build.gradle.kts"
       - "settings.gradle.kts"
       - ".maestro/**"
+      - "docker/**"
+      - "docker-compose.yml"
       - ".github/workflows/maestro.yml"
   workflow_dispatch:
 
@@ -31,42 +35,34 @@ jobs:
   build-apk:
     runs-on: ubuntu-latest
     environment: 'Android Build'
+    outputs:
+      apk-path: androidApp/build/outputs/apk/debug/androidApp-debug.apk
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-java@v4
-        with:
-          distribution: 'zulu'
-          java-version: '21'
-          cache: 'gradle'
+      - uses: docker/setup-buildx-action@v3
 
-      - name: Set up Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: aarch64-linux-android,armv7-linux-androideabi,x86_64-linux-android,i686-linux-android
-
-      - name: Cache cargo registry and target
-        uses: actions/cache@v4
+      - uses: actions/cache@v4
         with:
           path: |
             ~/.cargo/registry
             ~/.cargo/git
             rust/target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('rust/Cargo.lock', 'rust/**/Cargo.toml') }}
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-build-${{ hashFiles('rust/Cargo.lock', '**/*.gradle*', '**/gradle-wrapper.properties') }}
           restore-keys: |
-            ${{ runner.os }}-cargo-
+            ${{ runner.os }}-build-
 
-      - name: Install cargo-ndk
-        run: cargo install cargo-ndk --locked
-
-      - run: chmod +x ./gradlew
-      - run: echo "sdk.dir=$ANDROID_HOME" > local.properties
       - run: echo "MAPS_API_KEY=${{ secrets.MAPS_API_KEY || 'maps_key_default_value' }}" > secrets.properties
 
-      - name: Build debug APK
-        run: ./gradlew :androidApp:assembleDebug
-        env:
-          OTTJNI_SKIP_NIX: "1"
+      - name: Build APK in container (same image local devs use)
+        run: |
+          docker compose build build
+          docker compose run --rm \
+            -v ${HOME}/.gradle:/root/.gradle \
+            build \
+            ./gradlew :androidApp:assembleDebug
 
       - uses: actions/upload-artifact@v4
         with:
@@ -82,36 +78,46 @@ jobs:
       matrix:
         include:
           - shard: 0
-            profile: "pixel_6"
-            api: 34
+            device: "Samsung Galaxy S10"
+            android: "13.0"
+            tag: "emulator_13.0"
           - shard: 1
-            profile: "pixel_2"
-            api: 28
+            device: "Nexus 5"
+            android: "11.0"
+            tag: "emulator_11.0"
           - shard: 2
-            profile: "pixel_xl"
-            api: 30
+            device: "Samsung Galaxy S9"
+            android: "12.0"
+            tag: "emulator_12.0"
           - shard: 3
-            profile: "pixel_4"
-            api: 33
+            device: "Nexus 7"
+            android: "10.0"
+            tag: "emulator_10.0"
           - shard: 4
-            profile: "Nexus 5X"
-            api: 26
+            device: "Samsung Galaxy S6"
+            android: "9.0"
+            tag: "emulator_9.0"
           - shard: 5
-            profile: "pixel_5"
-            api: 31
+            device: "Nexus One"
+            android: "8.1"
+            tag: "emulator_8.1"
           - shard: 6
-            profile: "pixel_3"
-            api: 29
+            device: "Samsung Galaxy S10"
+            android: "13.0"
+            tag: "emulator_13.0"
           - shard: 7
-            profile: "pixel_7"
-            api: 34
+            device: "Pixel 6"
+            android: "13.0"
+            tag: "emulator_13.0"
           - shard: 8
-            profile: "pixel_4_xl"
-            api: 32
+            device: "Samsung Galaxy S9"
+            android: "12.0"
+            tag: "emulator_12.0"
           - shard: 9
-            profile: "pixel_3a"
-            api: 27
-    name: "shard ${{ matrix.shard }} (${{ matrix.profile }}, API ${{ matrix.api }})"
+            device: "Nexus 5"
+            android: "11.0"
+            tag: "emulator_11.0"
+    name: "shard ${{ matrix.shard }} (${{ matrix.device }} / Android ${{ matrix.android }})"
     steps:
       - uses: actions/checkout@v4
 
@@ -122,71 +128,45 @@ jobs:
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
 
-      - uses: actions/setup-java@v4
-        with:
-          distribution: 'zulu'
-          java-version: '21'
-
       - uses: actions/download-artifact@v4
         with:
           name: debug-apk
-          path: apk
+          path: androidApp/build/outputs/apk/debug/
 
-      - name: Install Maestro
+      - name: Compute test order for this shard
         run: |
-          curl -Ls "https://get.maestro.mobile.dev" | bash
-          echo "$HOME/.maestro/bin" >> $GITHUB_PATH
-
-      - name: Compute test order
-        id: order
-        run: |
-          # Run the full suite on each emulator profile so every test exercises
-          # every device. Shuffle order per shard (deterministic seed) so
-          # different shards exercise different test orderings, surfacing any
-          # state leakage between flows.
-          # Skip 00_seed_test_data.yaml (helper, never run alone) and
-          # 02_login_happy_path.yaml (needs real Apple creds).
           ls .maestro/*.yaml \
             | grep -v '00_seed_test_data\.yaml$' \
             | grep -v '02_login_happy_path\.yaml$' \
             | sort \
             | shuf --random-source=<(yes "shard${{ matrix.shard }}" | head -c 4096) \
             > shard_files.txt
-          echo "Shard ${{ matrix.shard }} will run $(wc -l < shard_files.txt) tests:"
+          echo "Shard ${{ matrix.shard }} on ${{ matrix.device }} (Android ${{ matrix.android }}) will run:"
           cat shard_files.txt
 
-      - name: Boot emulator and run Maestro shard
-        uses: reactivecircus/android-emulator-runner@v2
-        with:
-          api-level: ${{ matrix.api }}
-          arch: x86_64
-          profile: ${{ matrix.profile }}
-          ram-size: 4096M
-          heap-size: 1024M
-          disk-size: 6144M
-          force-avd-creation: false
-          emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim
-          disable-animations: true
-          script: |
-            adb wait-for-device
-            adb install -r apk/androidApp-debug.apk
-            FAIL=0
-            while IFS= read -r file; do
-              [ -z "$file" ] && continue
-              echo "::group::maestro $file"
-              if ! maestro test "$file"; then
-                FAIL=1
-                echo "::error file=$file::Maestro flow failed"
-              fi
-              echo "::endgroup::"
-            done < shard_files.txt
-            exit $FAIL
+      - name: Run Maestro shard in container
+        env:
+          EMULATOR_DEVICE: ${{ matrix.device }}
+          EMULATOR_VERSION: ${{ matrix.android }}
+          EMULATOR_TAG: ${{ matrix.tag }}
+        run: |
+          # Map shard list to absolute paths the container will see.
+          mapfile -t TESTS < shard_files.txt
+          MAPPED=()
+          for f in "${TESTS[@]}"; do
+            MAPPED+=("/tests/$(basename "$f")")
+          done
+          docker compose build maestro
+          docker compose run --rm \
+            -e EMULATOR_DEVICE \
+            -e EMULATOR_VERSION \
+            maestro "${MAPPED[@]}"
 
-      - name: Upload Maestro debug output
-        if: always()
+      - if: always()
         uses: actions/upload-artifact@v4
         with:
           name: maestro-shard-${{ matrix.shard }}
-          path: ~/.maestro/tests/
+          path: |
+            ~/.maestro/tests/
           retention-days: 7
           if-no-files-found: ignore
