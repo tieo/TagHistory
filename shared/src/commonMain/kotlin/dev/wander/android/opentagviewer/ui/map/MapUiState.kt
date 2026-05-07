@@ -21,6 +21,8 @@ data class MapUiState(
     val isRefreshing: Boolean = false,
     val refreshError: String? = null,
     val requireLogin: Boolean = false,
+    /** Beacon IDs whose reports are currently being fetched / decrypted. */
+    val fetchingBeaconIds: Set<String> = emptySet(),
 )
 
 data class BeaconMarkerUi(

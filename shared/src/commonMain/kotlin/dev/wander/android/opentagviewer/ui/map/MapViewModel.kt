@@ -203,11 +203,13 @@ class MapViewModel(
                     break
                 }
 
+                _state.update { it.copy(fetchingBeaconIds = toFetch.keys.toSet()) }
                 val reports = try {
                     withContext(ioDispatcher) { fetchReports(toFetch, window) }
                 } catch (e: Exception) {
                     lastError = e.message
                     println("[MapViewModel] refresh rung=${window}h failed: ${e::class.simpleName}: ${e.message}")
+                    _state.update { it.copy(fetchingBeaconIds = emptySet()) }
                     continue
                 }
                 val (markers, cards) = withContext(ioDispatcher) {
@@ -254,6 +256,7 @@ class MapViewModel(
                 it.copy(
                     isRefreshing = false,
                     refreshError = lastError,
+                    fetchingBeaconIds = emptySet(),
                 )
             }
         }

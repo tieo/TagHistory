@@ -166,6 +166,7 @@ fun MapScreen(
                 TagCardPager(
                     cards = state.cards,
                     selectedBeaconId = state.selectedBeaconId,
+                    fetchingBeaconIds = state.fetchingBeaconIds,
                     onSelect = viewModel::selectBeacon,
                     onOpenInfo = onOpenDevice,
                     onOpenHistory = onOpenHistory,
@@ -261,6 +262,7 @@ internal fun TagCardPager(
     onOpenInfo: (String) -> Unit,
     onOpenHistory: (String, String) -> Unit,
     onRoute: (Double, Double, String) -> Unit,
+    fetchingBeaconIds: Set<String> = emptySet(),
     modifier: Modifier = Modifier,
 ) {
     BoxWithConstraints(modifier = modifier.height(CARD_HEIGHT)) {
@@ -320,6 +322,7 @@ internal fun TagCardPager(
             TagCard(
                 card = card,
                 isSelected = index == pagerState.currentPage,
+                isFetching = card.beaconId in fetchingBeaconIds,
                 onOpenInfo = { onOpenInfo(card.beaconId) },
                 onOpenHistory = { onOpenHistory(card.beaconId, card.displayName) },
                 onRoute = {
@@ -341,6 +344,7 @@ private fun TagCard(
     onOpenInfo: () -> Unit,
     onOpenHistory: () -> Unit,
     onRoute: () -> Unit,
+    isFetching: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
     val hasLocation = card.latitude != null && card.longitude != null
@@ -361,6 +365,18 @@ private fun TagCard(
         elevation = CardDefaults.elevatedCardElevation(defaultElevation = 0.dp),
         border = border,
     ) {
+      Box(modifier = Modifier.fillMaxSize()) {
+        if (isFetching) {
+            CircularProgressIndicator(
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(top = 10.dp, end = 12.dp)
+                    .size(16.dp)
+                    .testTag("card_fetching_${card.beaconId}"),
+                strokeWidth = 2.dp,
+                color = MaterialTheme.colorScheme.primary,
+            )
+        }
         Column(modifier = Modifier.fillMaxSize()) {
             // Top: emoji left, name/address/time right — matches original 85dp top row
             Row(
@@ -427,6 +443,7 @@ private fun TagCard(
                 )
             }
         }
+      }
     }
 }
 

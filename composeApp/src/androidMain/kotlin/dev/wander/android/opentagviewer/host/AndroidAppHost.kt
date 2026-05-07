@@ -204,20 +204,25 @@ class AndroidAppHost private constructor(
      * refresh paths share the same network/auth logic.
      */
     fun createRefreshNowCallback(): suspend () -> String? = label@{
-        val auth = userAuthRepo.getUserAuth() ?: return@label "Sign in first"
-        val plain = userAuthRepo.decrypt(auth.data).decodeToString()
-        val account = AppleAccount.restoreFromJson(plain)
-        val beacons = beaconRepo.getAllBeaconInformation().keys
-            .mapNotNull { beaconRepo.getById(it) }
-        val accessories = loadAccessoriesVerbose(
-            beacons.associate { it.beaconId to it.ownedBeaconInfo },
-        )
-        if (accessories.isEmpty()) return@label "No beacons to refresh"
-        val reports = AppleReportsService(LocationReportsClient(http, anisette), account)
-            .fetchLastReportsByBeacon(accessories, hoursBack = 24 * 7)
-        if (reports.isNotEmpty()) beaconRepo.storeToLocationCache(reports)
-        val total = reports.values.sumOf { it.size }
-        "Refreshed ${reports.size} beacons • $total reports"
+        // Crypto + network must NOT run on Main. The Settings screen launches
+        // this from a Compose-bound scope which uses Dispatchers.Main; without
+        // the explicit IO hop, fetchLastReportsByBeacon ANRs the app.
+        withContext(Dispatchers.IO) {
+            val auth = userAuthRepo.getUserAuth() ?: return@withContext "Sign in first"
+            val plain = userAuthRepo.decrypt(auth.data).decodeToString()
+            val account = AppleAccount.restoreFromJson(plain)
+            val beacons = beaconRepo.getAllBeaconInformation().keys
+                .mapNotNull { beaconRepo.getById(it) }
+            val accessories = loadAccessoriesVerbose(
+                beacons.associate { it.beaconId to it.ownedBeaconInfo },
+            )
+            if (accessories.isEmpty()) return@withContext "No beacons to refresh"
+            val reports = AppleReportsService(LocationReportsClient(http, anisette), account)
+                .fetchLastReportsByBeacon(accessories, hoursBack = 24 * 7)
+            if (reports.isNotEmpty()) beaconRepo.storeToLocationCache(reports)
+            val total = reports.values.sumOf { it.size }
+            "Refreshed ${reports.size} beacons • $total reports"
+        }
     }
 
     fun createHistoryViewModel(beaconId: String): HistoryViewModel {
