@@ -42,22 +42,6 @@ jobs:
 
       - uses: docker/setup-buildx-action@v3
 
-      - uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-          key: ${{ runner.os }}-cargo-${{ hashFiles('rust/Cargo.lock') }}
-          restore-keys: ${{ runner.os }}-cargo-
-
-      - uses: actions/cache@v4
-        with:
-          path: |
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
-          restore-keys: ${{ runner.os }}-gradle-
-
       - run: echo "MAPS_API_KEY=${{ secrets.MAPS_API_KEY || 'maps_key_default_value' }}" > secrets.properties
 
       - name: Build APK in container (same image local devs use)
