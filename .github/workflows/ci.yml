@@ -90,9 +90,9 @@ jobs:
             android: "9.0"
             tag: "emulator_9.0"
           - shard: 5
-            device: "Nexus One"
-            android: "8.1"
-            tag: "emulator_8.1"
+            device: "Pixel 6"
+            android: "14.0"
+            tag: "emulator_14.0"
           - shard: 6
             device: "Samsung Galaxy S10"
             android: "13.0"
