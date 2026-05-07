@@ -48,7 +48,7 @@ jobs:
 
       - run: echo "MAPS_API_KEY=${{ secrets.MAPS_API_KEY || 'maps_key_default_value' }}" > secrets.properties
 
-      - name: Build APK + run unit tests in container (same image local devs use)
+      - name: Build APK + run unit tests in container
         run: |
           docker compose build build
           docker compose run --rm \
@@ -70,106 +70,22 @@ jobs:
       matrix:
         include:
           - shard: 0
-            slice: 0
-            device: "Samsung Galaxy S10"
-            android: "13.0"
-            tag: "emulator_13.0"
-          - shard: 0
-            slice: 1
-            device: "Samsung Galaxy S10"
-            android: "13.0"
-            tag: "emulator_13.0"
+            api: 34
+            arch: x86_64
+            profile: pixel_6
           - shard: 1
-            slice: 0
-            device: "Nexus 5"
-            android: "11.0"
-            tag: "emulator_11.0"
-          - shard: 1
-            slice: 1
-            device: "Nexus 5"
-            android: "11.0"
-            tag: "emulator_11.0"
+            api: 34
+            arch: x86_64
+            profile: pixel_6
           - shard: 2
-            slice: 0
-            device: "Samsung Galaxy S9"
-            android: "12.0"
-            tag: "emulator_12.0"
-          - shard: 2
-            slice: 1
-            device: "Samsung Galaxy S9"
-            android: "12.0"
-            tag: "emulator_12.0"
+            api: 34
+            arch: x86_64
+            profile: pixel_6
           - shard: 3
-            slice: 0
-            device: "Nexus 7"
-            android: "10.0"
-            tag: "emulator_10.0"
-          - shard: 3
-            slice: 1
-            device: "Nexus 7"
-            android: "10.0"
-            tag: "emulator_10.0"
-          - shard: 4
-            slice: 0
-            device: "Samsung Galaxy S6"
-            android: "9.0"
-            tag: "emulator_9.0"
-          - shard: 4
-            slice: 1
-            device: "Samsung Galaxy S6"
-            android: "9.0"
-            tag: "emulator_9.0"
-          - shard: 5
-            slice: 0
-            device: "Pixel 6"
-            android: "14.0"
-            tag: "emulator_14.0"
-          - shard: 5
-            slice: 1
-            device: "Pixel 6"
-            android: "14.0"
-            tag: "emulator_14.0"
-          - shard: 6
-            slice: 0
-            device: "Samsung Galaxy S10"
-            android: "13.0"
-            tag: "emulator_13.0"
-          - shard: 6
-            slice: 1
-            device: "Samsung Galaxy S10"
-            android: "13.0"
-            tag: "emulator_13.0"
-          - shard: 7
-            slice: 0
-            device: "Pixel 6"
-            android: "13.0"
-            tag: "emulator_13.0"
-          - shard: 7
-            slice: 1
-            device: "Pixel 6"
-            android: "13.0"
-            tag: "emulator_13.0"
-          - shard: 8
-            slice: 0
-            device: "Samsung Galaxy S9"
-            android: "12.0"
-            tag: "emulator_12.0"
-          - shard: 8
-            slice: 1
-            device: "Samsung Galaxy S9"
-            android: "12.0"
-            tag: "emulator_12.0"
-          - shard: 9
-            slice: 0
-            device: "Nexus 5"
-            android: "11.0"
-            tag: "emulator_11.0"
-          - shard: 9
-            slice: 1
-            device: "Nexus 5"
-            android: "11.0"
-            tag: "emulator_11.0"
-    name: "shard ${{ matrix.shard }}.${{ matrix.slice }} (${{ matrix.device }} / Android ${{ matrix.android }})"
+            api: 34
+            arch: x86_64
+            profile: pixel_6
+    name: "shard ${{ matrix.shard }} (API ${{ matrix.api }})"
     steps:
       - uses: actions/checkout@v4
 
@@ -180,49 +96,63 @@ jobs:
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
 
+      - uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '21'
+
       - uses: actions/download-artifact@v4
         with:
           name: debug-apk
-          path: androidApp/build/outputs/apk/debug/
+          path: apk
 
-      - name: Compute test order for this shard slice
+      - name: Install Maestro
         run: |
-          # Full shuffled list per shard (deterministic seed). Then pick every
-          # other entry by slice index so each profile runs both halves of
-          # the suite in parallel jobs.
+          curl -Ls "https://get.maestro.mobile.dev" | bash
+          echo "$HOME/.maestro/bin" >> $GITHUB_PATH
+
+      - name: Compute test slice for this shard (4-way split)
+        run: |
           ls .maestro/*.yaml \
             | grep -v '00_seed_test_data\.yaml$' \
             | grep -v '02_login_happy_path\.yaml$' \
             | sort \
-            | shuf --random-source=<(yes "shard${{ matrix.shard }}" | head -c 4096) \
-            | awk -v slice=${{ matrix.slice }} 'NR % 2 == slice' \
+            | awk -v shard=${{ matrix.shard }} 'NR % 4 == shard' \
             > shard_files.txt
-          echo "Shard ${{ matrix.shard }}.${{ matrix.slice }} on ${{ matrix.device }} (Android ${{ matrix.android }}) will run $(wc -l < shard_files.txt) flow(s):"
+          echo "Shard ${{ matrix.shard }} will run $(wc -l < shard_files.txt) flow(s):"
           cat shard_files.txt
 
-      - name: Run Maestro shard in container
-        env:
-          EMULATOR_DEVICE: ${{ matrix.device }}
-          EMULATOR_VERSION: ${{ matrix.android }}
-          EMULATOR_TAG: ${{ matrix.tag }}
-        run: |
-          # Map shard list to absolute paths the container will see.
-          mapfile -t TESTS < shard_files.txt
-          MAPPED=()
-          for f in "${TESTS[@]}"; do
-            MAPPED+=("/tests/$(basename "$f")")
-          done
-          docker compose build maestro
-          docker compose run --rm \
-            -e EMULATOR_DEVICE \
-            -e EMULATOR_VERSION \
-            maestro "${MAPPED[@]}"
+      - name: Boot emulator and run Maestro shard
+        uses: reactivecircus/android-emulator-runner@v2
+        timeout-minutes: 35
+        with:
+          api-level: ${{ matrix.api }}
+          arch: ${{ matrix.arch }}
+          profile: ${{ matrix.profile }}
+          ram-size: 4096M
+          heap-size: 1024M
+          force-avd-creation: false
+          emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim
+          disable-animations: true
+          script: |
+            adb wait-for-device
+            adb install -r apk/androidApp-debug.apk
+            FAIL=0
+            while IFS= read -r file; do
+              [ -z "$file" ] && continue
+              echo "::group::maestro $file"
+              if ! maestro test "$file"; then
+                FAIL=1
+                echo "::error file=$file::Maestro flow failed"
+              fi
+              echo "::endgroup::"
+            done < shard_files.txt
+            exit $FAIL
 
       - if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: maestro-shard-${{ matrix.shard }}-${{ matrix.slice }}
-          path: |
-            ~/.maestro/tests/
+          name: maestro-shard-${{ matrix.shard }}
+          path: ~/.maestro/tests/
           retention-days: 7
           if-no-files-found: ignore
