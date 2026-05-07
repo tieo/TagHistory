@@ -1,0 +1,18 @@
+[package]
+name = "android-loader"
+version = "0.2.0"
+edition = "2021"
+
+rust-version = "1.60"
+
+[dependencies]
+anyhow = "1.0"
+lazy_static = "1.4"
+libc = "0.2"
+memmap2 = "0.5"
+rand = "0.8"
+region = "3.0"
+sysv64 = { path = "./sysv64" }
+xmas-elf = "0.9"
+zero = "0.1"
+log = "*"

@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PageSize
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -62,8 +63,10 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlin.time.Clock
 import kotlin.time.ExperimentalTime
@@ -346,133 +349,89 @@ private fun TagCard(
     modifier: Modifier = Modifier,
 ) {
     val hasLocation = card.latitude != null && card.longitude != null
-    // Translucent card — map faintly visible through, matches modern
-    // "floating glass" pattern. Selected state gets an accent border
-    // instead of a full color-flip (less visual noise).
-    val containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.92f)
-    val border = if (isSelected) {
-        BorderStroke(2.dp, MaterialTheme.colorScheme.primary)
-    } else {
-        null
-    }
+    val containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f)
+    val shadowElevation = if (isSelected) 28.dp else 8.dp
+    val shadowColor = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+    val border = if (isSelected) BorderStroke(2.dp, MaterialTheme.colorScheme.primary) else null
 
     Card(
-        modifier = modifier
-            // All-around drop shadow (not just below). Compose's default
-            // Card elevation creates a Y-biased Android shadow; this
-            // explicit `shadow` modifier uses spread+blur on every side.
-            .shadow(
-                elevation = 18.dp,
-                shape = RoundedCornerShape(28.dp),
-                ambientColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.35f),
-                spotColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.45f),
-            ),
-        shape = RoundedCornerShape(28.dp),
-        colors = CardDefaults.elevatedCardColors(containerColor = containerColor),
-        elevation = CardDefaults.elevatedCardElevation(
-            defaultElevation = 0.dp,
-            pressedElevation = 0.dp,
+        modifier = modifier.shadow(
+            elevation = shadowElevation,
+            shape = RoundedCornerShape(24.dp),
+            ambientColor = shadowColor.copy(alpha = if (isSelected) 0.5f else 0.2f),
+            spotColor = shadowColor.copy(alpha = if (isSelected) 0.6f else 0.3f),
         ),
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.elevatedCardColors(containerColor = containerColor),
+        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 0.dp),
         border = border,
     ) {
-        Column(
-            modifier = Modifier.fillMaxSize().padding(horizontal = 22.dp, vertical = 18.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp),
-        ) {
-            // Header: emoji avatar + (name / time-ago) stack.
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                EmojiAvatar(card.emoji, card.displayName, hasLocation)
-                Spacer(Modifier.width(16.dp))
+        Column(modifier = Modifier.fillMaxSize()) {
+            // Top: emoji left, name/address/time right — matches original 85dp top row
+            Row(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+                    .padding(start = 15.dp, end = 15.dp, top = 10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Box(
+                    modifier = Modifier.width(90.dp).height(53.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    val glyph = card.emoji ?: card.displayName.firstOrNull()?.uppercase() ?: "●"
+                    Text(glyph, fontSize = 36.sp)
+                }
                 Column(
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier.weight(1f).padding(start = 15.dp),
                     verticalArrangement = Arrangement.spacedBy(2.dp),
                 ) {
                     Text(
                         card.displayName,
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
-                    val subtitle = buildString {
-                        if (!card.model.isNullOrBlank()) append(card.model)
-                        val timeLabel = lastUpdatedLabel(card.lastUpdatedMs)
-                        if (isNotEmpty()) append(" · $timeLabel") else append(timeLabel)
-                    }
+                    AddressLine(card.addressLine, hasLocation)
                     Text(
-                        subtitle,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
+                        lastUpdatedLabel(card.lastUpdatedMs),
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.outline,
                     )
                 }
             }
 
-            // Address row aligned flush with the card edge — previously sat
-            // under the emoji which looked off. Icon + text together form
-            // one left-aligned strip under the header block.
-            AddressLine(card.addressLine, hasLocation)
-
-            Spacer(Modifier.weight(1f))
-
-            // Action row: History + Details live left, Route (primary) right.
+            // Bottom: 3 filled-circle buttons centered — matches original 85dp bottom row
             Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                modifier = Modifier
+                    .height(85.dp)
+                    .fillMaxWidth()
+                    .padding(bottom = 10.dp),
+                horizontalArrangement = Arrangement.Center,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                CardTextAction(
+                CardCircleAction(
                     icon = Icons.AutoMirrored.Filled.List,
                     label = "History",
                     onClick = onOpenHistory,
                     enabled = hasLocation,
                     tag = "btn_card_history",
                 )
-                CardTextAction(
+                CardCircleAction(
                     icon = Icons.Filled.Info,
                     label = "Details",
                     onClick = onOpenInfo,
                     tag = "btn_card_details",
                 )
-                Spacer(Modifier.weight(1f))
-                FilledTonalButton(
+                CardCircleAction(
+                    icon = Icons.Filled.Directions,
+                    label = "Route",
                     onClick = onRoute,
                     enabled = hasLocation,
-                    contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp),
-                ) {
-                    Icon(
-                        imageVector = Icons.Filled.Directions,
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp),
-                    )
-                    Spacer(Modifier.width(6.dp))
-                    Text("Route", style = MaterialTheme.typography.labelLarge)
-                }
+                )
             }
         }
-    }
-}
-
-@Composable
-private fun EmojiAvatar(
-    emoji: String?,
-    displayName: String,
-    hasLocation: Boolean,
-) {
-    val containerColor = if (hasLocation) {
-        MaterialTheme.colorScheme.primaryContainer
-    } else {
-        MaterialTheme.colorScheme.surfaceVariant
-    }
-    Box(
-        modifier = Modifier
-            .size(56.dp)
-            .background(color = containerColor, shape = CircleShape),
-        contentAlignment = Alignment.Center,
-    ) {
-        val glyph = emoji ?: displayName.firstOrNull()?.uppercase() ?: "●"
-        Text(glyph, style = MaterialTheme.typography.headlineSmall)
     }
 }
 
@@ -482,13 +441,10 @@ private fun AddressLine(addressLine: String?, hasLocation: Boolean) {
         Icon(
             imageVector = if (hasLocation) Icons.Filled.Place else Icons.Filled.LocationOff,
             contentDescription = null,
-            modifier = Modifier.size(16.dp),
+            modifier = Modifier.size(15.dp).height(15.dp),
             tint = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-        Spacer(Modifier.width(6.dp))
-        // Address can be "Max-Planck-Straße 20, 89584 Ehingen (Donau), Germany".
-        // Show only the first comma segment — street + number — which is
-        // what the user cares about glance-wise.
+        Spacer(Modifier.width(5.dp))
         val streetOnly = addressLine?.substringBefore(",")?.trim()?.takeIf { it.isNotEmpty() }
         Text(
             when {
@@ -496,7 +452,7 @@ private fun AddressLine(addressLine: String?, hasLocation: Boolean) {
                 streetOnly != null -> streetOnly
                 else -> "Locating…"
             },
-            style = MaterialTheme.typography.bodyMedium,
+            fontSize = 12.sp,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
@@ -505,26 +461,47 @@ private fun AddressLine(addressLine: String?, hasLocation: Boolean) {
 }
 
 @Composable
-private fun CardTextAction(
+private fun CardCircleAction(
     icon: ImageVector,
     label: String,
     onClick: () -> Unit,
     enabled: Boolean = true,
     tag: String? = null,
 ) {
-    TextButton(
-        onClick = onClick,
-        enabled = enabled,
-        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
-        modifier = if (tag != null) Modifier.testTag(tag) else Modifier,
+    val circleColor = if (enabled) MaterialTheme.colorScheme.onBackground
+                      else MaterialTheme.colorScheme.outlineVariant
+    val iconColor = if (enabled) MaterialTheme.colorScheme.background
+                    else MaterialTheme.colorScheme.outline
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+        modifier = Modifier
+            .width(80.dp)
+            .clickable(enabled = enabled) { onClick() }
+            .then(if (tag != null) Modifier.testTag(tag) else Modifier),
     ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = null,
-            modifier = Modifier.size(16.dp),
+        Box(
+            modifier = Modifier
+                .size(40.dp)
+                .background(color = circleColor, shape = CircleShape),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = label,
+                modifier = Modifier.size(22.dp),
+                tint = iconColor,
+            )
+        }
+        Spacer(Modifier.height(4.dp))
+        Text(
+            label,
+            fontSize = 10.sp,
+            textAlign = TextAlign.Center,
+            color = if (enabled) MaterialTheme.colorScheme.onSurface
+                    else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
+            maxLines = 1,
         )
-        Spacer(Modifier.width(4.dp))
-        Text(label, style = MaterialTheme.typography.labelMedium)
     }
 }
 
