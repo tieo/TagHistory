@@ -111,7 +111,7 @@ jobs:
           curl -Ls "https://get.maestro.mobile.dev" | bash
           echo "$HOME/.maestro/bin" >> $GITHUB_PATH
 
-      - name: Compute test slice for this shard (4-way split)
+      - name: Compute test slice and write runner script
         run: |
           ls .maestro/*.yaml \
             | grep -v '00_seed_test_data\.yaml$' \
@@ -121,6 +121,26 @@ jobs:
             > shard_files.txt
           echo "Shard ${{ matrix.shard }} will run $(wc -l < shard_files.txt) flow(s):"
           cat shard_files.txt
+          # Inline heredoc/while-read inside the runner action's `script:`
+          # gets mangled by its shell wrapper. Stage the runner as a file.
+          cat > run-shard.sh <<'RUNNER'
+          #!/usr/bin/env bash
+          set -u
+          adb wait-for-device
+          adb install -r apk/androidApp-debug.apk
+          FAIL=0
+          while IFS= read -r file; do
+            [ -z "$file" ] && continue
+            echo "::group::maestro $file"
+            if ! maestro test "$file"; then
+              FAIL=1
+              echo "::error file=$file::Maestro flow failed"
+            fi
+            echo "::endgroup::"
+          done < shard_files.txt
+          exit $FAIL
+          RUNNER
+          chmod +x run-shard.sh
 
       - name: Boot emulator and run Maestro shard
         uses: reactivecircus/android-emulator-runner@v2
@@ -134,20 +154,7 @@ jobs:
           force-avd-creation: false
           emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim
           disable-animations: true
-          script: |
-            adb wait-for-device
-            adb install -r apk/androidApp-debug.apk
-            FAIL=0
-            while IFS= read -r file; do
-              [ -z "$file" ] && continue
-              echo "::group::maestro $file"
-              if ! maestro test "$file"; then
-                FAIL=1
-                echo "::error file=$file::Maestro flow failed"
-              fi
-              echo "::endgroup::"
-            done < shard_files.txt
-            exit $FAIL
+          script: ./run-shard.sh
 
       - if: always()
         uses: actions/upload-artifact@v4
