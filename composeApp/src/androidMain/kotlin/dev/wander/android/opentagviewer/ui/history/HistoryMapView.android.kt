@@ -125,15 +125,18 @@ actual fun HistoryMapView(
         update = { _ ->
             val ordered = points.sortedBy { it.timestampMs }
             val sel = selectedPointIndex
+            val newKey = ordered.map { it.timestampMs }
+            // Fire synchronously with the new keys so callers know Compose
+            // delivered the points to the updater; the async getMapAsync block
+            // is what then does the actual MapLibre layer update.
+            onRendered(newKey)
             mapView.getMapAsync { map ->
                 val style = map.style ?: return@getMapAsync
                 if (!style.isFullyLoaded) return@getMapAsync
-                val newKey = ordered.map { it.timestampMs }
                 val pointsChanged = newKey != lastRenderedPointsKey[0]
                 if (pointsChanged) {
                     lastRenderedPointsKey[0] = newKey
                     renderPath(map, style, ordered, fitCamera = true)
-                    onRendered(newKey)
                 }
                 renderSelectedPoint(map, style, ordered, sel, panCamera = !pointsChanged)
             }

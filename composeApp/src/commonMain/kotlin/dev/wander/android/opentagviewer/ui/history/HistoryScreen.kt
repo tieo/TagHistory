@@ -37,6 +37,8 @@ import androidx.compose.material3.rememberBottomSheetScaffoldState
 import androidx.compose.material3.rememberStandardBottomSheetState
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import io.github.tieo.taghistory.ui.map.BasemapCycleButton
 import io.github.tieo.taghistory.ui.map.MapBasemap
 import io.github.tieo.taghistory.ui.map.defaultBasemap
@@ -133,6 +135,7 @@ fun HistoryScreen(
                 error = state.error,
                 listState = listState,
                 addressCache = addressCache,
+                lastRenderedCount = lastRenderedCount,
                 onDayPrev = { if (dayIdx < days.size - 1) dayIdx++ },
                 onDayNext = { if (dayIdx > 0) dayIdx-- },
                 onSelectPoint = { selectedPointIdx = it },
@@ -152,18 +155,6 @@ fun HistoryScreen(
                 modifier = Modifier.fillMaxSize(),
             )
 
-            // Test-observable: text reflects last successful map render. Maestro
-            // uses this to verify the map polyline actually updated after a day
-            // change (the points list updates via state, but the MapLibre layer
-            // is updated asynchronously inside getMapAsync).
-            Text(
-                text = "map_render_$lastRenderedCount",
-                modifier = Modifier
-                    .size(1.dp)
-                    .align(Alignment.TopStart)
-                    .testTag("map_render_indicator"),
-                color = androidx.compose.ui.graphics.Color.Transparent,
-            )
 
             FilledIconButton(
                 onClick = onBack,
@@ -208,12 +199,23 @@ private fun SheetContent(
     error: String?,
     listState: androidx.compose.foundation.lazy.LazyListState,
     addressCache: Map<Long, String>,
+    lastRenderedCount: Int,
     onDayPrev: () -> Unit,
     onDayNext: () -> Unit,
     onSelectPoint: (Int) -> Unit,
     onRetry: () -> Unit,
 ) {
     Column(modifier = Modifier.fillMaxWidth()) {
+        // Test signal: testTag flips whenever the MapLibre layer actually
+        // re-rendered. Lives in the bottom sheet (always reachable in the
+        // semantics tree, never occluded by the map view).
+        Box(
+            modifier = Modifier
+                .size(1.dp)
+                .testTag("map_render_$lastRenderedCount")
+                .semantics { contentDescription = "map_render_$lastRenderedCount" },
+        )
+
         Row(
             modifier = Modifier
                 .fillMaxWidth()

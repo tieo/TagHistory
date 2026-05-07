@@ -12,15 +12,13 @@ name: History — map polyline actually re-renders when day arrows are tapped
       text: "Today"
     timeout: 4000
 
-# Map should have rendered Today's 3 points.
 - extendedWaitUntil:
     visible:
-      text: "map_render_3"
-    timeout: 3000
+      id: "map_render_3"
+    timeout: 4000
 - assertVisible:
-    text: "map_render_3"
+    id: "map_render_3"
 
-# Navigate back one day. List shows 2 points; map indicator must drop to 2.
 - tapOn:
     id: "btn_day_prev"
 - extendedWaitUntil:
@@ -29,12 +27,11 @@ name: History — map polyline actually re-renders when day arrows are tapped
     timeout: 2000
 - extendedWaitUntil:
     visible:
-      text: "map_render_2"
+      id: "map_render_2"
     timeout: 2000
 - assertVisible:
-    text: "map_render_2"
+    id: "map_render_2"
 
-# Back to today: map must re-render to 3 points.
 - tapOn:
     id: "btn_day_next"
 - extendedWaitUntil:
@@ -43,10 +40,10 @@ name: History — map polyline actually re-renders when day arrows are tapped
     timeout: 2000
 - extendedWaitUntil:
     visible:
-      text: "map_render_3"
+      id: "map_render_3"
     timeout: 2000
 - assertVisible:
-    text: "map_render_3"
+    id: "map_render_3"
 
 - back
 - extendedWaitUntil:
