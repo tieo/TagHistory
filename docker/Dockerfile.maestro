@@ -1,6 +1,8 @@
 ARG EMULATOR_TAG=emulator_13.0
 FROM budtmo/docker-android:${EMULATOR_TAG}
 
+USER root
+
 ENV MAESTRO_HOME=/root/.maestro \
     PATH=/root/.maestro/bin:$PATH
 
