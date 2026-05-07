@@ -37,7 +37,7 @@ name: Login screen — fields accept input and login button is tappable
 - runFlow:
     when:
       visible:
-        id: "btn_verify"
+        id: "field_otp_code"
     commands:
       - assertVisible:
-          id: "btn_verify"
+          id: "field_otp_code"

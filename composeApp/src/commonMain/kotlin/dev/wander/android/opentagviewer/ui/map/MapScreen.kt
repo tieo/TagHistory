@@ -254,7 +254,7 @@ private fun EmptyDevicesCard(
  */
 @OptIn(ExperimentalTime::class)
 @Composable
-private fun TagCardPager(
+internal fun TagCardPager(
     cards: List<TagCardUi>,
     selectedBeaconId: String?,
     onSelect: (String) -> Unit,
@@ -275,37 +275,32 @@ private fun TagCardPager(
             pageCount = { cards.size },
         )
 
-        // External selection change (map tap, boot auto-select) →
-        // animate pager to that page.
-        LaunchedEffect(selectedBeaconId, cards) {
-            if (selectedBeaconId == null) return@LaunchedEffect
-            val idx = cards.indexOfFirst { it.beaconId == selectedBeaconId }
-            if (idx >= 0 && idx != pagerState.currentPage) {
-                pagerState.animateScrollToPage(idx)
+        // Re-key only on the page index of the selected beacon, not the cards
+        // list. Geocoding/refresh updates produce a new cards list reference
+        // every tick — keying on cards restarted this effect (and the snapshot
+        // collector below), causing spurious onSelect → haptic → animate loops.
+        val selectedBeaconPage = remember(selectedBeaconId, cards) {
+            if (selectedBeaconId == null) -1
+            else cards.indexOfFirst { it.beaconId == selectedBeaconId }
+        }
+        LaunchedEffect(selectedBeaconPage) {
+            if (selectedBeaconPage >= 0 && selectedBeaconPage != pagerState.currentPage) {
+                pagerState.animateScrollToPage(selectedBeaconPage)
             }
         }
 
-        // Drive the ViewModel (map highlight + camera) only when the pager
-        // has fully settled. Using currentPage here caused a feedback loop:
-        // rapid swipes → onSelect fires mid-gesture → LaunchedEffect above
-        // tries to animateScrollToPage back → fights the user's gesture →
-        // desync between visible card and highlighted marker.
-        //
-        // rememberUpdatedState: the guard must read the *live* selectedBeaconId,
-        // not the one captured when the LaunchedEffect first started. Without
-        // this, swipe A→B→A causes settledPage=A to fire, but the closure still
-        // sees the original selectedBeaconId=A, so id==selectedBeaconId → onSelect
-        // skipped → map stuck on B forever.
+        val currentCards = androidx.compose.runtime.rememberUpdatedState(cards)
         val currentSelectedId = androidx.compose.runtime.rememberUpdatedState(selectedBeaconId)
+        val currentOnSelect = androidx.compose.runtime.rememberUpdatedState(onSelect)
         val haptics = LocalHapticFeedback.current
-        LaunchedEffect(pagerState, cards) {
+        LaunchedEffect(pagerState) {
             snapshotFlow { pagerState.currentPage }
                 .distinctUntilChanged()
                 .collect { page ->
-                    cards.getOrNull(page)?.beaconId?.let { id ->
+                    currentCards.value.getOrNull(page)?.beaconId?.let { id ->
                         if (id != currentSelectedId.value) {
                             haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                            onSelect(id)
+                            currentOnSelect.value(id)
                         }
                     }
                 }

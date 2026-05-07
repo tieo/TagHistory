@@ -72,6 +72,11 @@ class MapViewModel(
     /** Holds the latest location per beacon keyed by beaconId. */
     private val latestLocationByBeacon = mutableMapOf<String, BeaconLocationReport>()
 
+    // Once the user picks a card themselves (swipe / marker tap),
+    // refresh stops auto-promoting selection to the most-recently-located beacon.
+    // Reset by `reboot()` (post-import) so a fresh import gets the auto-pick again.
+    private var userHasExplicitlySelected: Boolean = false
+
     /** Cached [BeaconData] so we can reconstruct markers without a re-query. */
     private val beaconsById = mutableMapOf<String, BeaconData>()
 
@@ -216,11 +221,26 @@ class MapViewModel(
                 }
                 val got = reports.values.sumOf { it.size }
                 println("[MapViewModel] rung=${window}h got=$got markers=${markers.size}")
-                _state.update {
-                    it.copy(
+                _state.update { current ->
+                    // Auto-pick the freshest located beacon if the current
+                    // selection (set by boot's default) has no marker yet —
+                    // so the map can actually pan somewhere. Stops once the
+                    // user has picked a card explicitly.
+                    val selected = current.selectedBeaconId
+                    val selectedHasMarker = selected != null &&
+                        markers.any { m -> m.beaconId == selected }
+                    val newSelected = if (
+                        userHasExplicitlySelected || selectedHasMarker || markers.isEmpty()
+                    ) {
+                        selected
+                    } else {
+                        markers.maxByOrNull { m -> m.lastUpdatedMs }?.beaconId ?: selected
+                    }
+                    current.copy(
                         isInitialFetchComplete = true,
                         markers = markers,
                         cards = cards,
+                        selectedBeaconId = newSelected,
                     )
                 }
                 kickoffGeocoding()
@@ -240,6 +260,7 @@ class MapViewModel(
     }
 
     fun selectBeacon(beaconId: String?) {
+        userHasExplicitlySelected = true
         _state.update { it.copy(selectedBeaconId = beaconId) }
     }
 
@@ -282,6 +303,7 @@ class MapViewModel(
         beaconsById.clear()
         latestLocationByBeacon.clear()
         geocodeCache.clear()
+        userHasExplicitlySelected = false
         _state.update { MapUiState() }
         runScope.launch {
             boot().join()

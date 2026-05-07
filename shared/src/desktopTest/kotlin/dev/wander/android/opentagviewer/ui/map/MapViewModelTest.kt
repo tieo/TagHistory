@@ -229,4 +229,64 @@ class MapViewModelTest {
         assertEquals("123 Main St", vm.state.value.markers.single().addressLine)
     }
 
+    @Test
+    fun `refresh promotes selection from unlocated default to most recently located`() = runTest {
+        // Fresh-import scenario: 3 beacons in DB, none cached with a location.
+        // boot() defaults selection to the first card it sees (could be any).
+        // After refresh brings real positions in, selection should auto-promote
+        // to the most-recently-located beacon, not stay on an unlocated one.
+        seedBeacon("a", "Auto", null)
+        seedBeacon("b", "Bike", null)
+        seedBeacon("c", "Cat", null)
+        val reports = mapOf(
+            "b" to listOf(BeaconLocationReport(
+                publishedAt = 100L, description = "", timestamp = 100L,
+                confidence = 1, latitude = 10.0, longitude = 20.0,
+                horizontalAccuracy = 5, status = 0,
+            )),
+            "c" to listOf(BeaconLocationReport(
+                publishedAt = 500L, description = "", timestamp = 500L,
+                confidence = 1, latitude = 50.0, longitude = 60.0,
+                horizontalAccuracy = 5, status = 0,
+            )),
+        )
+        val vm = buildVm(fetchReports = { _, _ -> reports })
+        vm.boot()
+        advanceUntilIdle()
+        // Boot picked SOMETHING — possibly the unlocated 'a' (or any of them).
+        val bootSelection = vm.state.value.selectedBeaconId
+        assertNotNull(bootSelection)
+
+        vm.refresh()
+        advanceUntilIdle()
+
+        // 'c' has the newest report (ts=500), so it must end up selected.
+        assertEquals("c", vm.state.value.selectedBeaconId,
+            "After refresh, selection must promote to most-recently-located beacon")
+    }
+
+    @Test
+    fun `refresh keeps selection if user already chose a located beacon`() = runTest {
+        seedBeacon("a", "Auto", null)
+        seedBeacon("b", "Bike", null)
+        seedLocation("a", lat = 1.0, lon = 2.0, ts = 100L)
+        val reports = mapOf(
+            "b" to listOf(BeaconLocationReport(
+                publishedAt = 999L, description = "", timestamp = 999L,
+                confidence = 1, latitude = 9.0, longitude = 9.0,
+                horizontalAccuracy = 5, status = 0,
+            )),
+        )
+        val vm = buildVm(fetchReports = { _, _ -> reports })
+        vm.boot()
+        advanceUntilIdle()
+        // User explicitly selects 'a' (the older but already-located beacon).
+        vm.selectBeacon("a")
+        vm.refresh()
+        advanceUntilIdle()
+        // Refresh brings 'b' with a newer ts but user's explicit pick stays.
+        assertEquals("a", vm.state.value.selectedBeaconId,
+            "Explicit user selection on a located beacon must not be overridden")
+    }
+
 }

@@ -36,8 +36,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.semantics.testTagsAsResourceId
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.tieo.taghistory.data.model.BeaconInformation
@@ -144,10 +142,10 @@ fun DeviceInfoScreen(
                 TextButton(onClick = {
                     confirmingRemove = false
                     viewModel.remove()
-                }, modifier = Modifier.semantics { testTagsAsResourceId = true }.testTag("btn_remove_confirm")) { Text("Remove") }
+                }, modifier = Modifier.testTag("btn_remove_confirm")) { Text("Remove") }
             },
             dismissButton = {
-                TextButton(onClick = { confirmingRemove = false }, modifier = Modifier.semantics { testTagsAsResourceId = true }.testTag("btn_remove_cancel")) { Text("Cancel") }
+                TextButton(onClick = { confirmingRemove = false }, modifier = Modifier.testTag("btn_remove_cancel")) { Text("Cancel") }
             },
         )
     }
@@ -278,7 +276,7 @@ private fun RenameDialog(
                     onValueChange = { name = it },
                     label = { Text("Name") },
                     singleLine = true,
-                    modifier = Modifier.fillMaxWidth().semantics { testTagsAsResourceId = true }.testTag("field_rename_name"),
+                    modifier = Modifier.fillMaxWidth().testTag("field_rename_name"),
                 )
                 OutlinedTextField(
                     value = emoji,
@@ -293,11 +291,11 @@ private fun RenameDialog(
             TextButton(
                 onClick = { onConfirm(name, emoji) },
                 enabled = name.isNotBlank(),
-                modifier = Modifier.semantics { testTagsAsResourceId = true }.testTag("btn_rename_save"),
+                modifier = Modifier.testTag("btn_rename_save"),
             ) { Text("Save") }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss, modifier = Modifier.semantics { testTagsAsResourceId = true }.testTag("btn_rename_cancel")) { Text("Cancel") }
+            TextButton(onClick = onDismiss, modifier = Modifier.testTag("btn_rename_cancel")) { Text("Cancel") }
         },
     )
 }

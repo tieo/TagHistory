@@ -19,17 +19,14 @@ name: Login — full happy path (requires APPLE_EMAIL + APPLE_PASSWORD + APPLE_2
 # 2FA code entry screen
 - extendedWaitUntil:
     visible:
-      id: "btn_verify"
+      id: "field_otp_code"
     timeout: 15000
 
 - tapOn:
     id: "field_otp_code"
 - inputText: "${APPLE_2FA_CODE}"
 
-- tapOn:
-    id: "btn_verify"
-
-# Should land on map screen after successful login
+# Auto-submits once 6 digits are entered. Should land on map screen.
 - extendedWaitUntil:
     visible:
       id: "btn_settings"

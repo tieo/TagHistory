@@ -252,6 +252,13 @@ private fun TwoFactorCodeEntry(
     val focus = remember { FocusRequester() }
     LaunchedEffect(Unit) { focus.requestFocus() }
 
+    // Auto-submit once the code is 6 digits and we're not already submitting.
+    LaunchedEffect(state.twoFactorCode, state.isSubmittingTwoFactor) {
+        if (state.twoFactorCode.length == 6 && !state.isSubmittingTwoFactor) {
+            onSubmit()
+        }
+    }
+
     Column(
         modifier = Modifier.fillMaxSize().padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -302,21 +309,11 @@ private fun TwoFactorCodeEntry(
                     style = MaterialTheme.typography.bodySmall,
                 )
             }
-            Button(
-                onClick = onSubmit,
-                enabled = !state.isSubmittingTwoFactor && state.twoFactorCode.length == 6,
-                modifier = Modifier.fillMaxWidth().testTag("btn_verify"),
-                contentPadding = PaddingValues(vertical = 14.dp),
-            ) {
-                if (state.isSubmittingTwoFactor) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(20.dp),
-                        strokeWidth = 2.dp,
-                        color = MaterialTheme.colorScheme.onPrimary,
-                    )
-                } else {
-                    Text("Verify", fontWeight = FontWeight.SemiBold)
-                }
+            if (state.isSubmittingTwoFactor) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(24.dp).testTag("twofactor_submitting"),
+                    strokeWidth = 2.dp,
+                )
             }
         }
         Spacer(Modifier.weight(1f))

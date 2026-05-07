@@ -15,6 +15,6 @@ name: Login screen — UI elements present
 - assertVisible:
     id: "btn_login"
 - assertNotVisible:
-    id: "btn_verify"
+    id: "field_otp_code"
 - assertNotVisible:
     id: "btn_start_over"
