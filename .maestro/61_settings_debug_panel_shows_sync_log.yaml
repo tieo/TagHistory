@@ -1,0 +1,31 @@
+appId: io.github.tieo.taghistory
+name: Settings — Show debug data reveals the Sync log panel
+---
+- runFlow:
+    file: 00_seed_test_data.yaml
+
+- tapOn:
+    id: "btn_settings"
+- extendedWaitUntil:
+    visible:
+      text: "Show debug data"
+    timeout: 3000
+
+- assertNotVisible:
+    id: "sync_log_header"
+
+- tapOn:
+    text: "Show debug data"
+- extendedWaitUntil:
+    visible:
+      id: "sync_log_header"
+    timeout: 2000
+- assertVisible:
+    id: "sync_log_header"
+- assertVisible:
+    id: "btn_clear_sync_log"
+
+- tapOn:
+    id: "btn_clear_sync_log"
+- assertVisible:
+    id: "sync_log_header"

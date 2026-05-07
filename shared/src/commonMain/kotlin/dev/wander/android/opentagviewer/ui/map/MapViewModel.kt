@@ -178,6 +178,10 @@ class MapViewModel(
     private fun refreshCascade(windows: List<Int>, skipCascadeIfInitialDone: Boolean) {
         if (_state.value.isRefreshing) return
         _state.update { it.copy(isRefreshing = true, refreshError = null) }
+        io.github.tieo.taghistory.sync.SyncLog.record(
+            io.github.tieo.taghistory.sync.SyncEvent.Kind.START,
+            "Refresh started (${beaconsById.size} beacons known)",
+        )
         // Periodic refresh (after initial fetch done): always re-fetch every
         // beacon with a full window. The cascade's "skip already-located tags"
         // filter only applies during the first-run ladder so stale cached
@@ -209,6 +213,10 @@ class MapViewModel(
                 } catch (e: Exception) {
                     lastError = e.message
                     println("[MapViewModel] refresh rung=${window}h failed: ${e::class.simpleName}: ${e.message}")
+                    io.github.tieo.taghistory.sync.SyncLog.record(
+                        io.github.tieo.taghistory.sync.SyncEvent.Kind.RUNG_FAIL,
+                        "${window}h rung failed: ${e::class.simpleName}: ${e.message}",
+                    )
                     _state.update { it.copy(fetchingBeaconIds = emptySet()) }
                     continue
                 }
@@ -223,6 +231,10 @@ class MapViewModel(
                 }
                 val got = reports.values.sumOf { it.size }
                 println("[MapViewModel] rung=${window}h got=$got markers=${markers.size}")
+                io.github.tieo.taghistory.sync.SyncLog.record(
+                    io.github.tieo.taghistory.sync.SyncEvent.Kind.RUNG_OK,
+                    "${window}h rung: ${reports.size}/${toFetch.size} beacons replied, $got reports total",
+                )
                 _state.update { current ->
                     // Auto-pick the freshest located beacon if the current
                     // selection (set by boot's default) has no marker yet —
@@ -259,6 +271,11 @@ class MapViewModel(
                     fetchingBeaconIds = emptySet(),
                 )
             }
+            io.github.tieo.taghistory.sync.SyncLog.record(
+                io.github.tieo.taghistory.sync.SyncEvent.Kind.REFRESH_DONE,
+                if (lastError != null) "Refresh finished with error: $lastError"
+                else "Refresh finished (${_state.value.markers.size} located)",
+            )
         }
     }
 

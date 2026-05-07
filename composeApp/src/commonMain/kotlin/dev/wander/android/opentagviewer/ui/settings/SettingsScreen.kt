@@ -112,10 +112,14 @@ fun SettingsScreen(
         SettingsSection("Advanced") {
             SwitchRow(
                 label = "Show debug data",
-                subtitle = "Include diagnostic fields and raw payloads in the UI",
+                subtitle = "Show recent sync activity below",
                 checked = state.current.enableDebugData == true,
                 onChange = viewModel::setEnableDebugData,
             )
+            if (state.current.enableDebugData == true) {
+                HorizontalDivider()
+                SyncLogPanel()
+            }
         }
 
         // ---------- Data ----------
@@ -373,6 +377,81 @@ private fun ThemeChoice(
         Button(onClick = onClick, modifier = modifier) { Text(label) }
     } else {
         OutlinedButton(onClick = onClick, modifier = modifier) { Text(label) }
+    }
+}
+
+@OptIn(kotlin.time.ExperimentalTime::class)
+private fun formatHHmmss(ms: Long): String {
+    val instant = kotlin.time.Instant.fromEpochMilliseconds(ms)
+    val s = instant.toString()
+    val t = s.substringAfter('T').substringBefore('.').substringBefore('Z')
+    return if (t.length >= 8) t.substring(0, 8) else t
+}
+
+@OptIn(kotlin.time.ExperimentalTime::class)
+@Composable
+private fun SyncLogPanel() {
+    val events by io.github.tieo.taghistory.sync.SyncLog.events
+        .collectAsStateWithLifecycle()
+    Column(
+        modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                "Sync log",
+                style = MaterialTheme.typography.titleSmall,
+                modifier = Modifier.testTag("sync_log_header"),
+            )
+            TextButton(
+                onClick = { io.github.tieo.taghistory.sync.SyncLog.clear() },
+                modifier = Modifier.testTag("btn_clear_sync_log"),
+            ) {
+                Text("Clear")
+            }
+        }
+        if (events.isEmpty()) {
+            Text(
+                "No sync events yet — open the map to trigger a refresh.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        } else {
+            for (event in events.asReversed().take(40)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Text(
+                        formatHHmmss(event.timestampMs),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.outline,
+                        modifier = Modifier.padding(top = 2.dp),
+                    )
+                    Text(
+                        event.kind.name,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = when (event.kind) {
+                            io.github.tieo.taghistory.sync.SyncEvent.Kind.RUNG_FAIL ->
+                                MaterialTheme.colorScheme.error
+                            io.github.tieo.taghistory.sync.SyncEvent.Kind.REFRESH_DONE ->
+                                MaterialTheme.colorScheme.primary
+                            else -> MaterialTheme.colorScheme.outline
+                        },
+                        modifier = Modifier.padding(top = 2.dp),
+                    )
+                    Text(
+                        event.message,
+                        style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+            }
+        }
     }
 }
 
