@@ -1,0 +1,25 @@
+appId: io.github.tieo.taghistory
+name: Settings screen — all section headers visible
+---
+- runFlow:
+    file: 00_seed_test_data.yaml
+
+- tapOn:
+    id: "btn_settings"
+- extendedWaitUntil:
+    visible:
+      text: "Settings"
+    timeout: 5000
+- assertVisible:
+    text: "Appearance"
+- assertVisible:
+    text: "Background sync"
+- swipe:
+    direction: UP
+    duration: 600
+- assertVisible:
+    text: "Advanced"
+- assertVisible:
+    text: "Account"
+- assertVisible:
+    text: "About"

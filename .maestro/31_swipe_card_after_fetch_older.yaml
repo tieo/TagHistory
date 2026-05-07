@@ -1,0 +1,79 @@
+appId: io.github.tieo.taghistory
+name: "Stress: swipe cards after fetch-older — history loads independently per beacon"
+---
+# Opens history for Car Keys, fetches older, goes back. Then opens history for
+# Backpack. Catches state bleed where a previous beacon's history contaminates
+# the next screen, or the ViewModel isn't reset between navigations.
+- runFlow:
+    file: 00_seed_test_data.yaml
+
+# ── Car Keys: open history, fetch older ──────────────────────────────────────
+- tapOn:
+    id: "btn_card_history"
+- extendedWaitUntil:
+    visible:
+      id: "btn_fetch_older"
+    timeout: 5000
+- tapOn:
+    id: "btn_fetch_older"
+- extendedWaitUntil:
+    visible:
+      id: "btn_fetch_older"
+    timeout: 15000
+- back
+- extendedWaitUntil:
+    visible:
+      id: "btn_settings"
+    timeout: 5000
+
+# ── swipe to Backpack, open history ──────────────────────────────────────────
+- swipe:
+    start: "85%, 75%"
+    end: "15%, 75%"
+    duration: 400
+- extendedWaitUntil:
+    visible:
+      text: "Backpack"
+    timeout: 5000
+- tapOn:
+    id: "btn_card_history"
+- extendedWaitUntil:
+    visible:
+      id: "btn_fetch_older"
+    timeout: 5000
+- tapOn:
+    id: "btn_fetch_older"
+- extendedWaitUntil:
+    visible:
+      id: "btn_fetch_older"
+    timeout: 15000
+- back
+- extendedWaitUntil:
+    visible:
+      id: "btn_settings"
+    timeout: 5000
+- assertVisible:
+    text: "Backpack"
+
+# ── swipe to Bike, open history ───────────────────────────────────────────────
+- swipe:
+    start: "85%, 75%"
+    end: "15%, 75%"
+    duration: 400
+- extendedWaitUntil:
+    visible:
+      text: "Bike"
+    timeout: 5000
+- tapOn:
+    id: "btn_card_history"
+- extendedWaitUntil:
+    visible:
+      id: "btn_fetch_older"
+    timeout: 5000
+- back
+- extendedWaitUntil:
+    visible:
+      id: "btn_settings"
+    timeout: 5000
+- assertVisible:
+    text: "Bike"

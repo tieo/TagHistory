@@ -1,36 +1,32 @@
 name: Generate APK (Debug)
 env:
-  # The name of the main module repository
-  main_project_module: app
-  # The name of the App
-  app_name: OpenTagViewer
+  main_project_module: androidApp
+  app_name: TagHistory
 
 on:
   push:
     branches: [ "main" ]
     paths:
-      # only run when Android-related stuff actually changed!
-      - "app/**"
+      - "androidApp/**"
+      - "composeApp/**"
+      - "shared/**"
       - "gradle/**"
       - "build.gradle.kts"
       - "gradle.properties"
       - "gradlew"
-      - "gradle.bat"
-      - "local.defaults.properties"
       - "settings.gradle.kts"
   pull_request:
     branches: [ "main" ]
     paths:
-      - "app/**"
+      - "androidApp/**"
+      - "composeApp/**"
+      - "shared/**"
       - "gradle/**"
       - "build.gradle.kts"
       - "gradle.properties"
       - "gradlew"
-      - "gradle.bat"
-      - "local.defaults.properties"
       - "settings.gradle.kts"
 
-  # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
 
 jobs:
@@ -44,38 +40,32 @@ jobs:
       - name: Set current date as env variable
         run: echo "date_today=$(date +'%Y-%m-%d')" >> $GITHUB_ENV
 
-      # Set Repository Name As Env Variable
       - name: Set repository name as env variable
         run: echo "repository_name=$(echo '${{ github.repository }}' | awk -F '/' '{print $2}')" >> $GITHUB_ENV
 
       - name: Set Up JDK
         uses: actions/setup-java@v4
         with:
-          distribution: 'zulu' # See 'Supported distributions' for available options
-          java-version: '17'
+          distribution: 'zulu'
+          java-version: '21'
           cache: 'gradle'
 
       - name: Change wrapper permissions
         run: chmod +x ./gradlew
 
       - name: Create local.properties
-        run: |
-          echo "sdk.dir=$ANDROID_HOME" > local.properties
+        run: echo "sdk.dir=$ANDROID_HOME" > local.properties
 
       - name: Inject secrets.properties
         run: |
           echo "MAPS_API_KEY=${{ secrets.MAPS_API_KEY || 'maps_key_default_value' }}" > secrets.properties
 
-      # Run Tests Build
       - name: Run gradle tests
         run: ./gradlew test
 
-      # Create APK Debug
-      - name: Build Debug APK - ${{ env.main_project_module }} module
-        run: ./gradlew testDebugUnitTest assembleDebug
+      - name: Build Debug APK
+        run: ./gradlew :androidApp:assembleDebug
 
-      # Upload Artifact Build
-      # Noted For Output [main_project_module]/build/outputs/apk/debug/
       - name: Upload APK Debug
         uses: actions/upload-artifact@v4
         with:

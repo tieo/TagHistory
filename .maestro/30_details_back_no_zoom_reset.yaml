@@ -1,0 +1,86 @@
+appId: io.github.tieo.taghistory
+name: "Stress: details→back does not reset map camera to world"
+---
+# The map must NOT jump to world view when returning from DeviceInfo or History.
+# Structural check: btn_settings visible (still on map) + no btn_import
+# (auth state intact, not reset to login). Repeats for all three beacons.
+- runFlow:
+    file: 00_seed_test_data.yaml
+
+# ── Car Keys: details → back ─────────────────────────────────────────────────
+- tapOn:
+    id: "btn_card_details"
+- extendedWaitUntil:
+    visible:
+      id: "btn_rename"
+    timeout: 5000
+- back
+- extendedWaitUntil:
+    visible:
+      id: "btn_settings"
+    timeout: 5000
+- assertNotVisible:
+    id: "btn_import"
+- assertVisible:
+    text: "Car Keys"
+
+# ── Backpack: history → back ─────────────────────────────────────────────────
+- swipe:
+    start: "85%, 75%"
+    end: "15%, 75%"
+    duration: 400
+- extendedWaitUntil:
+    visible:
+      text: "Backpack"
+    timeout: 5000
+- tapOn:
+    id: "btn_card_history"
+- extendedWaitUntil:
+    visible:
+      id: "btn_fetch_older"
+    timeout: 5000
+- back
+- extendedWaitUntil:
+    visible:
+      id: "btn_settings"
+    timeout: 5000
+- assertNotVisible:
+    id: "btn_import"
+- assertVisible:
+    text: "Backpack"
+
+# ── Bike: details → history → back → back ────────────────────────────────────
+- swipe:
+    start: "85%, 75%"
+    end: "15%, 75%"
+    duration: 400
+- extendedWaitUntil:
+    visible:
+      text: "Bike"
+    timeout: 5000
+- tapOn:
+    id: "btn_card_details"
+- extendedWaitUntil:
+    visible:
+      id: "btn_view_history"
+    timeout: 5000
+- tapOn:
+    id: "btn_view_history"
+- extendedWaitUntil:
+    visible:
+      id: "btn_fetch_older"
+    timeout: 5000
+- back
+- extendedWaitUntil:
+    visible:
+      id: "btn_view_history"
+    timeout: 5000
+- back
+- extendedWaitUntil:
+    visible:
+      id: "btn_settings"
+    timeout: 5000
+- assertNotVisible:
+    id: "btn_import"
+- assertVisible:
+    text: "Bike"

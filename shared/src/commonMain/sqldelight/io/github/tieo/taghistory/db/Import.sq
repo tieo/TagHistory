@@ -1,0 +1,30 @@
+-- Mirrors the Room Import entity. `id` is AUTOINCREMENT so new rows can
+-- pass NULL; inserted id is read back via last_insert_rowid().
+
+CREATE TABLE IF NOT EXISTS Import (
+    id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    version TEXT,
+    imported_at INTEGER NOT NULL,
+    exported_at INTEGER NOT NULL,
+    source_user TEXT,
+    via TEXT
+);
+
+getAll:
+SELECT * FROM Import;
+
+getImportsFromUser:
+SELECT * FROM Import WHERE source_user = :sourceUser;
+
+getById:
+SELECT * FROM Import WHERE id = :importId;
+
+insert:
+INSERT INTO Import(version, imported_at, exported_at, source_user, via)
+VALUES (:version, :importedAt, :exportedAt, :sourceUser, :via);
+
+lastInsertedId:
+SELECT last_insert_rowid();
+
+deleteById:
+DELETE FROM Import WHERE id = :importId;

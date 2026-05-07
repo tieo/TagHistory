@@ -1,0 +1,23 @@
+-- Tracks which (beacon, day-start-UTC-millis) pairs we've already fetched
+-- history for — lets the history UI skip redundant iCloud calls.
+
+CREATE TABLE IF NOT EXISTS DailyHistoryFetchRecord (
+    day_start_time INTEGER NOT NULL,
+    beacon_id TEXT NOT NULL,
+    last_update INTEGER NOT NULL,
+    PRIMARY KEY (day_start_time, beacon_id),
+    FOREIGN KEY (beacon_id) REFERENCES OwnedBeacons(id) ON UPDATE CASCADE ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS DailyHistoryFetchRecord_beacon_id ON DailyHistoryFetchRecord(beacon_id);
+
+getInsertedDays:
+SELECT * FROM DailyHistoryFetchRecord WHERE beacon_id = :beaconId;
+
+getIfExists:
+SELECT * FROM DailyHistoryFetchRecord
+WHERE beacon_id = :beaconId AND day_start_time = :dayStartTime;
+
+upsert:
+INSERT OR REPLACE INTO DailyHistoryFetchRecord(day_start_time, beacon_id, last_update)
+VALUES (:dayStartTime, :beaconId, :lastUpdate);

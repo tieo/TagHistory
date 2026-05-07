@@ -1,0 +1,30 @@
+appId: io.github.tieo.taghistory
+name: Device info — back button returns to map with same beacon selected
+---
+- runFlow:
+    file: 00_seed_test_data.yaml
+
+# Swipe to Backpack (index 1)
+- swipe:
+    start: "85%, 75%"
+    end: "15%, 75%"
+    duration: 400
+- extendedWaitUntil:
+    visible:
+      text: "Backpack"
+    timeout: 5000
+
+- tapOn:
+    id: "btn_card_details"
+- extendedWaitUntil:
+    visible:
+      id: "btn_rename"
+    timeout: 5000
+
+- back
+- extendedWaitUntil:
+    visible:
+      id: "btn_settings"
+    timeout: 5000
+- assertVisible:
+    text: "Backpack"

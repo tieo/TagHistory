@@ -1,0 +1,30 @@
+appId: io.github.tieo.taghistory
+name: Settings — background sync toggle shows/hides interval slider
+---
+# Background sync defaults to ON (Interval visible initially).
+# Toggle OFF → Interval hidden. Toggle ON → Interval visible again.
+- runFlow:
+    file: 00_seed_test_data.yaml
+
+- tapOn:
+    id: "btn_settings"
+- extendedWaitUntil:
+    visible:
+      text: "Background sync"
+    timeout: 5000
+
+# Default: ON → Interval visible
+- assertVisible:
+    text: "Interval"
+
+# Toggle OFF → Interval hidden
+- tapOn:
+    id: "toggle_background_sync"
+- assertNotVisible:
+    text: "Interval"
+
+# Toggle ON → Interval shown again
+- tapOn:
+    id: "toggle_background_sync"
+- assertVisible:
+    text: "Interval"

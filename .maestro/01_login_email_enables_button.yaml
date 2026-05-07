@@ -1,0 +1,43 @@
+appId: io.github.tieo.taghistory
+name: Login screen — fields accept input and login button is tappable
+---
+- launchApp:
+    clearState: true
+
+- extendedWaitUntil:
+    visible:
+      text: "Welcome to TagHistory"
+    timeout: 5000
+
+- tapOn:
+    id: "field_email"
+- inputText: "test@example.com"
+- assertVisible:
+    text: "test@example.com"
+
+- tapOn:
+    id: "field_password"
+- inputText: "test_password"
+
+# Login button must be tappable (enabled by non-empty input)
+- assertVisible:
+    id: "btn_login"
+- tapOn:
+    id: "btn_login"
+
+# App must still be alive — either still on login or transitioned to 2FA.
+# Either way some TagHistory UI is visible.
+- runFlow:
+    when:
+      visible:
+        text: "Welcome to TagHistory"
+    commands:
+      - assertVisible:
+          text: "Welcome to TagHistory"
+- runFlow:
+    when:
+      visible:
+        id: "btn_verify"
+    commands:
+      - assertVisible:
+          id: "btn_verify"

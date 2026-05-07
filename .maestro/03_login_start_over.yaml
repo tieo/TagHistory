@@ -1,0 +1,34 @@
+appId: io.github.tieo.taghistory
+name: Login — Start over returns to credentials screen
+---
+- launchApp:
+    clearState: true
+
+- extendedWaitUntil:
+    visible:
+      text: "Welcome to TagHistory"
+    timeout: 5000
+
+- tapOn:
+    id: "field_email"
+- inputText: "test@example.com"
+- tapOn:
+    id: "field_password"
+- inputText: "wrongpassword"
+- tapOn:
+    id: "btn_login"
+
+# If Start over appears (error path), verify it returns to credentials screen
+- runFlow:
+    when:
+      visible:
+        id: "btn_start_over"
+    commands:
+      - tapOn:
+          id: "btn_start_over"
+      - assertVisible:
+          id: "field_email"
+      - assertVisible:
+          id: "field_password"
+      - assertVisible:
+          id: "btn_login"

@@ -1,0 +1,93 @@
+appId: io.github.tieo.taghistory
+name: "Stress: settings open/close ×5 — map and card unchanged"
+---
+# Rapidly opens and dismisses settings five times. After each round-trip the
+# original card (Car Keys, index 0) must still be shown. Catches any bug where
+# the settings back-stack pop resets the pager or re-triggers auth flow.
+- runFlow:
+    file: 00_seed_test_data.yaml
+
+# Swipe to Backpack first so we verify a non-zero card index survives
+- swipe:
+    start: "85%, 75%"
+    end: "15%, 75%"
+    duration: 400
+- extendedWaitUntil:
+    visible:
+      text: "Backpack"
+    timeout: 5000
+
+# ── round 1 ──────────────────────────────────────────────────────────────────
+- tapOn:
+    id: "btn_settings"
+- extendedWaitUntil:
+    visible:
+      text: "Settings"
+    timeout: 5000
+- back
+- extendedWaitUntil:
+    visible:
+      id: "btn_settings"
+    timeout: 5000
+- assertVisible:
+    text: "Backpack"
+
+# ── round 2 ──────────────────────────────────────────────────────────────────
+- tapOn:
+    id: "btn_settings"
+- extendedWaitUntil:
+    visible:
+      text: "Settings"
+    timeout: 5000
+- back
+- extendedWaitUntil:
+    visible:
+      id: "btn_settings"
+    timeout: 5000
+- assertVisible:
+    text: "Backpack"
+
+# ── round 3 ──────────────────────────────────────────────────────────────────
+- tapOn:
+    id: "btn_settings"
+- extendedWaitUntil:
+    visible:
+      text: "Settings"
+    timeout: 5000
+- back
+- extendedWaitUntil:
+    visible:
+      id: "btn_settings"
+    timeout: 5000
+- assertVisible:
+    text: "Backpack"
+
+# ── round 4 ──────────────────────────────────────────────────────────────────
+- tapOn:
+    id: "btn_settings"
+- extendedWaitUntil:
+    visible:
+      text: "Settings"
+    timeout: 5000
+- back
+- extendedWaitUntil:
+    visible:
+      id: "btn_settings"
+    timeout: 5000
+- assertVisible:
+    text: "Backpack"
+
+# ── round 5 ──────────────────────────────────────────────────────────────────
+- tapOn:
+    id: "btn_settings"
+- extendedWaitUntil:
+    visible:
+      text: "Settings"
+    timeout: 5000
+- back
+- extendedWaitUntil:
+    visible:
+      id: "btn_settings"
+    timeout: 5000
+- assertVisible:
+    text: "Backpack"

@@ -1,0 +1,64 @@
+appId: io.github.tieo.taghistory
+name: "Stress: open details ×3 in a row for same beacon — no state corruption"
+---
+# Opens and immediately backs out of DeviceInfo three times for the same beacon.
+# Catches ViewModel lifecycle bugs (e.g. second open shows stale/doubled state).
+- runFlow:
+    file: 00_seed_test_data.yaml
+
+# ── open 1 ───────────────────────────────────────────────────────────────────
+- tapOn:
+    id: "btn_card_details"
+- extendedWaitUntil:
+    visible:
+      id: "btn_rename"
+    timeout: 5000
+- back
+- extendedWaitUntil:
+    visible:
+      id: "btn_settings"
+    timeout: 5000
+- assertVisible:
+    text: "Car Keys"
+
+# ── open 2 ───────────────────────────────────────────────────────────────────
+- tapOn:
+    id: "btn_card_details"
+- extendedWaitUntil:
+    visible:
+      id: "btn_rename"
+    timeout: 5000
+- back
+- extendedWaitUntil:
+    visible:
+      id: "btn_settings"
+    timeout: 5000
+- assertVisible:
+    text: "Car Keys"
+
+# ── open 3: do actual rename to confirm data integrity ───────────────────────
+- tapOn:
+    id: "btn_card_details"
+- extendedWaitUntil:
+    visible:
+      id: "btn_rename"
+    timeout: 5000
+- tapOn:
+    id: "btn_rename"
+- tapOn:
+    id: "field_rename_name"
+- eraseText: 50
+- inputText: "Triple Check"
+- tapOn:
+    id: "btn_rename_save"
+- extendedWaitUntil:
+    visible:
+      text: "Triple Check"
+    timeout: 5000
+- back
+- extendedWaitUntil:
+    visible:
+      id: "btn_settings"
+    timeout: 5000
+- assertVisible:
+    text: "Triple Check"

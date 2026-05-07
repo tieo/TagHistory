@@ -1,0 +1,81 @@
+appId: io.github.tieo.taghistory
+name: "Stress: map→details→history→back×2 — full back-stack depth"
+---
+# Drills two levels deep (details then history via btn_view_history) and unwinds
+# one level at a time. Verifies the back-stack has exactly the right depth — one
+# extra back would skip details and land on the map, the wrong assertion catches it.
+- runFlow:
+    file: 00_seed_test_data.yaml
+
+# ── Descend: map → details → history ─────────────────────────────────────────
+- tapOn:
+    id: "btn_card_details"
+- extendedWaitUntil:
+    visible:
+      id: "btn_view_history"
+    timeout: 5000
+- tapOn:
+    id: "btn_view_history"
+- extendedWaitUntil:
+    visible:
+      id: "btn_fetch_older"
+    timeout: 5000
+
+# ── Unwind level 1: history → details ────────────────────────────────────────
+- back
+- extendedWaitUntil:
+    visible:
+      id: "btn_view_history"
+    timeout: 5000
+# Must be on details, not map
+- assertNotVisible:
+    id: "btn_settings"
+
+# ── Unwind level 2: details → map ────────────────────────────────────────────
+- back
+- extendedWaitUntil:
+    visible:
+      id: "btn_settings"
+    timeout: 5000
+- assertVisible:
+    text: "Car Keys"
+
+# ── Do it again from Bike ─────────────────────────────────────────────────────
+- swipe:
+    start: "85%, 75%"
+    end: "15%, 75%"
+    duration: 400
+- swipe:
+    start: "85%, 75%"
+    end: "15%, 75%"
+    duration: 400
+- extendedWaitUntil:
+    visible:
+      text: "Bike"
+    timeout: 5000
+- tapOn:
+    id: "btn_card_details"
+- extendedWaitUntil:
+    visible:
+      id: "btn_view_history"
+    timeout: 5000
+- tapOn:
+    id: "btn_view_history"
+- extendedWaitUntil:
+    visible:
+      id: "btn_fetch_older"
+    timeout: 5000
+- back
+- extendedWaitUntil:
+    visible:
+      id: "btn_view_history"
+    timeout: 5000
+- assertNotVisible:
+    id: "btn_settings"
+- back
+- extendedWaitUntil:
+    visible:
+      id: "btn_settings"
+    timeout: 5000
+- assertVisible:
+    text: "Bike"

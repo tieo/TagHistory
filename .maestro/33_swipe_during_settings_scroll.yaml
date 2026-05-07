@@ -1,0 +1,60 @@
+appId: io.github.tieo.taghistory
+name: "Stress: settings deep scroll then back — card at non-zero index unchanged"
+---
+# Scrolls deep into settings (past Account section), triggers theme change, then
+# backs out. Tests that the map pager card is not reset even after settings
+# makes a persistent state change (theme rewrite could trigger recomposition).
+- runFlow:
+    file: 00_seed_test_data.yaml
+
+# Park on Bike (index 2) before going to settings
+- swipe:
+    start: "85%, 75%"
+    end: "15%, 75%"
+    duration: 400
+- swipe:
+    start: "85%, 75%"
+    end: "15%, 75%"
+    duration: 400
+- extendedWaitUntil:
+    visible:
+      text: "Bike"
+    timeout: 5000
+
+# Open settings and scroll all the way down
+- tapOn:
+    id: "btn_settings"
+- extendedWaitUntil:
+    visible:
+      text: "Settings"
+    timeout: 5000
+- swipe:
+    direction: UP
+    duration: 800
+- swipe:
+    direction: UP
+    duration: 800
+- assertVisible:
+    text: "Account"
+
+# Change theme (state mutation) while scrolled deep
+- scrollUntilVisible:
+    element:
+      id: "btn_theme_dark"
+    direction: UP
+    timeout: 5000
+- tapOn:
+    id: "btn_theme_dark"
+- tapOn:
+    id: "btn_theme_system"
+
+# Back → Bike must still be the active card
+- back
+- extendedWaitUntil:
+    visible:
+      id: "btn_settings"
+    timeout: 5000
+- assertVisible:
+    text: "Bike"
+- assertNotVisible:
+    id: "btn_import"

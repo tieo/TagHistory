@@ -1,0 +1,30 @@
+-- Mirrors the Room BeaconNamingRecord entity. `content` is the FindMy
+-- BeaconNamingRecord plist XML; we keep it as opaque TEXT and let the
+-- service layer parse it so the DB stays dumb.
+
+CREATE TABLE IF NOT EXISTS BeaconNamingRecord (
+    id TEXT NOT NULL PRIMARY KEY,
+    import_id INTEGER,
+    version TEXT,
+    content TEXT,
+    is_removed INTEGER AS kotlin.Boolean NOT NULL DEFAULT 0,
+    FOREIGN KEY (import_id) REFERENCES Import(id) ON UPDATE CASCADE ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS BeaconNamingRecord_import_id ON BeaconNamingRecord(import_id);
+
+getAll:
+SELECT * FROM BeaconNamingRecord WHERE is_removed = 0;
+
+getByBeaconId:
+SELECT * FROM BeaconNamingRecord WHERE id = :beaconId AND is_removed = 0;
+
+upsert:
+INSERT OR REPLACE INTO BeaconNamingRecord(id, import_id, version, content, is_removed)
+VALUES (:id, :importId, :version, :content, :isRemoved);
+
+setRemoved:
+UPDATE BeaconNamingRecord SET is_removed = 1 WHERE id = :beaconId;
+
+deleteById:
+DELETE FROM BeaconNamingRecord WHERE id = :beaconId;
