@@ -1,0 +1,40 @@
+# Lefthook git hooks. Install with: `lefthook install` (or `just lefthook-install`).
+# Skip a single push without uninstalling: `LEFTHOOK=0 git push`.
+
+pre-commit:
+  parallel: true
+  commands:
+    yaml-lint:
+      glob: "{.maestro/*.yaml,.github/**/*.yml,.github/**/*.yaml,docker-compose.yml,lefthook.yml}"
+      run: |
+        for f in {staged_files}; do
+          python3 -c "import yaml,sys; yaml.safe_load(open('$f'))" || exit 1
+        done
+    kotlin-fmt-check:
+      glob: "**/*.kt"
+      run: |
+        # ktlint via gradle if it's wired up, otherwise skip silently.
+        if ./gradlew tasks --all 2>/dev/null | grep -q ktlintCheck; then
+          ./gradlew ktlintCheck --daemon
+        fi
+
+pre-push:
+  parallel: false
+  commands:
+    unit-tests:
+      run: |
+        echo "→ unit tests"
+        JAVA_HOME=$HOME/.gradle/jdks/temurin-21 ./gradlew test --daemon
+    maestro-smoke:
+      run: |
+        # Quick smoke flow against running emulator-5554 (skipped if not booted).
+        if adb -s emulator-5554 get-state 2>/dev/null | grep -q device; then
+          echo "→ maestro smoke flow"
+          if [ -f .maestro/04_map_screen_beacons.yaml ]; then
+            JAVA_HOME=$HOME/.gradle/jdks/temurin-21 ./gradlew :androidApp:assembleDebug --daemon
+            adb -s emulator-5554 install -r androidApp/build/outputs/apk/debug/androidApp-debug.apk
+            maestro --device emulator-5554 test .maestro/04_map_screen_beacons.yaml
+          fi
+        else
+          echo "→ no emulator-5554, skipping maestro smoke"
+        fi

@@ -111,3 +111,13 @@ clean-volumes:
 [doc('Tail logcat from the running emulator-5554.')]
 logcat:
     adb -s emulator-5554 logcat
+
+[group('dev')]
+[doc('Install lefthook git hooks (pre-commit + pre-push).')]
+lefthook-install:
+    lefthook install
+
+[group('dev')]
+[doc('Run all lefthook hooks against staged files (mirrors what runs on commit).')]
+lefthook-run:
+    lefthook run pre-commit
