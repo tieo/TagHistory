@@ -5,7 +5,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -20,32 +19,34 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
-import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.Place
 import androidx.compose.material.icons.filled.Timeline
 import androidx.compose.material3.BottomSheetScaffold
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SheetValue
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberBottomSheetScaffoldState
 import androidx.compose.material3.rememberStandardBottomSheetState
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.runtime.mutableStateOf
+import io.github.tieo.taghistory.ui.map.BasemapCycleButton
+import io.github.tieo.taghistory.ui.map.MapBasemap
+import io.github.tieo.taghistory.ui.map.defaultBasemap
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateMapOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
@@ -69,26 +70,24 @@ fun HistoryScreen(
 
     LaunchedEffect(Unit) {
         val end = Clock.System.now().toEpochMilliseconds()
+        // Show cached data immediately so the screen isn't blank for 15s while
+        // the network fetch runs.
+        viewModel.load(end - 7L * DAY_MS, end)
         viewModel.fetchAndLoad(end - 7L * DAY_MS, end)
     }
 
     val days = remember(state.points) { buildDayBuckets(state.points) }
-
-    // dayIdx 0 = most recent day; navigate right = go further back in time.
     var dayIdx by remember(days) { mutableIntStateOf(0) }
     val selectedDay = days.getOrNull(dayIdx)
 
-    // Sorted oldest→newest for map polyline; list shows newest-first.
     val chronological = remember(selectedDay) {
         selectedDay?.points?.sortedBy { it.timestampMs } ?: emptyList()
     }
 
-    // Which point is highlighted on the map. Index into chronological (0 = oldest).
     var selectedPointIdx by remember(chronological) {
         mutableIntStateOf((chronological.size - 1).coerceAtLeast(0))
     }
 
-    // Geocode cache: timestampMs → address string. Populated lazily per point.
     val addressCache = remember { mutableStateMapOf<Long, String>() }
     if (reverseGeocode != null) {
         LaunchedEffect(state.points) {
@@ -102,12 +101,14 @@ fun HistoryScreen(
     }
 
     val sheetState = rememberStandardBottomSheetState(
-        initialValue = SheetValue.PartiallyExpanded,
+        initialValue = SheetValue.Expanded,
         skipHiddenState = true,
     )
     val scaffoldState = rememberBottomSheetScaffoldState(bottomSheetState = sheetState)
 
-    // Scroll list to selected item when map selection changes.
+    val themeDefault = defaultBasemap()
+    var basemap by remember(themeDefault) { mutableStateOf(themeDefault) }
+
     val listState = rememberLazyListState()
     LaunchedEffect(selectedPointIdx, chronological.size) {
         if (chronological.isNotEmpty()) {
@@ -119,21 +120,7 @@ fun HistoryScreen(
     BottomSheetScaffold(
         scaffoldState = scaffoldState,
         modifier = modifier.fillMaxSize(),
-        topBar = {
-            TopAppBar(
-                title = { Text(title) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f),
-                ),
-                windowInsets = TopAppBarDefaults.windowInsets,
-            )
-        },
-        sheetPeekHeight = 88.dp,
+        sheetPeekHeight = 96.dp,
         sheetContent = {
             SheetContent(
                 days = days,
@@ -147,19 +134,14 @@ fun HistoryScreen(
                 onDayPrev = { if (dayIdx < days.size - 1) dayIdx++ },
                 onDayNext = { if (dayIdx > 0) dayIdx-- },
                 onSelectPoint = { selectedPointIdx = it },
-                onFetchOlder = {
-                    val oldest = days.minOfOrNull { it.key }
-                        ?: Clock.System.now().toEpochMilliseconds()
-                    viewModel.fetchAndLoad(oldest - 7L * DAY_MS, oldest)
+                onRetry = {
+                    val end = Clock.System.now().toEpochMilliseconds()
+                    viewModel.fetchAndLoad(end - 7L * DAY_MS, end)
                 },
             )
         },
-    ) { paddingValues ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(top = paddingValues.calculateTopPadding()),
-        ) {
+    ) { _ ->
+        Box(modifier = Modifier.fillMaxSize()) {
             when {
                 state.isLoading && state.points.isEmpty() -> FullScreenMessage(loading = true)
                 state.error != null && state.points.isEmpty() ->
@@ -169,9 +151,39 @@ fun HistoryScreen(
                 else -> HistoryMapView(
                     points = chronological,
                     selectedPointIndex = selectedPointIdx,
+                    basemap = basemap,
                     modifier = Modifier.fillMaxSize(),
                 )
             }
+
+            FilledIconButton(
+                onClick = onBack,
+                modifier = Modifier
+                    .align(Alignment.TopStart)
+                    .statusBarsPadding()
+                    .padding(start = 12.dp, top = 12.dp),
+                colors = IconButtonDefaults.filledIconButtonColors(
+                    containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.92f),
+                    contentColor = MaterialTheme.colorScheme.onSurface,
+                ),
+            ) {
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+            }
+
+            BasemapCycleButton(
+                current = basemap,
+                onCycle = {
+                    basemap = when (basemap) {
+                        MapBasemap.LIGHT -> MapBasemap.DARK
+                        MapBasemap.DARK -> MapBasemap.SATELLITE
+                        MapBasemap.SATELLITE -> MapBasemap.LIGHT
+                    }
+                },
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .statusBarsPadding()
+                    .padding(end = 12.dp, top = 12.dp),
+            )
         }
     }
 }
@@ -190,14 +202,13 @@ private fun SheetContent(
     onDayPrev: () -> Unit,
     onDayNext: () -> Unit,
     onSelectPoint: (Int) -> Unit,
-    onFetchOlder: () -> Unit,
+    onRetry: () -> Unit,
 ) {
     Column(modifier = Modifier.fillMaxWidth()) {
-        // Day navigation row
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 4.dp, vertical = 2.dp),
+                .padding(horizontal = 8.dp, vertical = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             IconButton(
@@ -211,7 +222,7 @@ private fun SheetContent(
             Text(
                 text = days.getOrNull(dayIdx)?.key?.let { dayLabel(it, now) } ?: "No data",
                 modifier = Modifier.weight(1f),
-                style = MaterialTheme.typography.titleMedium,
+                style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
                 textAlign = androidx.compose.ui.text.style.TextAlign.Center,
             )
@@ -226,12 +237,12 @@ private fun SheetContent(
 
         HorizontalDivider()
 
-        // Points summary
         if (chronological.isNotEmpty()) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                    .padding(8.dp),
+                horizontalArrangement = Arrangement.Center,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Icon(
@@ -250,12 +261,15 @@ private fun SheetContent(
             HorizontalDivider()
         }
 
-        // Loading indicator
         if (isLoading) {
             LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
         }
 
-        // Location list: newest first
+        if (error != null && chronological.isEmpty()) {
+            ErrorBlock(message = error, onRetry = onRetry)
+            return@Column
+        }
+
         val reversed = remember(chronological) { chronological.asReversed() }
         LazyColumn(
             state = listState,
@@ -268,36 +282,9 @@ private fun SheetContent(
                     point = point,
                     address = addressCache[point.timestampMs],
                     isSelected = isSelected,
-                    isLast = listIdx == reversed.size - 1,
                     testTag = "history_item_$listIdx",
                     onClick = { onSelectPoint(chronoIdx) },
                 )
-            }
-
-            item(key = "fetch_older") {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 12.dp, vertical = 4.dp),
-                    horizontalArrangement = Arrangement.End,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    if (isLoading) {
-                        CircularProgressIndicator(
-                            strokeWidth = 2.dp,
-                            modifier = Modifier.size(16.dp),
-                        )
-                        Spacer(Modifier.width(8.dp))
-                    }
-                    TextButton(
-                        onClick = onFetchOlder,
-                        enabled = !isLoading,
-                        contentPadding = PaddingValues(horizontal = 8.dp),
-                        modifier = Modifier.testTag("btn_fetch_older"),
-                    ) {
-                        Text("Fetch older")
-                    }
-                }
             }
         }
     }
@@ -308,34 +295,35 @@ private fun HistoryListItem(
     point: HistoryPoint,
     address: String?,
     isSelected: Boolean,
-    isLast: Boolean,
     testTag: String? = null,
     onClick: () -> Unit,
 ) {
-    val bg = if (isSelected) MaterialTheme.colorScheme.primaryContainer
-             else MaterialTheme.colorScheme.surface
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .background(bg)
             .clickable { onClick() }
-            .padding(horizontal = 16.dp, vertical = 12.dp)
-            .then(if (testTag != null) Modifier.testTag(testTag) else Modifier),
+            .then(if (testTag != null) Modifier.testTag(testTag) else Modifier)
+            .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Icon(
-            Icons.Filled.LocationOn,
-            contentDescription = null,
+        Box(
             modifier = Modifier.size(22.dp),
-            tint = if (isSelected) MaterialTheme.colorScheme.primary
-                   else MaterialTheme.colorScheme.onSurfaceVariant,
-        )
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                Icons.Filled.Place,
+                contentDescription = null,
+                modifier = Modifier.size(22.dp),
+                tint = if (isSelected) MaterialTheme.colorScheme.primary
+                       else MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
         Spacer(Modifier.width(16.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 address ?: "%.5f, %.5f".format(point.latitude, point.longitude),
                 style = MaterialTheme.typography.bodyMedium,
-                fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
+                fontWeight = FontWeight.Bold,
                 maxLines = 2,
                 overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
             )
@@ -346,7 +334,29 @@ private fun HistoryListItem(
             )
         }
     }
-    if (!isLast) HorizontalDivider(modifier = Modifier.padding(start = 54.dp))
+}
+
+@Composable
+private fun ErrorBlock(message: String, onRetry: () -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Text(
+            message,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.error,
+        )
+        Spacer(Modifier.height(12.dp))
+        androidx.compose.material3.Button(
+            onClick = onRetry,
+            modifier = Modifier.testTag("btn_history_retry"),
+        ) {
+            Text("Retry")
+        }
+    }
 }
 
 @Composable

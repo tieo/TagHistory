@@ -11,9 +11,9 @@ built on the [FindMy.py](https://github.com/malmeloo/FindMy.py) library.
 > [!WARNING]
 > This project is not affiliated with Apple Inc. or Google LLC in any capacity.
 
-|☀️ Light Mode|🌑 Dark Mode|
-|----|----|
-|![Demo of the app while using Light Mode](./light_mode_preview.jpg)|![Demo of the app while using Dark Mode](./dark_mode_preview.jpg)|
+|☀️ Light Mode|🌑 Dark Mode|🛰️ Satellite|
+|----|----|----|
+|![Demo of the app while using Light Mode](./light_mode_preview.jpg)|![Demo of the app while using Dark Mode](./dark_mode_preview.jpg)|![Demo of the app while using the satellite basemap](./satellite_mode_preview.jpg)|
 
 ## Features ⭐
 

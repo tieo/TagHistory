@@ -53,11 +53,12 @@ private const val ROLE_END = "end"
 actual fun HistoryMapView(
     points: List<HistoryPoint>,
     selectedPointIndex: Int?,
+    basemap: MapBasemap?,
     modifier: Modifier,
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
-    val basemap = defaultBasemap()
+    val effectiveBasemap = basemap ?: defaultBasemap()
     val currentPoints = rememberUpdatedState(points)
     val currentSelectedIdx = rememberUpdatedState(selectedPointIndex)
     val lineColor = MaterialTheme.colorScheme.primary.toArgb()
@@ -67,7 +68,7 @@ actual fun HistoryMapView(
         MapLibre.getInstance(context)
         MapView(context).apply { onCreate(Bundle()) }
     }
-    val lastAppliedBasemap = remember { arrayOf(basemap) }
+    val lastAppliedBasemap = remember { arrayOf(effectiveBasemap) }
     // Track last rendered point list so we know whether to fit camera or just pan.
     val lastRenderedPointsKey = remember { arrayOf<List<Long>>(emptyList()) }
 
@@ -89,11 +90,11 @@ actual fun HistoryMapView(
         }
     }
 
-    LaunchedEffect(basemap) {
-        if (lastAppliedBasemap[0] == basemap) return@LaunchedEffect
-        lastAppliedBasemap[0] = basemap
+    LaunchedEffect(effectiveBasemap) {
+        if (lastAppliedBasemap[0] == effectiveBasemap) return@LaunchedEffect
+        lastAppliedBasemap[0] = effectiveBasemap
         mapView.getMapAsync { map ->
-            map.setStyle(Style.Builder().fromBasemap(basemap)) { style ->
+            map.setStyle(Style.Builder().fromBasemap(effectiveBasemap)) { style ->
                 installLayers(style, lineColor, selectedColor)
                 val ordered = currentPoints.value.sortedBy { it.timestampMs }
                 renderPath(map, style, ordered, fitCamera = false)
@@ -108,7 +109,7 @@ actual fun HistoryMapView(
                 map.uiSettings.isRotateGesturesEnabled = false
                 map.uiSettings.isCompassEnabled = false
                 map.uiSettings.isLogoEnabled = false
-                map.setStyle(Style.Builder().fromBasemap(basemap)) { style ->
+                map.setStyle(Style.Builder().fromBasemap(effectiveBasemap)) { style ->
                     installLayers(style, lineColor, selectedColor)
                     val ordered = currentPoints.value.sortedBy { it.timestampMs }
                     lastRenderedPointsKey[0] = ordered.map { it.timestampMs }
@@ -153,15 +154,8 @@ private fun installLayers(style: Style, lineColorArgb: Int, selectedColorArgb: I
         style.addSource(GeoJsonSource(ENDPOINTS_SOURCE, FeatureCollection.fromFeatures(emptyList())))
         style.addLayer(
             CircleLayer(ENDPOINTS_LAYER, ENDPOINTS_SOURCE).withProperties(
-                PropertyFactory.circleRadius(8f),
-                PropertyFactory.circleColor(
-                    Expression.match(
-                        Expression.get(PROP_ROLE),
-                        Expression.color(Color.parseColor("#1976D2")),
-                        Expression.stop(ROLE_START, Expression.color(Color.parseColor("#2E7D32"))),
-                        Expression.stop(ROLE_END, Expression.color(Color.parseColor("#D32F2F"))),
-                    )
-                ),
+                PropertyFactory.circleRadius(6f),
+                PropertyFactory.circleColor(lineColorArgb),
                 PropertyFactory.circleStrokeWidth(2f),
                 PropertyFactory.circleStrokeColor(Color.WHITE),
             )
@@ -171,7 +165,7 @@ private fun installLayers(style: Style, lineColorArgb: Int, selectedColorArgb: I
         style.addSource(GeoJsonSource(SELECTED_SOURCE, FeatureCollection.fromFeatures(emptyList())))
         style.addLayer(
             CircleLayer(SELECTED_LAYER, SELECTED_SOURCE).withProperties(
-                PropertyFactory.circleRadius(12f),
+                PropertyFactory.circleRadius(10f),
                 PropertyFactory.circleColor(selectedColorArgb),
                 PropertyFactory.circleStrokeWidth(3f),
                 PropertyFactory.circleStrokeColor(Color.WHITE),
@@ -210,10 +204,21 @@ private fun renderPath(
 
     if (fitCamera) {
         if (latLngs.size == 1) {
-            map.animateCamera(CameraUpdateFactory.newLatLngZoom(latLngs.first(), 16.0))
+            map.animateCamera(CameraUpdateFactory.newLatLngZoom(latLngs.first(), 14.0))
         } else {
             val bounds = LatLngBounds.Builder().apply { latLngs.forEach { include(it) } }.build()
-            map.animateCamera(CameraUpdateFactory.newLatLngBounds(bounds, BOUNDS_PADDING_PX))
+            map.animateCamera(
+                CameraUpdateFactory.newLatLngBounds(bounds, BOUNDS_PADDING_PX),
+                400,
+                object : MapLibreMap.CancelableCallback {
+                    override fun onCancel() = Unit
+                    override fun onFinish() {
+                        if (map.cameraPosition.zoom > 17.0) {
+                            map.animateCamera(CameraUpdateFactory.zoomTo(17.0))
+                        }
+                    }
+                },
+            )
         }
     }
 }

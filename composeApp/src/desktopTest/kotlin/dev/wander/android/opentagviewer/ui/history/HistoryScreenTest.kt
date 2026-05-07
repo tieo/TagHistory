@@ -133,36 +133,6 @@ class HistoryScreenTest {
     }
 
     @Test
-    fun history_fetch_older_button_is_present() = runComposeUiTest {
-        val vm = buildVm()
-        setContent {
-            TagHistoryTheme {
-                Surface {
-                    HistoryScreen(viewModel = vm, title = "Tag", onBack = {})
-                }
-            }
-        }
-        onNodeWithTag("btn_fetch_older").assertIsDisplayed()
-    }
-
-    @Test
-    fun history_fetch_older_disabled_while_loading() = runComposeUiTest {
-        val vm = buildVm(
-            // Suspend indefinitely to hold isLoading = true
-            fetchRange = { _, _, _ -> kotlinx.coroutines.suspendCancellableCoroutine { } },
-        )
-        setContent {
-            TagHistoryTheme {
-                Surface {
-                    HistoryScreen(viewModel = vm, title = "Tag", onBack = {})
-                }
-            }
-        }
-        waitUntil(timeoutMillis = 3_000L) { vm.state.value.isLoading }
-        onNodeWithTag("btn_fetch_older").assertIsNotEnabled()
-    }
-
-    @Test
     fun history_title_shown_in_top_bar() = runComposeUiTest {
         val vm = buildVm()
         setContent {

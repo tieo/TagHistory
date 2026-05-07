@@ -38,10 +38,6 @@ name: History — bottom sheet shows day nav, point list, and "Fetch older"
 - assertVisible:
     id: "history_item_0"
 
-# Fetch older button present
-- assertVisible:
-    id: "btn_fetch_older"
-
 # Navigate to previous day (← arrow)
 - tapOn:
     id: "btn_day_prev"

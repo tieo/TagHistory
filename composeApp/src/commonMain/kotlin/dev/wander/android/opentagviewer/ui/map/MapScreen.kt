@@ -565,7 +565,7 @@ private fun LoadingShimmerCard(modifier: Modifier = Modifier) {
 }
 
 @Composable
-private fun BasemapCycleButton(
+internal fun BasemapCycleButton(
     current: MapBasemap,
     onCycle: () -> Unit,
     modifier: Modifier = Modifier,
