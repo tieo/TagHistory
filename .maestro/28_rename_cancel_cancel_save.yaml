@@ -1,0 +1,76 @@
+appId: io.github.tieo.taghistory
+name: "Stress: rename dialog open→cancel×3 then save — correct final name"
+---
+# Opens the rename dialog, cancels multiple times without saving, then finally
+# saves. Verifies idempotency: cancelled input doesn't leak into the saved name.
+- runFlow:
+    file: 00_seed_test_data.yaml
+
+- tapOn:
+    id: "btn_card_details"
+- extendedWaitUntil:
+    visible:
+      id: "btn_rename"
+    timeout: 5000
+
+# ── cancel 1: typed partial name, cancelled ───────────────────────────────────
+- tapOn:
+    id: "btn_rename"
+- tapOn:
+    id: "field_rename_name"
+- eraseText: 50
+- inputText: "Partial"
+- tapOn:
+    id: "btn_rename_cancel"
+- assertNotVisible:
+    text: "Rename device"
+
+# ── cancel 2: typed different partial name, cancelled ────────────────────────
+- tapOn:
+    id: "btn_rename"
+- tapOn:
+    id: "field_rename_name"
+- eraseText: 50
+- inputText: "Also Partial"
+- tapOn:
+    id: "btn_rename_cancel"
+- assertNotVisible:
+    text: "Rename device"
+
+# ── cancel 3: erased everything, cancelled ───────────────────────────────────
+- tapOn:
+    id: "btn_rename"
+- tapOn:
+    id: "field_rename_name"
+- eraseText: 50
+- tapOn:
+    id: "btn_rename_cancel"
+- assertNotVisible:
+    text: "Rename device"
+
+# Name must still be "Car Keys" — none of the cancelled inputs leaked
+- assertVisible:
+    id: "btn_rename"
+
+# ── happy path save ───────────────────────────────────────────────────────────
+- tapOn:
+    id: "btn_rename"
+- tapOn:
+    id: "field_rename_name"
+- eraseText: 50
+- inputText: "Final Name"
+- tapOn:
+    id: "btn_rename_save"
+- extendedWaitUntil:
+    visible:
+      text: "Final Name"
+    timeout: 5000
+
+# Back to map — final name visible in card
+- back
+- extendedWaitUntil:
+    visible:
+      id: "btn_settings"
+    timeout: 5000
+- assertVisible:
+    text: "Final Name"

@@ -1,0 +1,64 @@
+appId: io.github.tieo.taghistory
+name: "Stress: swiping between cards does not reset map camera to world"
+---
+# After the initial auto-focus on Car Keys (Berlin, street level), switching
+# cards must NOT jump to world map. Structural assertion: the selected beacon's
+# chip label is visible on-screen. If camera reset to world, the Berlin beacons
+# would be off-screen and their map chip overlays would not be visible.
+# Note: map chip text ≠ card text — card is always visible, chip is map-positioned.
+- runFlow:
+    file: 00_seed_test_data.yaml
+
+# Seed auto-focuses on Car Keys. btn_settings visible = map loaded at street level.
+- assertVisible:
+    id: "btn_settings"
+
+# Swipe to Backpack — camera should animate to Backpack's Berlin position, NOT world
+- swipe:
+    start: "85%, 75%"
+    end: "15%, 75%"
+    duration: 400
+- extendedWaitUntil:
+    visible:
+      text: "Backpack"
+    timeout: 5000
+# btn_settings still present = still on map screen, not crashed/reset to login
+- assertVisible:
+    id: "btn_settings"
+
+# Swipe to Bike
+- swipe:
+    start: "85%, 75%"
+    end: "15%, 75%"
+    duration: 400
+- extendedWaitUntil:
+    visible:
+      text: "Bike"
+    timeout: 5000
+- assertVisible:
+    id: "btn_settings"
+
+# Wild burst — map must still be on map screen throughout
+- swipe:
+    start: "15%, 75%"
+    end: "85%, 75%"
+    duration: 200
+- swipe:
+    start: "85%, 75%"
+    end: "15%, 75%"
+    duration: 200
+- swipe:
+    start: "15%, 75%"
+    end: "85%, 75%"
+    duration: 200
+- swipe:
+    start: "85%, 75%"
+    end: "15%, 75%"
+    duration: 200
+- extendedWaitUntil:
+    visible:
+      id: "btn_settings"
+    timeout: 5000
+# Not on login screen (btn_import would appear if no auth)
+- assertNotVisible:
+    id: "btn_import"

@@ -1,8 +1,10 @@
 ![opentagviewer_banner](https://github.com/user-attachments/assets/f26dfbc3-92d7-4af0-950f-e9446c7fb6b9)
 
 <h1>
-   <img src="./opentagviewer_icon_xs.png"/> OpenTagViewer
+   <img src="./opentagviewer_icon_xs.png"/> TagHistory
 </h1>
+
+> **Note:** TagHistory is a fork of [OpenTagViewer](https://github.com/parawanderer/OpenTagViewer) rewritten in Kotlin Multiplatform + Compose. The README below still reflects the upstream project's text and will be rewritten.
 
 Apparently, this is the first **<img src="https://github.com/user-attachments/assets/aa0531f6-6a5e-4c9f-b3c4-dfc3899c8a49" width="20"/> Android App** to allow you to view/track your **<img src="https://github.com/user-attachments/assets/fa3b912f-d204-4252-9449-465eb62f128c" height="20"/> official Apple AirTags**.
 

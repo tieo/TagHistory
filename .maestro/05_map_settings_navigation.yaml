@@ -1,0 +1,21 @@
+appId: io.github.tieo.taghistory
+name: Map screen — settings button opens settings screen
+---
+- runFlow:
+    file: 00_seed_test_data.yaml
+
+- tapOn:
+    id: "btn_settings"
+- extendedWaitUntil:
+    visible:
+      text: "Settings"
+    timeout: 5000
+- assertVisible:
+    text: "Appearance"
+- assertVisible:
+    text: "Background sync"
+- back
+- extendedWaitUntil:
+    visible:
+      id: "btn_settings"
+    timeout: 5000

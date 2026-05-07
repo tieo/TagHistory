@@ -1,0 +1,30 @@
+appId: io.github.tieo.taghistory
+name: Settings — theme selector has three choices and responds to taps
+---
+- runFlow:
+    file: 00_seed_test_data.yaml
+
+- tapOn:
+    id: "btn_settings"
+- extendedWaitUntil:
+    visible:
+      text: "Settings"
+    timeout: 5000
+- assertVisible:
+    id: "btn_theme_system"
+- assertVisible:
+    id: "btn_theme_light"
+- assertVisible:
+    id: "btn_theme_dark"
+- tapOn:
+    id: "btn_theme_light"
+- assertVisible:
+    id: "btn_theme_light"
+- tapOn:
+    id: "btn_theme_dark"
+- assertVisible:
+    id: "btn_theme_dark"
+- tapOn:
+    id: "btn_theme_system"
+- assertVisible:
+    id: "btn_theme_system"

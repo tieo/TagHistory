@@ -1,0 +1,123 @@
+appId: io.github.tieo.taghistory
+name: "Stress: wild card swipes — card always lands on correct beacon"
+---
+# Hammers the pager with boundary slams and single-step advances.
+# Strategy: slam to a known boundary, then step to a specific card.
+# This is deterministic regardless of pager animation timing.
+# Catches: off-by-one, pager desynced from selectedBeaconId, recomposition reset.
+- runFlow:
+    file: 00_seed_test_data.yaml
+
+# ── slam left past the end → Bike (boundary) ─────────────────────────────────
+- swipe:
+    start: "85%, 75%"
+    end: "15%, 75%"
+    duration: 300
+- swipe:
+    start: "85%, 75%"
+    end: "15%, 75%"
+    duration: 300
+- swipe:
+    start: "85%, 75%"
+    end: "15%, 75%"
+    duration: 300
+- swipe:
+    start: "85%, 75%"
+    end: "15%, 75%"
+    duration: 300
+- swipe:
+    start: "85%, 75%"
+    end: "15%, 75%"
+    duration: 300
+- extendedWaitUntil:
+    visible:
+      text: "Bike"
+    timeout: 5000
+
+# ── one step right from Bike → Backpack ──────────────────────────────────────
+- swipe:
+    start: "15%, 75%"
+    end: "85%, 75%"
+    duration: 400
+- extendedWaitUntil:
+    visible:
+      text: "Backpack"
+    timeout: 5000
+
+# ── one more step right → Car Keys ───────────────────────────────────────────
+- swipe:
+    start: "15%, 75%"
+    end: "85%, 75%"
+    duration: 400
+- extendedWaitUntil:
+    visible:
+      text: "Car Keys"
+    timeout: 5000
+
+# ── slam right past the start → Car Keys (boundary) ──────────────────────────
+- swipe:
+    start: "15%, 75%"
+    end: "85%, 75%"
+    duration: 300
+- swipe:
+    start: "15%, 75%"
+    end: "85%, 75%"
+    duration: 300
+- swipe:
+    start: "15%, 75%"
+    end: "85%, 75%"
+    duration: 300
+- extendedWaitUntil:
+    visible:
+      text: "Car Keys"
+    timeout: 5000
+
+# ── two steps left → Bike ─────────────────────────────────────────────────────
+- swipe:
+    start: "85%, 75%"
+    end: "15%, 75%"
+    duration: 400
+- extendedWaitUntil:
+    visible:
+      text: "Backpack"
+    timeout: 5000
+- swipe:
+    start: "85%, 75%"
+    end: "15%, 75%"
+    duration: 400
+- extendedWaitUntil:
+    visible:
+      text: "Bike"
+    timeout: 5000
+
+# ── slam right from Bike → Car Keys ──────────────────────────────────────────
+- swipe:
+    start: "15%, 75%"
+    end: "85%, 75%"
+    duration: 300
+- swipe:
+    start: "15%, 75%"
+    end: "85%, 75%"
+    duration: 300
+- swipe:
+    start: "15%, 75%"
+    end: "85%, 75%"
+    duration: 300
+- extendedWaitUntil:
+    visible:
+      text: "Car Keys"
+    timeout: 5000
+
+# ── step to middle, check buttons still alive ─────────────────────────────────
+- swipe:
+    start: "85%, 75%"
+    end: "15%, 75%"
+    duration: 400
+- extendedWaitUntil:
+    visible:
+      text: "Backpack"
+    timeout: 5000
+- assertVisible:
+    id: "btn_card_details"
+- assertVisible:
+    id: "btn_card_history"

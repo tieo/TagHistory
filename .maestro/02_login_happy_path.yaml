@@ -1,0 +1,36 @@
+appId: io.github.tieo.taghistory
+name: Login — full happy path (requires APPLE_EMAIL + APPLE_PASSWORD + APPLE_2FA_CODE env vars)
+---
+# Run: maestro test --env APPLE_EMAIL=you@icloud.com --env APPLE_PASSWORD=pw --env APPLE_2FA_CODE=123456 .maestro/02_login_happy_path.yaml
+- launchApp:
+    clearState: true
+
+- tapOn:
+    id: "field_email"
+- inputText: "${APPLE_EMAIL}"
+
+- tapOn:
+    id: "field_password"
+- inputText: "${APPLE_PASSWORD}"
+
+- tapOn:
+    id: "btn_login"
+
+# 2FA code entry screen
+- extendedWaitUntil:
+    visible:
+      id: "btn_verify"
+    timeout: 15000
+
+- tapOn:
+    id: "field_otp_code"
+- inputText: "${APPLE_2FA_CODE}"
+
+- tapOn:
+    id: "btn_verify"
+
+# Should land on map screen after successful login
+- extendedWaitUntil:
+    visible:
+      id: "btn_settings"
+    timeout: 20000

@@ -1,0 +1,40 @@
+appId: io.github.tieo.taghistory
+name: Device info — rename dialog opens, cancel dismisses, happy-path save works
+---
+- runFlow:
+    file: 00_seed_test_data.yaml
+
+# Open device info for the first beacon (Car Keys)
+- tapOn:
+    id: "btn_card_details"
+- extendedWaitUntil:
+    visible:
+      id: "btn_rename"
+    timeout: 5000
+
+# Cancel path: dialog opens and closes without saving
+- tapOn:
+    id: "btn_rename"
+- assertVisible:
+    text: "Rename device"
+- tapOn:
+    id: "btn_rename_cancel"
+- assertNotVisible:
+    text: "Rename device"
+- assertVisible:
+    id: "btn_rename"
+
+# Happy path: type new name, save, dialog dismissed
+- tapOn:
+    id: "btn_rename"
+- tapOn:
+    id: "field_rename_name"
+- eraseText: 50
+- inputText: "My Test Tag"
+- tapOn:
+    id: "btn_rename_save"
+- assertNotVisible:
+    text: "Rename device"
+# Name persisted — visible in device info header
+- assertVisible:
+    text: "My Test Tag"

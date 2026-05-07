@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Two things this config does:
+
+    1. Trust Apple's legacy + G2 + G3 root CAs on Apple-owned hosts.
+       gsa.apple.com serves a chain that terminates at the legacy SHA-1
+       "Apple Root CA". That root isn't accepted for server-auth in
+       modern Android's system store, so HttpURLConnection bails with
+       "Unacceptable certificate: CN=Apple Root CA". Apple's servers
+       aren't going to migrate, so we bundle the three Apple roots in
+       res/raw/ and trust them alongside the system store for Apple
+       domains only — everything else keeps default trust.
+
+    2. Allow cleartext to 127.0.0.1 so the on-device anisette bridge
+       (LocalAnisetteHttpBridge → 127.0.0.1:<port>) can be reached
+       without the Rust side having to terminate TLS.
+-->
+<network-security-config>
+    <domain-config>
+        <domain includeSubdomains="true">apple.com</domain>
+        <domain includeSubdomains="true">icloud.com</domain>
+        <domain includeSubdomains="true">mzstatic.com</domain>
+        <trust-anchors>
+            <certificates src="system" />
+            <certificates src="@raw/apple_root_ca" />
+            <certificates src="@raw/apple_root_ca_g2" />
+            <certificates src="@raw/apple_root_ca_g3" />
+        </trust-anchors>
+    </domain-config>
+
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="true">127.0.0.1</domain>
+        <domain includeSubdomains="true">localhost</domain>
+    </domain-config>
+</network-security-config>

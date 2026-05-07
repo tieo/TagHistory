@@ -1,0 +1,34 @@
+appId: io.github.tieo.taghistory
+name: Settings — About button navigates to information screen
+---
+- runFlow:
+    file: 00_seed_test_data.yaml
+
+- tapOn:
+    id: "btn_settings"
+- extendedWaitUntil:
+    visible:
+      text: "Settings"
+    timeout: 5000
+- scrollUntilVisible:
+    element:
+      id: "btn_about"
+    direction: DOWN
+    timeout: 5000
+- tapOn:
+    id: "btn_about"
+- extendedWaitUntil:
+    visible:
+      text: "TagHistory"
+    timeout: 5000
+- assertVisible:
+    id: "btn_source_code"
+- assertVisible:
+    id: "btn_developer_website"
+- assertVisible:
+    id: "btn_license"
+- back
+- extendedWaitUntil:
+    visible:
+      text: "Settings"
+    timeout: 5000

@@ -1,0 +1,50 @@
+appId: io.github.tieo.taghistory
+name: Map screen — seeded beacons appear as cards and markers
+---
+# Structural assertions: card text visible, pager scrollable via card-area swipes
+- runFlow:
+    file: 00_seed_test_data.yaml
+
+# First card must be Car Keys (most recent — seeded 30 min ago)
+- assertVisible:
+    text: "Car Keys"
+- assertVisible:
+    id: "btn_card_details"
+- assertVisible:
+    id: "btn_card_history"
+
+# Swipe LEFT on card area (75% down screen) → Backpack
+- swipe:
+    start: "85%, 75%"
+    end: "15%, 75%"
+    duration: 400
+- extendedWaitUntil:
+    visible:
+      text: "Backpack"
+    timeout: 5000
+- assertVisible:
+    id: "btn_card_details"
+
+# Swipe LEFT again → Bike
+- swipe:
+    start: "85%, 75%"
+    end: "15%, 75%"
+    duration: 400
+- extendedWaitUntil:
+    visible:
+      text: "Bike"
+    timeout: 5000
+
+# Swipe RIGHT twice → Car Keys again
+- swipe:
+    start: "15%, 75%"
+    end: "85%, 75%"
+    duration: 400
+- swipe:
+    start: "15%, 75%"
+    end: "85%, 75%"
+    duration: 400
+- extendedWaitUntil:
+    visible:
+      text: "Car Keys"
+    timeout: 5000

@@ -1,0 +1,39 @@
+appId: io.github.tieo.taghistory
+name: History screen — opening from card pager different beacons
+---
+- runFlow:
+    file: 00_seed_test_data.yaml
+
+# Car Keys history (6 reports seeded)
+- tapOn:
+    id: "btn_card_history"
+- extendedWaitUntil:
+    visible:
+      id: "btn_fetch_older"
+    timeout: 5000
+- back
+- extendedWaitUntil:
+    visible:
+      id: "btn_settings"
+    timeout: 5000
+
+# Swipe to Backpack (2 reports seeded)
+- swipe:
+    start: "85%, 75%"
+    end: "15%, 75%"
+    duration: 400
+- extendedWaitUntil:
+    visible:
+      text: "Backpack"
+    timeout: 5000
+- tapOn:
+    id: "btn_card_history"
+- extendedWaitUntil:
+    visible:
+      id: "btn_fetch_older"
+    timeout: 5000
+- back
+- extendedWaitUntil:
+    visible:
+      id: "btn_settings"
+    timeout: 5000

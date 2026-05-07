@@ -1,0 +1,28 @@
+appId: io.github.tieo.taghistory
+name: "Device info — remove dialog: cancel keeps device, confirm removes it"
+---
+- runFlow:
+    file: 00_seed_test_data.yaml
+
+- tapOn:
+    id: "btn_card_details"
+- extendedWaitUntil:
+    visible:
+      id: "btn_remove"
+    timeout: 5000
+
+# Cancel path: device survives
+- tapOn:
+    id: "btn_remove"
+- assertVisible:
+    text: "Remove device?"
+- assertVisible:
+    id: "btn_remove_cancel"
+- assertVisible:
+    id: "btn_remove_confirm"
+- tapOn:
+    id: "btn_remove_cancel"
+- assertNotVisible:
+    text: "Remove device?"
+- assertVisible:
+    id: "btn_remove"

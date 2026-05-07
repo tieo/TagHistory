@@ -1,0 +1,30 @@
+appId: io.github.tieo.taghistory
+name: Device info — rename with empty name keeps save button disabled or shows error
+---
+# Invalid input path: erasing all text must prevent save (button disabled or validation shown).
+- runFlow:
+    file: 00_seed_test_data.yaml
+
+- tapOn:
+    id: "btn_card_details"
+- extendedWaitUntil:
+    visible:
+      id: "btn_rename"
+    timeout: 5000
+- tapOn:
+    id: "btn_rename"
+- assertVisible:
+    text: "Rename device"
+- tapOn:
+    id: "field_rename_name"
+- eraseText: 50
+# Save with empty field must NOT dismiss dialog
+- tapOn:
+    id: "btn_rename_save"
+- assertVisible:
+    text: "Rename device"
+# Dismiss cleanly
+- tapOn:
+    id: "btn_rename_cancel"
+- assertNotVisible:
+    text: "Rename device"

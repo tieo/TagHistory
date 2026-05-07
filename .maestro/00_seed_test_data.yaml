@@ -1,0 +1,14 @@
+appId: io.github.tieo.taghistory
+name: Seed test data — fake auth + 3 beacons + location reports
+---
+# Wipe previous app state so the seed is authoritative, then trigger
+# TestSeedActivity via its deep link. It seeds idempotently and hands off
+# to MainActivity. Structural assertion: btn_settings visible on map = auth
+# succeeded and at least one beacon card rendered.
+- launchApp:
+    clearState: true
+- openLink: taghistory://test/seed
+- extendedWaitUntil:
+    visible:
+      id: "btn_settings"
+    timeout: 15000

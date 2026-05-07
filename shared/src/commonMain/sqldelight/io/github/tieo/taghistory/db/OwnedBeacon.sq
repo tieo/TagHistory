@@ -1,0 +1,33 @@
+-- Mirrors the Room OwnedBeacon entity. Keep table name as "OwnedBeacons"
+-- (plural) to match the existing Room schema so installs that upgrade
+-- in-place read the same table.
+
+CREATE TABLE IF NOT EXISTS OwnedBeacons (
+    id TEXT NOT NULL PRIMARY KEY,
+    import_id INTEGER,
+    content TEXT,
+    version TEXT,
+    is_removed INTEGER AS kotlin.Boolean NOT NULL DEFAULT 0,
+    FOREIGN KEY (import_id) REFERENCES Import(id) ON UPDATE CASCADE ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS OwnedBeacons_import_id ON OwnedBeacons(import_id);
+
+getAll:
+SELECT * FROM OwnedBeacons WHERE is_removed = 0;
+
+getAllByImportId:
+SELECT * FROM OwnedBeacons WHERE import_id = :importId AND is_removed = 0;
+
+getById:
+SELECT * FROM OwnedBeacons WHERE id = :beaconId AND is_removed = 0;
+
+upsert:
+INSERT OR REPLACE INTO OwnedBeacons(id, import_id, content, version, is_removed)
+VALUES (:id, :importId, :content, :version, :isRemoved);
+
+setRemoved:
+UPDATE OwnedBeacons SET is_removed = 1 WHERE id = :beaconId;
+
+deleteById:
+DELETE FROM OwnedBeacons WHERE id = :beaconId;

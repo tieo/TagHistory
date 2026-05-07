@@ -1,0 +1,20 @@
+-- Per-beacon user customization (display name override, emoji). One row
+-- per beacon, keyed on beacon_id.
+
+CREATE TABLE IF NOT EXISTS UserBeaconOptions (
+    beacon_id TEXT NOT NULL PRIMARY KEY,
+    last_update INTEGER NOT NULL,
+    ui_name TEXT,
+    ui_emoji TEXT,
+    FOREIGN KEY (beacon_id) REFERENCES OwnedBeacons(id) ON UPDATE CASCADE ON DELETE CASCADE
+);
+
+getAll:
+SELECT * FROM UserBeaconOptions;
+
+getById:
+SELECT * FROM UserBeaconOptions WHERE beacon_id = :beaconId;
+
+upsert:
+INSERT OR REPLACE INTO UserBeaconOptions(beacon_id, last_update, ui_name, ui_emoji)
+VALUES (:beaconId, :lastUpdate, :uiName, :uiEmoji);

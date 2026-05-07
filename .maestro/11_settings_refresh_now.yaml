@@ -1,0 +1,21 @@
+appId: io.github.tieo.taghistory
+name: Settings — Refresh now button visible and tappable
+---
+- runFlow:
+    file: 00_seed_test_data.yaml
+
+- tapOn:
+    id: "btn_settings"
+- extendedWaitUntil:
+    visible:
+      text: "Settings"
+    timeout: 5000
+- assertVisible:
+    id: "btn_refresh_now"
+- tapOn:
+    id: "btn_refresh_now"
+# Refresh triggers background work; Settings screen must still be visible after
+- extendedWaitUntil:
+    visible:
+      text: "Settings"
+    timeout: 10000

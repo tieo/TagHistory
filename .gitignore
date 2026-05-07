@@ -17,7 +17,16 @@ local.properties
 build/
 dist/
 __pycache__/
-app/release
 .coverage
 .pytest_cache
 .venv
+
+# Rust-built JNI bridge — produced by `cargoBuildOttjni` Gradle task from rust/
+composeApp/src/androidMain/jniLibs/
+
+# Apple .so files extracted from Apple Music APK by `extractAppleLibs`
+# Gradle task; repackaged under <filesDir>/anisette/lib/ at runtime.
+androidApp/src/main/assets/apple-libs/
+
+# Rust cargo target
+rust/target/

@@ -1,0 +1,70 @@
+appId: io.github.tieo.taghistory
+name: "Stress: history→back for every beacon — card stays synced"
+---
+# Opens history from every card's History button and verifies back returns to
+# the same card. Catches the pager-reset-on-back class of bugs from map ↔ nav.
+- runFlow:
+    file: 00_seed_test_data.yaml
+
+# ── Car Keys (6 reports) ─────────────────────────────────────────────────────
+- assertVisible:
+    text: "Car Keys"
+- tapOn:
+    id: "btn_card_history"
+- extendedWaitUntil:
+    visible:
+      id: "btn_fetch_older"
+    timeout: 5000
+- back
+- extendedWaitUntil:
+    visible:
+      id: "btn_settings"
+    timeout: 5000
+- assertVisible:
+    text: "Car Keys"
+
+# ── Backpack (2 reports) ─────────────────────────────────────────────────────
+- swipe:
+    start: "85%, 75%"
+    end: "15%, 75%"
+    duration: 400
+- extendedWaitUntil:
+    visible:
+      text: "Backpack"
+    timeout: 5000
+- tapOn:
+    id: "btn_card_history"
+- extendedWaitUntil:
+    visible:
+      id: "btn_fetch_older"
+    timeout: 5000
+- back
+- extendedWaitUntil:
+    visible:
+      id: "btn_settings"
+    timeout: 5000
+- assertVisible:
+    text: "Backpack"
+
+# ── Bike (1 report) ──────────────────────────────────────────────────────────
+- swipe:
+    start: "85%, 75%"
+    end: "15%, 75%"
+    duration: 400
+- extendedWaitUntil:
+    visible:
+      text: "Bike"
+    timeout: 5000
+- tapOn:
+    id: "btn_card_history"
+- extendedWaitUntil:
+    visible:
+      id: "btn_fetch_older"
+    timeout: 5000
+- back
+- extendedWaitUntil:
+    visible:
+      id: "btn_settings"
+    timeout: 5000
+- assertVisible:
+    text: "Bike"

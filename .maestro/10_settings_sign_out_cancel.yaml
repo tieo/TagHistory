@@ -1,0 +1,33 @@
+appId: io.github.tieo.taghistory
+name: Settings — sign out dialog cancel keeps user signed in
+---
+# Dialog buttons render in a separate window — use text selectors, not IDs.
+- runFlow:
+    file: 00_seed_test_data.yaml
+
+- tapOn:
+    id: "btn_settings"
+- extendedWaitUntil:
+    visible:
+      text: "Settings"
+    timeout: 5000
+- scrollUntilVisible:
+    element:
+      id: "btn_sign_out"
+    direction: DOWN
+    timeout: 5000
+- tapOn:
+    id: "btn_sign_out"
+- assertVisible:
+    text: "Sign out?"
+- assertVisible:
+    text: "Cancel"
+- assertVisible:
+    text: "Sign out"
+- tapOn:
+    text: "Cancel"
+- assertNotVisible:
+    text: "Sign out?"
+# Still on Settings (btn_sign_out visible = not signed out, not navigated away)
+- assertVisible:
+    id: "btn_sign_out"

@@ -1,0 +1,55 @@
+-- Mirrors the Room LocationReport entity. Primary key is the SHA-256
+-- content hash (see BeaconLocationReportHasher) so duplicate records from
+-- overlapping fetch windows collapse automatically.
+
+CREATE TABLE IF NOT EXISTS LocationReport (
+    hash_id TEXT NOT NULL PRIMARY KEY,
+    beacon_id TEXT NOT NULL,
+    published_at INTEGER NOT NULL,
+    description TEXT,
+    timestamp INTEGER NOT NULL,
+    confidence INTEGER NOT NULL,
+    latitude REAL NOT NULL,
+    longitude REAL NOT NULL,
+    horizontal_accuracy INTEGER NOT NULL,
+    status INTEGER NOT NULL,
+    last_update INTEGER NOT NULL,
+    FOREIGN KEY (beacon_id) REFERENCES OwnedBeacons(id) ON UPDATE CASCADE ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS LocationReport_index ON LocationReport(hash_id, beacon_id, timestamp);
+
+getLastFor:
+SELECT * FROM LocationReport WHERE beacon_id = :beaconId ORDER BY timestamp DESC LIMIT 1;
+
+getInTimeRange:
+SELECT * FROM LocationReport
+WHERE beacon_id = :beaconId
+  AND timestamp >= :startUnixMs
+  AND timestamp < :endUnixMs
+ORDER BY timestamp ASC;
+
+getLastForAllBeacons:
+SELECT
+    hash_id,
+    beacon_id,
+    published_at,
+    description,
+    MAX(timestamp) AS timestamp,
+    confidence,
+    latitude,
+    longitude,
+    horizontal_accuracy,
+    status,
+    last_update
+FROM LocationReport
+GROUP BY beacon_id;
+
+upsert:
+INSERT OR REPLACE INTO LocationReport(
+    hash_id, beacon_id, published_at, description, timestamp, confidence,
+    latitude, longitude, horizontal_accuracy, status, last_update
+) VALUES (
+    :hashId, :beaconId, :publishedAt, :description, :timestamp, :confidence,
+    :latitude, :longitude, :horizontalAccuracy, :status, :lastUpdate
+);
