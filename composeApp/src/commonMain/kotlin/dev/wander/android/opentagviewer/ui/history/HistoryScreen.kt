@@ -101,7 +101,7 @@ fun HistoryScreen(
     }
 
     val sheetState = rememberStandardBottomSheetState(
-        initialValue = SheetValue.Expanded,
+        initialValue = SheetValue.PartiallyExpanded,
         skipHiddenState = true,
     )
     val scaffoldState = rememberBottomSheetScaffoldState(bottomSheetState = sheetState)
@@ -120,7 +120,7 @@ fun HistoryScreen(
     BottomSheetScaffold(
         scaffoldState = scaffoldState,
         modifier = modifier.fillMaxSize(),
-        sheetPeekHeight = 96.dp,
+        sheetPeekHeight = 240.dp,
         sheetContent = {
             SheetContent(
                 days = days,
@@ -142,19 +142,12 @@ fun HistoryScreen(
         },
     ) { _ ->
         Box(modifier = Modifier.fillMaxSize()) {
-            when {
-                state.isLoading && state.points.isEmpty() -> FullScreenMessage(loading = true)
-                state.error != null && state.points.isEmpty() ->
-                    FullScreenMessage(message = state.error ?: "Couldn't load history", isError = true)
-                days.isEmpty() && !state.isLoading -> FullScreenMessage(message = "No history yet")
-                chronological.isEmpty() -> FullScreenMessage(message = "No points on this day")
-                else -> HistoryMapView(
-                    points = chronological,
-                    selectedPointIndex = selectedPointIdx,
-                    basemap = basemap,
-                    modifier = Modifier.fillMaxSize(),
-                )
-            }
+            HistoryMapView(
+                points = chronological,
+                selectedPointIndex = selectedPointIdx,
+                basemap = basemap,
+                modifier = Modifier.fillMaxSize(),
+            )
 
             FilledIconButton(
                 onClick = onBack,
