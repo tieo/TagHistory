@@ -1,0 +1,66 @@
+appId: io.github.tieo.taghistory
+name: Map — opening details from card pager works for all three beacons
+---
+# Opens DeviceInfo via btn_card_details for each card and verifies the rename
+# button is rendered (proving the device-info ViewModel loaded).
+- runFlow:
+    file: 00_seed_test_data.yaml
+
+# Car Keys
+- assertVisible:
+    text: "Car Keys"
+- tapOn:
+    id: "btn_card_details"
+- extendedWaitUntil:
+    visible:
+      id: "btn_rename"
+    timeout: 5000
+- back
+- extendedWaitUntil:
+    visible:
+      id: "btn_settings"
+    timeout: 5000
+
+# Backpack
+- swipe:
+    start: "85%, 75%"
+    end: "15%, 75%"
+    duration: 400
+- extendedWaitUntil:
+    visible:
+      text: "Backpack"
+    timeout: 5000
+- tapOn:
+    id: "btn_card_details"
+- extendedWaitUntil:
+    visible:
+      id: "btn_rename"
+    timeout: 5000
+- back
+- extendedWaitUntil:
+    visible:
+      id: "btn_settings"
+    timeout: 5000
+
+# Bike
+- swipe:
+    start: "85%, 75%"
+    end: "15%, 75%"
+    duration: 400
+- extendedWaitUntil:
+    visible:
+      text: "Bike"
+    timeout: 5000
+- tapOn:
+    id: "btn_card_details"
+- extendedWaitUntil:
+    visible:
+      id: "btn_rename"
+    timeout: 5000
+- back
+- extendedWaitUntil:
+    visible:
+      id: "btn_settings"
+    timeout: 5000
+- assertVisible:
+    text: "Bike"

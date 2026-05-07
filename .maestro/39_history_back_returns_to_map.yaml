@@ -1,0 +1,28 @@
+appId: io.github.tieo.taghistory
+name: History — back from history returns to map (btn_settings reappears)
+---
+- runFlow:
+    file: 00_seed_test_data.yaml
+
+- tapOn:
+    id: "btn_card_history"
+- extendedWaitUntil:
+    visible:
+      id: "btn_day_prev"
+    timeout: 5000
+
+# btn_settings is part of map screen and should not be visible while history
+# screen is up
+- assertNotVisible:
+    id: "btn_settings"
+
+- back
+
+- extendedWaitUntil:
+    visible:
+      id: "btn_settings"
+    timeout: 5000
+- assertVisible:
+    id: "btn_settings"
+- assertVisible:
+    text: "Car Keys"

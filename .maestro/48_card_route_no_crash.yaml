@@ -1,0 +1,45 @@
+appId: io.github.tieo.taghistory
+name: Map — tapping btn_card_route launches chooser without crashing
+---
+# btn_card_route action triggers a "navigate to" intent. The system app-
+# chooser may or may not appear depending on installed nav apps. Either way
+# the app must NOT crash. We verify by checking the back-press returns us
+# to the map screen with btn_settings visible.
+#
+# NOTE: btn_card_route doesn't have a testTag — the third CardCircleAction
+# tag is null. We tap by the visible "Route" label instead.
+- runFlow:
+    file: 00_seed_test_data.yaml
+
+- assertVisible:
+    text: "Car Keys"
+- assertVisible:
+    text: "Route"
+- tapOn:
+    text: "Route"
+
+# The chooser may not appear if no nav apps are installed. If the chooser
+# appears, dismiss it. Either way the app process must still be alive.
+- runFlow:
+    when:
+      notVisible:
+        id: "btn_settings"
+    commands:
+      - back
+
+# After dismissing any chooser/launched activity, we must be back on the map
+# OR we may be on launcher (chooser intent took us there). Re-launching the
+# app verifies the process is still healthy.
+- runFlow:
+    when:
+      notVisible:
+        id: "btn_settings"
+    commands:
+      - openLink: taghistory://test/seed
+      - extendedWaitUntil:
+          visible:
+            id: "btn_settings"
+          timeout: 10000
+
+- assertVisible:
+    id: "btn_settings"

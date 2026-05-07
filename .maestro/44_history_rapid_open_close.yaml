@@ -1,0 +1,133 @@
+appId: io.github.tieo.taghistory
+name: History — open/close ten times in a row, app stays alive
+---
+# Hammers the navigation: open history, back to map, ten rounds. After
+# each round the map screen still has btn_settings visible. Catches
+# memory leaks, ViewModel re-init storms, navigation stack corruption.
+- runFlow:
+    file: 00_seed_test_data.yaml
+
+# 10 rounds
+- tapOn:
+    id: "btn_card_history"
+- extendedWaitUntil:
+    visible:
+      id: "btn_day_prev"
+    timeout: 5000
+- back
+- extendedWaitUntil:
+    visible:
+      id: "btn_settings"
+    timeout: 5000
+
+- tapOn:
+    id: "btn_card_history"
+- extendedWaitUntil:
+    visible:
+      id: "btn_day_prev"
+    timeout: 5000
+- back
+- extendedWaitUntil:
+    visible:
+      id: "btn_settings"
+    timeout: 5000
+
+- tapOn:
+    id: "btn_card_history"
+- extendedWaitUntil:
+    visible:
+      id: "btn_day_prev"
+    timeout: 5000
+- back
+- extendedWaitUntil:
+    visible:
+      id: "btn_settings"
+    timeout: 5000
+
+- tapOn:
+    id: "btn_card_history"
+- extendedWaitUntil:
+    visible:
+      id: "btn_day_prev"
+    timeout: 5000
+- back
+- extendedWaitUntil:
+    visible:
+      id: "btn_settings"
+    timeout: 5000
+
+- tapOn:
+    id: "btn_card_history"
+- extendedWaitUntil:
+    visible:
+      id: "btn_day_prev"
+    timeout: 5000
+- back
+- extendedWaitUntil:
+    visible:
+      id: "btn_settings"
+    timeout: 5000
+
+- tapOn:
+    id: "btn_card_history"
+- extendedWaitUntil:
+    visible:
+      id: "btn_day_prev"
+    timeout: 5000
+- back
+- extendedWaitUntil:
+    visible:
+      id: "btn_settings"
+    timeout: 5000
+
+- tapOn:
+    id: "btn_card_history"
+- extendedWaitUntil:
+    visible:
+      id: "btn_day_prev"
+    timeout: 5000
+- back
+- extendedWaitUntil:
+    visible:
+      id: "btn_settings"
+    timeout: 5000
+
+- tapOn:
+    id: "btn_card_history"
+- extendedWaitUntil:
+    visible:
+      id: "btn_day_prev"
+    timeout: 5000
+- back
+- extendedWaitUntil:
+    visible:
+      id: "btn_settings"
+    timeout: 5000
+
+- tapOn:
+    id: "btn_card_history"
+- extendedWaitUntil:
+    visible:
+      id: "btn_day_prev"
+    timeout: 5000
+- back
+- extendedWaitUntil:
+    visible:
+      id: "btn_settings"
+    timeout: 5000
+
+- tapOn:
+    id: "btn_card_history"
+- extendedWaitUntil:
+    visible:
+      id: "btn_day_prev"
+    timeout: 5000
+- back
+- extendedWaitUntil:
+    visible:
+      id: "btn_settings"
+    timeout: 5000
+
+# Final assertion: card pager still shows the original card
+- assertVisible:
+    text: "Car Keys"

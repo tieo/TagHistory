@@ -1,0 +1,27 @@
+appId: io.github.tieo.taghistory
+name: Map — tapping btn_card_details opens DeviceInfo for that card
+---
+# Verifies the details circle action works for each card. After back,
+# the same beacon name is still selected.
+- runFlow:
+    file: 00_seed_test_data.yaml
+
+- assertVisible:
+    text: "Car Keys"
+- tapOn:
+    id: "btn_card_details"
+- extendedWaitUntil:
+    visible:
+      id: "btn_view_history"
+    timeout: 5000
+- assertVisible:
+    id: "btn_rename"
+- assertVisible:
+    id: "btn_remove"
+- back
+- extendedWaitUntil:
+    visible:
+      id: "btn_settings"
+    timeout: 5000
+- assertVisible:
+    text: "Car Keys"

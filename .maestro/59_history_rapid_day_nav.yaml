@@ -1,0 +1,54 @@
+appId: io.github.tieo.taghistory
+name: History — rapid day prev/next does not crash, ends on valid label
+---
+# Mash btn_day_prev and btn_day_next alternately. Final state must show one
+# of the legal day labels (Today, Yesterday, or YYYY-MM-DD). The day-nav
+# controls remain visible the entire time.
+- runFlow:
+    file: 00_seed_test_data.yaml
+
+- tapOn:
+    id: "btn_card_history"
+- extendedWaitUntil:
+    visible:
+      text: "Today"
+    timeout: 6000
+
+# left, right, left, right, left, right
+- tapOn:
+    id: "btn_day_prev"
+    optional: true
+- tapOn:
+    id: "btn_day_next"
+    optional: true
+- tapOn:
+    id: "btn_day_prev"
+    optional: true
+- tapOn:
+    id: "btn_day_next"
+    optional: true
+- tapOn:
+    id: "btn_day_prev"
+    optional: true
+- tapOn:
+    id: "btn_day_next"
+    optional: true
+
+# Day-nav controls still alive
+- assertVisible:
+    id: "btn_day_prev"
+- assertVisible:
+    id: "btn_day_next"
+
+# Final label is one of: Today, Yesterday, or YYYY-MM-DD. Today wins
+# after balanced taps starting from Today.
+- extendedWaitUntil:
+    visible:
+      text: "Today"
+    timeout: 5000
+
+- back
+- extendedWaitUntil:
+    visible:
+      id: "btn_settings"
+    timeout: 5000

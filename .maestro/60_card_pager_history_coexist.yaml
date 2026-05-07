@@ -1,0 +1,61 @@
+appId: io.github.tieo.taghistory
+name: History + Pager — open history, back, swipe to next, open history again
+---
+# Verifies that opening then closing history does not break the card pager,
+# and that swiping the pager afterwards still navigates to a different
+# beacon's history. Catches state leaks where the pager freezes after a
+# back-pop or where the History VM caches the wrong beacon ID.
+- runFlow:
+    file: 00_seed_test_data.yaml
+
+# Card 1 (Car Keys) -> History -> back
+- assertVisible:
+    text: "Car Keys"
+- tapOn:
+    id: "btn_card_history"
+- extendedWaitUntil:
+    visible:
+      id: "btn_day_prev"
+    timeout: 5000
+- back
+- extendedWaitUntil:
+    visible:
+      id: "btn_settings"
+    timeout: 5000
+- assertVisible:
+    text: "Car Keys"
+
+# Swipe to card 2 (Backpack)
+- swipe:
+    start: "85%, 75%"
+    end: "15%, 75%"
+    duration: 400
+- extendedWaitUntil:
+    visible:
+      text: "Backpack"
+    timeout: 5000
+
+# Card 2 -> History -> back
+- tapOn:
+    id: "btn_card_history"
+- extendedWaitUntil:
+    visible:
+      id: "btn_day_prev"
+    timeout: 5000
+- back
+- extendedWaitUntil:
+    visible:
+      id: "btn_settings"
+    timeout: 5000
+- assertVisible:
+    text: "Backpack"
+
+# Swipe back to card 1, sanity check pager still works
+- swipe:
+    start: "15%, 75%"
+    end: "85%, 75%"
+    duration: 400
+- extendedWaitUntil:
+    visible:
+      text: "Car Keys"
+    timeout: 5000

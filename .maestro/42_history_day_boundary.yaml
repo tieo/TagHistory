@@ -1,0 +1,35 @@
+appId: io.github.tieo.taghistory
+name: History — pressing day-next at Today (boundary) is a no-op, day stays Today
+---
+# Today is the newest seeded day. btn_day_next is disabled there. Tapping it
+# (optional: true so the test does not fail if disabled) must NOT advance
+# the date. Verifies boundary behavior without relying on enabled state.
+- runFlow:
+    file: 00_seed_test_data.yaml
+
+- tapOn:
+    id: "btn_card_history"
+- extendedWaitUntil:
+    visible:
+      text: "Today"
+    timeout: 6000
+- assertVisible:
+    text: "Today"
+
+# Try to tap forward at the upper boundary
+- tapOn:
+    id: "btn_day_next"
+    optional: true
+- tapOn:
+    id: "btn_day_next"
+    optional: true
+
+# Day stays Today (still visible after attempted forward navigation)
+- assertVisible:
+    text: "Today"
+
+- back
+- extendedWaitUntil:
+    visible:
+      id: "btn_settings"
+    timeout: 5000

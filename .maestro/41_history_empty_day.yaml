@@ -1,0 +1,51 @@
+appId: io.github.tieo.taghistory
+name: History — navigating past the oldest seeded day still keeps controls alive
+---
+# Car Keys is seeded with 3 distinct days. Pressing prev 3 times should
+# either land on a date label (older days exist via fetch_older) or stay
+# on the oldest available bucket. Either way, the controls stay alive.
+- runFlow:
+    file: 00_seed_test_data.yaml
+
+- tapOn:
+    id: "btn_card_history"
+- extendedWaitUntil:
+    visible:
+      text: "Today"
+    timeout: 6000
+
+# Three back-presses on day-prev — tries to walk past the oldest seed
+- tapOn:
+    id: "btn_day_prev"
+    optional: true
+- tapOn:
+    id: "btn_day_prev"
+    optional: true
+- tapOn:
+    id: "btn_day_prev"
+    optional: true
+
+# Day-next icon is still present (history screen alive)
+- assertVisible:
+    id: "btn_day_next"
+
+# Walk forward all the way back to Today
+- tapOn:
+    id: "btn_day_next"
+    optional: true
+- tapOn:
+    id: "btn_day_next"
+    optional: true
+- tapOn:
+    id: "btn_day_next"
+    optional: true
+- extendedWaitUntil:
+    visible:
+      text: "Today"
+    timeout: 5000
+
+- back
+- extendedWaitUntil:
+    visible:
+      id: "btn_settings"
+    timeout: 5000

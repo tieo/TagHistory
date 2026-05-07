@@ -1,0 +1,24 @@
+appId: io.github.tieo.taghistory
+name: History — opens within 3s on cached data (btn_day_prev visible quickly)
+---
+# After seed completes, the data is already in DB. Opening history should
+# render the day nav controls fast — no network round trip required.
+- runFlow:
+    file: 00_seed_test_data.yaml
+
+- tapOn:
+    id: "btn_card_history"
+- extendedWaitUntil:
+    visible:
+      id: "btn_day_prev"
+    timeout: 3000
+- assertVisible:
+    id: "btn_day_prev"
+- assertVisible:
+    id: "btn_day_next"
+
+- back
+- extendedWaitUntil:
+    visible:
+      id: "btn_settings"
+    timeout: 5000

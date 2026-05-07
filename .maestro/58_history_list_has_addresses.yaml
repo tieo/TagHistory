@@ -1,0 +1,39 @@
+appId: io.github.tieo.taghistory
+name: History — expanded list shows item addresses or coords plus times
+---
+# After expanding the bottom sheet on Today (Car Keys, 3 points), at least
+# one history item is visible AND the "At HH:MM" time line renders
+# (regex matches anything like "At 12:34" or "At 9:01 PM"). Verifies the
+# items are not blank.
+- runFlow:
+    file: 00_seed_test_data.yaml
+
+- tapOn:
+    id: "btn_card_history"
+- extendedWaitUntil:
+    visible:
+      text: "Today"
+    timeout: 6000
+
+- swipe:
+    start: "50%, 88%"
+    end: "50%, 40%"
+    duration: 400
+- extendedWaitUntil:
+    visible:
+      id: "history_item_0"
+    timeout: 6000
+
+# At least one "At HH:MM" timestamp visible (full-string regex)
+- assertVisible:
+    text: ".*At \\d.*"
+
+# And at least one history item, since seeded data has 3 points today
+- assertVisible:
+    id: "history_item_0"
+
+- back
+- extendedWaitUntil:
+    visible:
+      id: "btn_settings"
+    timeout: 5000

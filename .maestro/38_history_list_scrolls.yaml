@@ -1,0 +1,51 @@
+appId: io.github.tieo.taghistory
+name: History — list scrolls when expanded with multiple items
+---
+# Car Keys has 6 reports across 3 days. With sheet expanded and on Today,
+# at least history_item_0 is visible. After scrolling, item 0 may go
+# off-screen (depending on count) but the list itself remains alive.
+- runFlow:
+    file: 00_seed_test_data.yaml
+
+- tapOn:
+    id: "btn_card_history"
+- extendedWaitUntil:
+    visible:
+      text: "Today"
+    timeout: 6000
+
+# Expand sheet
+- swipe:
+    start: "50%, 88%"
+    end: "50%, 40%"
+    duration: 400
+- extendedWaitUntil:
+    visible:
+      id: "history_item_0"
+    timeout: 6000
+
+# Try a downward swipe inside the list area to scroll. Even with 3 items,
+# the list shouldn't crash and history_item_0 must remain reachable
+# (scroll back up via reverse swipe).
+- swipe:
+    start: "50%, 70%"
+    end: "50%, 30%"
+    duration: 400
+- swipe:
+    start: "50%, 30%"
+    end: "50%, 70%"
+    duration: 400
+
+# Back to first item still rendered
+- extendedWaitUntil:
+    visible:
+      id: "history_item_0"
+    timeout: 5000
+- assertVisible:
+    id: "history_item_0"
+
+- back
+- extendedWaitUntil:
+    visible:
+      id: "btn_settings"
+    timeout: 5000

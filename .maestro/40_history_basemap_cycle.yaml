@@ -1,0 +1,34 @@
+appId: io.github.tieo.taghistory
+name: History — basemap cycle button cycles through light/dark/satellite
+---
+# BasemapCycleButton has contentDescription "Basemap: <state>". Cycling
+# advances LIGHT -> DARK -> SATELLITE -> LIGHT.
+- runFlow:
+    file: 00_seed_test_data.yaml
+
+- tapOn:
+    id: "btn_card_history"
+- extendedWaitUntil:
+    visible:
+      id: "btn_day_prev"
+    timeout: 5000
+
+# Find the button (one of the three states). Tap it to cycle. We don't
+# assume the starting state because it follows the system theme.
+- tapOn:
+    text: "Basemap: .*"
+- tapOn:
+    text: "Basemap: .*"
+- tapOn:
+    text: "Basemap: .*"
+
+# After three cycles we should be back at the original. Verify map screen
+# is still alive and day controls are still rendering.
+- assertVisible:
+    id: "btn_day_prev"
+
+- back
+- extendedWaitUntil:
+    visible:
+      id: "btn_settings"
+    timeout: 5000

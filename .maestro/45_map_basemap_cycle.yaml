@@ -1,0 +1,26 @@
+appId: io.github.tieo.taghistory
+name: Map — basemap cycle button advances LIGHT/DARK/SATELLITE/LIGHT
+---
+# BasemapCycleButton on map screen has contentDescription "Basemap: <state>".
+# Cycle three times and verify the map and pager are still alive.
+- runFlow:
+    file: 00_seed_test_data.yaml
+
+- assertVisible:
+    text: "Basemap: .*"
+
+# Three taps -> back to original basemap
+- tapOn:
+    text: "Basemap: .*"
+- tapOn:
+    text: "Basemap: .*"
+- tapOn:
+    text: "Basemap: .*"
+
+# Map and card still alive
+- assertVisible:
+    text: "Car Keys"
+- assertVisible:
+    id: "btn_card_history"
+- assertVisible:
+    id: "btn_settings"

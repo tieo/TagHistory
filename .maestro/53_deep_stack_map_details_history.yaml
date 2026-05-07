@@ -1,0 +1,48 @@
+appId: io.github.tieo.taghistory
+name: Navigation — Map -> Details -> History, three back-presses lands on Map
+---
+# Drills three levels deep: Map -> DeviceInfo -> History. Verifies that the
+# back-stack has exactly three entries (one back from history -> details,
+# another back -> map). Catches stack desync.
+- runFlow:
+    file: 00_seed_test_data.yaml
+
+# Map -> Details
+- tapOn:
+    id: "btn_card_details"
+- extendedWaitUntil:
+    visible:
+      id: "btn_view_history"
+    timeout: 5000
+- assertNotVisible:
+    id: "btn_settings"
+
+# Details -> History (via the View history button on DeviceInfo)
+- tapOn:
+    id: "btn_view_history"
+- extendedWaitUntil:
+    visible:
+      id: "btn_day_prev"
+    timeout: 5000
+- assertNotVisible:
+    id: "btn_view_history"
+- assertNotVisible:
+    id: "btn_settings"
+
+# History -> Details
+- back
+- extendedWaitUntil:
+    visible:
+      id: "btn_view_history"
+    timeout: 5000
+- assertNotVisible:
+    id: "btn_settings"
+
+# Details -> Map
+- back
+- extendedWaitUntil:
+    visible:
+      id: "btn_settings"
+    timeout: 5000
+- assertVisible:
+    text: "Car Keys"

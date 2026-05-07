@@ -1,0 +1,48 @@
+appId: io.github.tieo.taghistory
+name: Navigation — Settings -> Information -> back twice lands on Map
+---
+# Verifies the back-stack pops correctly through three levels:
+# Map -> Settings -> Information -> back -> Settings -> back -> Map.
+- runFlow:
+    file: 00_seed_test_data.yaml
+
+# Map -> Settings
+- tapOn:
+    id: "btn_settings"
+- extendedWaitUntil:
+    visible:
+      text: "Settings"
+    timeout: 5000
+
+# Settings -> Information
+- scrollUntilVisible:
+    element:
+      id: "btn_about"
+    direction: DOWN
+    timeout: 5000
+- tapOn:
+    id: "btn_about"
+- extendedWaitUntil:
+    visible:
+      id: "btn_developer_website"
+    timeout: 5000
+
+# Information -> Settings
+- back
+- extendedWaitUntil:
+    visible:
+      text: "Settings"
+    timeout: 5000
+# btn_about is the most-bottom button on Settings, btn_sign_out is just above it.
+# Either one being reachable confirms we're back on Settings.
+- assertVisible:
+    text: "Appearance"
+
+# Settings -> Map
+- back
+- extendedWaitUntil:
+    visible:
+      id: "btn_settings"
+    timeout: 5000
+- assertVisible:
+    text: "Car Keys"

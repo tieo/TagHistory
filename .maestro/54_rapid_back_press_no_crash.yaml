@@ -1,0 +1,35 @@
+appId: io.github.tieo.taghistory
+name: Navigation — rapid back from deep stack does not crash
+---
+# Stacks Map -> Details -> History, then mashes back rapidly. Final state
+# must be a tappable map (btn_settings visible).
+- runFlow:
+    file: 00_seed_test_data.yaml
+
+- tapOn:
+    id: "btn_card_details"
+- extendedWaitUntil:
+    visible:
+      id: "btn_view_history"
+    timeout: 5000
+- tapOn:
+    id: "btn_view_history"
+- extendedWaitUntil:
+    visible:
+      id: "btn_day_prev"
+    timeout: 5000
+
+# Three back-presses in quick succession (only need 2 to reach map; the
+# third pops to launcher only if not handled. The PlatformBackHandler
+# guards against that.)
+- back
+- back
+
+- extendedWaitUntil:
+    visible:
+      id: "btn_settings"
+    timeout: 8000
+- assertVisible:
+    id: "btn_settings"
+- assertVisible:
+    text: "Car Keys"

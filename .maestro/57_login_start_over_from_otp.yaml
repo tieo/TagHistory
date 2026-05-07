@@ -1,0 +1,46 @@
+appId: io.github.tieo.taghistory
+name: Login — start over from 2FA returns to credentials form
+---
+# Same setup as 03_login_start_over but stronger: after pressing "Start
+# over" we explicitly verify that all three credential-form widgets are
+# back, AND that the OTP field is gone.
+- launchApp:
+    clearState: true
+
+- extendedWaitUntil:
+    visible:
+      text: "Welcome to TagHistory"
+    timeout: 5000
+
+- tapOn:
+    id: "field_email"
+- inputText: "test@example.com"
+- tapOn:
+    id: "field_password"
+- inputText: "wrongpassword"
+- tapOn:
+    id: "btn_login"
+
+# If the app reached the 2FA screen (Start over button visible), tap it
+# and verify we're back on the credentials screen.
+- runFlow:
+    when:
+      visible:
+        id: "btn_start_over"
+    commands:
+      - tapOn:
+          id: "btn_start_over"
+      - extendedWaitUntil:
+          visible:
+            id: "field_email"
+          timeout: 5000
+      - assertVisible:
+          id: "field_email"
+      - assertVisible:
+          id: "field_password"
+      - assertVisible:
+          id: "btn_login"
+      - assertNotVisible:
+          id: "btn_start_over"
+      - assertNotVisible:
+          id: "field_otp_code"

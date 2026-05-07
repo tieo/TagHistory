@@ -1,0 +1,38 @@
+appId: io.github.tieo.taghistory
+name: Settings — Refresh now shows a non-empty result message
+---
+# After tapping btn_refresh_now the screen must remain on Settings AND a
+# small status message appears beneath the button. The message text is
+# either "Refresh complete" or starts with "Refresh failed:". Both contain
+# the substring "Refresh".
+- runFlow:
+    file: 00_seed_test_data.yaml
+
+- tapOn:
+    id: "btn_settings"
+- extendedWaitUntil:
+    visible:
+      text: "Settings"
+    timeout: 5000
+- assertVisible:
+    id: "btn_refresh_now"
+
+- tapOn:
+    id: "btn_refresh_now"
+
+# Wait for the refresh to settle. After completion the result message must
+# render — it contains the word "Refresh" (matches "Refresh complete" or
+# "Refresh failed: …"). A 15s ceiling covers slow network mocks.
+- extendedWaitUntil:
+    visible:
+      text: ".*Refresh.*"
+    timeout: 15000
+
+- assertVisible:
+    text: "Settings"
+
+- back
+- extendedWaitUntil:
+    visible:
+      id: "btn_settings"
+    timeout: 5000
