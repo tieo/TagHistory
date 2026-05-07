@@ -1,4 +1,4 @@
-name: Maestro E2E
+name: CI
 
 on:
   push:
@@ -10,11 +10,13 @@ on:
       - "rust/**"
       - "gradle/**"
       - "build.gradle.kts"
+      - "gradle.properties"
       - "settings.gradle.kts"
+      - "gradlew"
       - ".maestro/**"
       - "docker/**"
       - "docker-compose.yml"
-      - ".github/workflows/maestro.yml"
+      - ".github/workflows/ci.yml"
   pull_request:
     branches: [ "main" ]
     paths:
@@ -24,11 +26,13 @@ on:
       - "rust/**"
       - "gradle/**"
       - "build.gradle.kts"
+      - "gradle.properties"
       - "settings.gradle.kts"
+      - "gradlew"
       - ".maestro/**"
       - "docker/**"
       - "docker-compose.yml"
-      - ".github/workflows/maestro.yml"
+      - ".github/workflows/ci.yml"
   workflow_dispatch:
 
 jobs:
@@ -44,13 +48,13 @@ jobs:
 
       - run: echo "MAPS_API_KEY=${{ secrets.MAPS_API_KEY || 'maps_key_default_value' }}" > secrets.properties
 
-      - name: Build APK in container (same image local devs use)
+      - name: Build APK + run unit tests in container (same image local devs use)
         run: |
           docker compose build build
           docker compose run --rm \
             -v ${HOME}/.gradle:/root/.gradle \
             build \
-            ./gradlew :androidApp:assembleDebug
+            ./gradlew test :androidApp:assembleDebug
 
       - uses: actions/upload-artifact@v4
         with:
