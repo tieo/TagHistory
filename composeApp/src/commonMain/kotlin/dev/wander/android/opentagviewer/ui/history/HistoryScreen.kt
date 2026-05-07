@@ -1,6 +1,7 @@
 package io.github.tieo.taghistory.ui.history
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -9,37 +10,52 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.Timeline
+import androidx.compose.material3.BottomSheetScaffold
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.FilterChip
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Slider
-import androidx.compose.material3.Surface
+import androidx.compose.material3.SheetValue
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.rememberBottomSheetScaffoldState
+import androidx.compose.material3.rememberStandardBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import io.github.tieo.taghistory.ui.nav.PushedScreenScaffold
-import kotlin.math.roundToInt
 import kotlin.time.Clock
 import kotlin.time.ExperimentalTime
 import kotlin.time.Instant
 
-@OptIn(ExperimentalTime::class)
+@OptIn(ExperimentalTime::class, ExperimentalMaterial3Api::class)
 @Composable
 fun HistoryScreen(
     viewModel: HistoryViewModel,
@@ -55,166 +71,205 @@ fun HistoryScreen(
     }
 
     val days = remember(state.points) { buildDayBuckets(state.points) }
-    var selectedDayKey by remember { mutableStateOf<Long?>(null) }
-    val effectiveSelection = selectedDayKey ?: days.firstOrNull()?.key
-    val selectedDay = days.firstOrNull { it.key == effectiveSelection }
 
-    // Sorted oldest→newest so scrubber index 0 = oldest, last = most recent.
+    // dayIdx 0 = most recent day; navigate right = go further back in time.
+    var dayIdx by remember(days) { mutableIntStateOf(0) }
+    val selectedDay = days.getOrNull(dayIdx)
+
+    // Sorted oldest→newest for map polyline; list shows newest-first.
     val chronological = remember(selectedDay) {
         selectedDay?.points?.sortedBy { it.timestampMs } ?: emptyList()
     }
 
-    // Reset to most-recent point whenever the day's point list changes.
-    var selectedIdx by remember(chronological) {
-        mutableStateOf((chronological.size - 1).coerceAtLeast(0))
+    // Which point is highlighted on the map. Index into chronological (0 = oldest).
+    var selectedPointIdx by remember(chronological) {
+        mutableIntStateOf((chronological.size - 1).coerceAtLeast(0))
     }
 
-    PushedScreenScaffold(title = title, onBack = onBack, modifier = modifier) { _ ->
-        Box(modifier = Modifier.fillMaxSize()) {
+    val sheetState = rememberStandardBottomSheetState(
+        initialValue = SheetValue.PartiallyExpanded,
+        skipHiddenState = true,
+    )
+    val scaffoldState = rememberBottomSheetScaffoldState(bottomSheetState = sheetState)
 
+    // Scroll list to selected item when map selection changes.
+    val listState = rememberLazyListState()
+    LaunchedEffect(selectedPointIdx, chronological.size) {
+        if (chronological.isNotEmpty()) {
+            val listIdx = chronological.size - 1 - selectedPointIdx
+            listState.animateScrollToItem(listIdx)
+        }
+    }
+
+    BottomSheetScaffold(
+        scaffoldState = scaffoldState,
+        modifier = modifier.fillMaxSize(),
+        topBar = {
+            TopAppBar(
+                title = { Text(title) },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f),
+                ),
+                windowInsets = TopAppBarDefaults.windowInsets,
+            )
+        },
+        sheetPeekHeight = 88.dp,
+        sheetContent = {
+            SheetContent(
+                days = days,
+                dayIdx = dayIdx,
+                chronological = chronological,
+                selectedPointIdx = selectedPointIdx,
+                isLoading = state.isLoading,
+                error = state.error,
+                listState = listState,
+                onDayPrev = { if (dayIdx < days.size - 1) dayIdx++ },
+                onDayNext = { if (dayIdx > 0) dayIdx-- },
+                onSelectPoint = { selectedPointIdx = it },
+                onFetchOlder = {
+                    val oldest = days.minOfOrNull { it.key }
+                        ?: Clock.System.now().toEpochMilliseconds()
+                    viewModel.fetchAndLoad(oldest - 7L * DAY_MS, oldest)
+                },
+            )
+        },
+    ) { paddingValues ->
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(top = paddingValues.calculateTopPadding()),
+        ) {
             when {
                 state.isLoading && state.points.isEmpty() -> FullScreenMessage(loading = true)
                 state.error != null && state.points.isEmpty() ->
                     FullScreenMessage(message = state.error ?: "Couldn't load history", isError = true)
                 days.isEmpty() && !state.isLoading -> FullScreenMessage(message = "No history yet")
-                else -> {
-                    // Map fills entire content area.
-                    if (chronological.isNotEmpty()) {
-                        HistoryMapView(
-                            points = chronological,
-                            selectedPointIndex = selectedIdx,
-                            modifier = Modifier.fillMaxSize(),
-                        )
-                    } else {
-                        FullScreenMessage(message = "No points on this day")
-                    }
-
-                    // Day selector floats at top.
-                    if (days.isNotEmpty()) {
-                        DaySelector(
-                            days = days,
-                            selectedKey = effectiveSelection,
-                            onSelect = { selectedDayKey = it },
-                            modifier = Modifier
-                                .align(Alignment.TopCenter)
-                                .fillMaxWidth()
-                                .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.92f))
-                                .padding(vertical = 2.dp),
-                        )
-                    }
-
-                    // Timeline scrubber card floats at bottom.
-                    TimelineScrubberCard(
-                        points = chronological,
-                        selectedIdx = selectedIdx,
-                        isLoading = state.isLoading,
-                        onSelectIdx = { selectedIdx = it },
-                        onFetchOlder = {
-                            val oldest = days.minOfOrNull { it.key }
-                                ?: Clock.System.now().toEpochMilliseconds()
-                            viewModel.fetchAndLoad(oldest - 7L * DAY_MS, oldest)
-                        },
-                        modifier = Modifier
-                            .align(Alignment.BottomCenter)
-                            .fillMaxWidth(),
-                    )
-                }
+                chronological.isEmpty() -> FullScreenMessage(message = "No points on this day")
+                else -> HistoryMapView(
+                    points = chronological,
+                    selectedPointIndex = selectedPointIdx,
+                    modifier = Modifier.fillMaxSize(),
+                )
             }
         }
     }
 }
 
+@OptIn(ExperimentalTime::class)
 @Composable
-private fun TimelineScrubberCard(
-    points: List<HistoryPoint>,
-    selectedIdx: Int,
+private fun SheetContent(
+    days: List<DayBucket>,
+    dayIdx: Int,
+    chronological: List<HistoryPoint>,
+    selectedPointIdx: Int,
     isLoading: Boolean,
-    onSelectIdx: (Int) -> Unit,
+    error: String?,
+    listState: androidx.compose.foundation.lazy.LazyListState,
+    onDayPrev: () -> Unit,
+    onDayNext: () -> Unit,
+    onSelectPoint: (Int) -> Unit,
     onFetchOlder: () -> Unit,
-    modifier: Modifier = Modifier,
 ) {
-    Surface(
-        shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp),
-        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f),
-        tonalElevation = 3.dp,
-        shadowElevation = 10.dp,
-        modifier = modifier,
-    ) {
-        Column(
+    Column(modifier = Modifier.fillMaxWidth()) {
+        // Day navigation row
+        Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 20.dp, vertical = 14.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
+                .padding(horizontal = 4.dp, vertical = 2.dp),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            // Selected time + point count.
+            IconButton(onClick = onDayPrev, enabled = dayIdx < days.size - 1) {
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Previous day")
+            }
+            val now = Clock.System.now().toEpochMilliseconds()
+            Text(
+                text = days.getOrNull(dayIdx)?.key?.let { dayLabel(it, now) } ?: "No data",
+                modifier = Modifier.weight(1f),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+            )
+            IconButton(onClick = onDayNext, enabled = dayIdx > 0) {
+                Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = "Next day")
+            }
+        }
+
+        HorizontalDivider()
+
+        // Points summary
+        if (chronological.isNotEmpty()) {
             Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                val pt = points.getOrNull(selectedIdx)
-                Text(
-                    text = pt?.let { formatLocalTime(it.timestampMs) } ?: "—",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
+                Icon(
+                    Icons.Filled.Timeline,
+                    contentDescription = null,
+                    modifier = Modifier.size(20.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+                Spacer(Modifier.width(8.dp))
                 Text(
-                    text = if (points.isEmpty()) "" else "${points.size} point${if (points.size == 1) "" else "s"}",
+                    "${chronological.size} data point${if (chronological.size == 1) "" else "s"}",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
+            HorizontalDivider()
+        }
 
-            // Scrubber — only shown when there are at least 2 points.
-            if (points.size >= 2) {
-                Slider(
-                    value = selectedIdx.toFloat(),
-                    onValueChange = { v ->
-                        onSelectIdx(v.roundToInt().coerceIn(0, points.size - 1))
-                    },
-                    valueRange = 0f..(points.size - 1).toFloat(),
-                    steps = (points.size - 2).coerceAtLeast(0),
-                    modifier = Modifier.fillMaxWidth(),
+        // Loading indicator
+        if (isLoading) {
+            LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+        }
+
+        // Location list: newest first
+        val reversed = remember(chronological) { chronological.asReversed() }
+        LazyColumn(
+            state = listState,
+            modifier = Modifier.weight(1f, fill = false),
+        ) {
+            itemsIndexed(reversed, key = { _, p -> p.timestampMs }) { listIdx, point ->
+                val chronoIdx = chronological.size - 1 - listIdx
+                val isSelected = chronoIdx == selectedPointIdx
+                HistoryListItem(
+                    point = point,
+                    isSelected = isSelected,
+                    isLast = listIdx == reversed.size - 1,
+                    onClick = { onSelectPoint(chronoIdx) },
                 )
+            }
+
+            item(key = "fetch_older") {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 4.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
+                        .padding(horizontal = 12.dp, vertical = 4.dp),
+                    horizontalArrangement = Arrangement.End,
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Text(
-                        formatLocalTime(points.first().timestampMs),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    Text(
-                        formatLocalTime(points.last().timestampMs),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-            }
-
-            // Fetch-older row.
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                if (isLoading) {
-                    CircularProgressIndicator(
-                        strokeWidth = 2.dp,
-                        modifier = Modifier.size(16.dp).padding(end = 8.dp),
-                    )
-                    Spacer(Modifier.size(8.dp))
-                }
-                TextButton(
-                    onClick = onFetchOlder,
-                    enabled = !isLoading,
-                    contentPadding = PaddingValues(horizontal = 8.dp),
-                    modifier = Modifier.testTag("btn_fetch_older"),
-                ) {
-                    Text("Fetch older")
+                    if (isLoading) {
+                        CircularProgressIndicator(
+                            strokeWidth = 2.dp,
+                            modifier = Modifier.size(16.dp),
+                        )
+                        Spacer(Modifier.width(8.dp))
+                    }
+                    TextButton(
+                        onClick = onFetchOlder,
+                        enabled = !isLoading,
+                        contentPadding = PaddingValues(horizontal = 8.dp),
+                        modifier = Modifier.testTag("btn_fetch_older"),
+                    ) {
+                        Text("Fetch older")
+                    }
                 }
             }
         }
@@ -222,27 +277,45 @@ private fun TimelineScrubberCard(
 }
 
 @Composable
-private fun DaySelector(
-    days: List<DayBucket>,
-    selectedKey: Long?,
-    onSelect: (Long) -> Unit,
-    modifier: Modifier = Modifier,
+private fun HistoryListItem(
+    point: HistoryPoint,
+    isSelected: Boolean,
+    isLast: Boolean,
+    onClick: () -> Unit,
 ) {
-    if (days.isEmpty()) return
-    val now = Clock.System.now().toEpochMilliseconds()
-    LazyRow(
-        modifier = modifier,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        contentPadding = PaddingValues(horizontal = 12.dp),
+    val bg = if (isSelected) MaterialTheme.colorScheme.primaryContainer
+             else MaterialTheme.colorScheme.surface
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(bg)
+            .clickable { onClick() }
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        items(days, key = { it.key }) { bucket ->
-            FilterChip(
-                selected = bucket.key == selectedKey,
-                onClick = { onSelect(bucket.key) },
-                label = { Text(dayLabel(bucket.key, now)) },
+        // Timeline pin
+        Icon(
+            Icons.Filled.LocationOn,
+            contentDescription = null,
+            modifier = Modifier.size(22.dp),
+            tint = if (isSelected) MaterialTheme.colorScheme.primary
+                   else MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Spacer(Modifier.width(16.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                "%.5f, %.5f".format(point.latitude, point.longitude),
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
+            )
+            Text(
+                "At ${formatLocalTime(point.timestampMs)}",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.outline,
             )
         }
     }
+    if (!isLast) HorizontalDivider(modifier = Modifier.padding(start = 54.dp))
 }
 
 @Composable
@@ -264,7 +337,6 @@ private fun FullScreenMessage(
         }
     }
 }
-
 
 private fun buildDayBuckets(points: List<HistoryPoint>): List<DayBucket> =
     points.groupBy { it.timestampMs - (it.timestampMs % DAY_MS) }

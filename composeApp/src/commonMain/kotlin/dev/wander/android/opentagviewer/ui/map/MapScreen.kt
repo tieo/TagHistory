@@ -376,11 +376,11 @@ private fun TagCard(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Box(
-                    modifier = Modifier.width(90.dp).height(53.dp),
+                    modifier = Modifier.width(70.dp).height(53.dp),
                     contentAlignment = Alignment.Center,
                 ) {
                     val glyph = card.emoji ?: card.displayName.firstOrNull()?.uppercase() ?: "●"
-                    Text(glyph, fontSize = 36.sp)
+                    Text(glyph, fontSize = 28.sp)
                 }
                 Column(
                     modifier = Modifier.weight(1f).padding(start = 15.dp),
@@ -482,14 +482,14 @@ private fun CardCircleAction(
     ) {
         Box(
             modifier = Modifier
-                .size(40.dp)
+                .size(46.dp)
                 .background(color = circleColor, shape = CircleShape),
             contentAlignment = Alignment.Center,
         ) {
             Icon(
                 imageVector = icon,
                 contentDescription = label,
-                modifier = Modifier.size(22.dp),
+                modifier = Modifier.size(24.dp),
                 tint = iconColor,
             )
         }
