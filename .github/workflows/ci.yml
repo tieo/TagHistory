@@ -70,46 +70,106 @@ jobs:
       matrix:
         include:
           - shard: 0
+            slice: 0
+            device: "Samsung Galaxy S10"
+            android: "13.0"
+            tag: "emulator_13.0"
+          - shard: 0
+            slice: 1
             device: "Samsung Galaxy S10"
             android: "13.0"
             tag: "emulator_13.0"
           - shard: 1
+            slice: 0
+            device: "Nexus 5"
+            android: "11.0"
+            tag: "emulator_11.0"
+          - shard: 1
+            slice: 1
             device: "Nexus 5"
             android: "11.0"
             tag: "emulator_11.0"
           - shard: 2
+            slice: 0
+            device: "Samsung Galaxy S9"
+            android: "12.0"
+            tag: "emulator_12.0"
+          - shard: 2
+            slice: 1
             device: "Samsung Galaxy S9"
             android: "12.0"
             tag: "emulator_12.0"
           - shard: 3
+            slice: 0
+            device: "Nexus 7"
+            android: "10.0"
+            tag: "emulator_10.0"
+          - shard: 3
+            slice: 1
             device: "Nexus 7"
             android: "10.0"
             tag: "emulator_10.0"
           - shard: 4
+            slice: 0
+            device: "Samsung Galaxy S6"
+            android: "9.0"
+            tag: "emulator_9.0"
+          - shard: 4
+            slice: 1
             device: "Samsung Galaxy S6"
             android: "9.0"
             tag: "emulator_9.0"
           - shard: 5
+            slice: 0
+            device: "Pixel 6"
+            android: "14.0"
+            tag: "emulator_14.0"
+          - shard: 5
+            slice: 1
             device: "Pixel 6"
             android: "14.0"
             tag: "emulator_14.0"
           - shard: 6
+            slice: 0
+            device: "Samsung Galaxy S10"
+            android: "13.0"
+            tag: "emulator_13.0"
+          - shard: 6
+            slice: 1
             device: "Samsung Galaxy S10"
             android: "13.0"
             tag: "emulator_13.0"
           - shard: 7
+            slice: 0
+            device: "Pixel 6"
+            android: "13.0"
+            tag: "emulator_13.0"
+          - shard: 7
+            slice: 1
             device: "Pixel 6"
             android: "13.0"
             tag: "emulator_13.0"
           - shard: 8
+            slice: 0
+            device: "Samsung Galaxy S9"
+            android: "12.0"
+            tag: "emulator_12.0"
+          - shard: 8
+            slice: 1
             device: "Samsung Galaxy S9"
             android: "12.0"
             tag: "emulator_12.0"
           - shard: 9
+            slice: 0
             device: "Nexus 5"
             android: "11.0"
             tag: "emulator_11.0"
-    name: "shard ${{ matrix.shard }} (${{ matrix.device }} / Android ${{ matrix.android }})"
+          - shard: 9
+            slice: 1
+            device: "Nexus 5"
+            android: "11.0"
+            tag: "emulator_11.0"
+    name: "shard ${{ matrix.shard }}.${{ matrix.slice }} (${{ matrix.device }} / Android ${{ matrix.android }})"
     steps:
       - uses: actions/checkout@v4
 
@@ -125,15 +185,19 @@ jobs:
           name: debug-apk
           path: androidApp/build/outputs/apk/debug/
 
-      - name: Compute test order for this shard
+      - name: Compute test order for this shard slice
         run: |
+          # Full shuffled list per shard (deterministic seed). Then pick every
+          # other entry by slice index so each profile runs both halves of
+          # the suite in parallel jobs.
           ls .maestro/*.yaml \
             | grep -v '00_seed_test_data\.yaml$' \
             | grep -v '02_login_happy_path\.yaml$' \
             | sort \
             | shuf --random-source=<(yes "shard${{ matrix.shard }}" | head -c 4096) \
+            | awk -v slice=${{ matrix.slice }} 'NR % 2 == slice' \
             > shard_files.txt
-          echo "Shard ${{ matrix.shard }} on ${{ matrix.device }} (Android ${{ matrix.android }}) will run:"
+          echo "Shard ${{ matrix.shard }}.${{ matrix.slice }} on ${{ matrix.device }} (Android ${{ matrix.android }}) will run $(wc -l < shard_files.txt) flow(s):"
           cat shard_files.txt
 
       - name: Run Maestro shard in container
@@ -157,7 +221,7 @@ jobs:
       - if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: maestro-shard-${{ matrix.shard }}
+          name: maestro-shard-${{ matrix.shard }}-${{ matrix.slice }}
           path: |
             ~/.maestro/tests/
           retention-days: 7
