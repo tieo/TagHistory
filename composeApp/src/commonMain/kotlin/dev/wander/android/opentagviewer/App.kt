@@ -73,6 +73,7 @@ data class AppHostFactories(
      * so the user can force a sync from any screen.
      */
     val onRefreshNow: (suspend () -> String?)? = null,
+    val reverseGeocode: (suspend (Double, Double) -> String?)? = null,
 )
 
 @Composable
@@ -212,6 +213,7 @@ private fun AuthedNav(
                         viewModel = vm,
                         title = screen.title,
                         onBack = { nav = nav.pop() },
+                        reverseGeocode = factories.reverseGeocode,
                     )
                 }
             }

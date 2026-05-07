@@ -58,6 +58,19 @@ class AndroidAppHost private constructor(
     private val crypto: SecureBlobStore,
 ) {
 
+    private val geocoder: Geocoder? =
+        if (Geocoder.isPresent()) Geocoder(context, Locale.getDefault()) else null
+
+    private suspend fun reverseGeocode(lat: Double, lon: Double): String? {
+        val gc = geocoder ?: return null
+        return withContext(Dispatchers.IO) {
+            runCatching {
+                @Suppress("DEPRECATION")
+                gc.getFromLocation(lat, lon, 1)?.firstOrNull()?.getAddressLine(0)
+            }.getOrNull()
+        }
+    }
+
     private val beaconRepo by lazy { BeaconRepository(db) }
     private val userSettingsRepo by lazy {
         io.github.tieo.taghistory.data.repo.UserSettingsRepository(
@@ -102,7 +115,6 @@ class AndroidAppHost private constructor(
      */
     fun createMapViewModelOrNull(): MapViewModel? {
         if (userAuthRepo.getUserAuth() == null) return null
-        val geocoder = if (Geocoder.isPresent()) Geocoder(context, Locale.getDefault()) else null
         val reportsClient = LocationReportsClient(http, anisette)
 
         // Cache the decrypted account across cascade rungs (rung 1→6→24 all fire
@@ -134,15 +146,7 @@ class AndroidAppHost private constructor(
                 AppleReportsService(reportsClient, account)
                     .fetchLastReportsByBeacon(accessories, hoursBack)
             },
-            reverseGeocode = { lat, lon ->
-                val gc = geocoder ?: return@MapViewModel null
-                withContext(Dispatchers.IO) {
-                    runCatching {
-                        @Suppress("DEPRECATION")
-                        gc.getFromLocation(lat, lon, 1)?.firstOrNull()?.getAddressLine(0)
-                    }.getOrNull()
-                }
-            },
+            reverseGeocode = { lat, lon -> reverseGeocode(lat, lon) },
             currentLocation = { lastKnownDeviceLocation() },
         )
     }
@@ -248,6 +252,7 @@ class AndroidAppHost private constructor(
         createSettings = { createSettingsViewModel() },
         createDeviceInfo = { beaconId -> createDeviceInfoViewModel(beaconId) },
         createHistory = { beaconId -> createHistoryViewModel(beaconId) },
+        reverseGeocode = { lat, lon -> reverseGeocode(lat, lon) },
         appVersion = appVersion,
         openUrl = { url ->
             val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))

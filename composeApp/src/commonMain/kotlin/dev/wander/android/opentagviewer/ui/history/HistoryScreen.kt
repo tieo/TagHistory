@@ -41,6 +41,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -62,6 +63,7 @@ fun HistoryScreen(
     title: String,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
+    reverseGeocode: (suspend (Double, Double) -> String?)? = null,
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
 
@@ -84,6 +86,19 @@ fun HistoryScreen(
     // Which point is highlighted on the map. Index into chronological (0 = oldest).
     var selectedPointIdx by remember(chronological) {
         mutableIntStateOf((chronological.size - 1).coerceAtLeast(0))
+    }
+
+    // Geocode cache: timestampMs → address string. Populated lazily per point.
+    val addressCache = remember { mutableStateMapOf<Long, String>() }
+    if (reverseGeocode != null) {
+        LaunchedEffect(state.points) {
+            for (point in state.points) {
+                if (!addressCache.containsKey(point.timestampMs)) {
+                    val address = reverseGeocode(point.latitude, point.longitude)
+                    if (address != null) addressCache[point.timestampMs] = address
+                }
+            }
+        }
     }
 
     val sheetState = rememberStandardBottomSheetState(
@@ -128,6 +143,7 @@ fun HistoryScreen(
                 isLoading = state.isLoading,
                 error = state.error,
                 listState = listState,
+                addressCache = addressCache,
                 onDayPrev = { if (dayIdx < days.size - 1) dayIdx++ },
                 onDayNext = { if (dayIdx > 0) dayIdx-- },
                 onSelectPoint = { selectedPointIdx = it },
@@ -170,6 +186,7 @@ private fun SheetContent(
     isLoading: Boolean,
     error: String?,
     listState: androidx.compose.foundation.lazy.LazyListState,
+    addressCache: Map<Long, String>,
     onDayPrev: () -> Unit,
     onDayNext: () -> Unit,
     onSelectPoint: (Int) -> Unit,
@@ -183,7 +200,11 @@ private fun SheetContent(
                 .padding(horizontal = 4.dp, vertical = 2.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            IconButton(onClick = onDayPrev, enabled = dayIdx < days.size - 1) {
+            IconButton(
+                onClick = onDayPrev,
+                enabled = dayIdx < days.size - 1,
+                modifier = Modifier.testTag("btn_day_prev"),
+            ) {
                 Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Previous day")
             }
             val now = Clock.System.now().toEpochMilliseconds()
@@ -194,7 +215,11 @@ private fun SheetContent(
                 fontWeight = FontWeight.Bold,
                 textAlign = androidx.compose.ui.text.style.TextAlign.Center,
             )
-            IconButton(onClick = onDayNext, enabled = dayIdx > 0) {
+            IconButton(
+                onClick = onDayNext,
+                enabled = dayIdx > 0,
+                modifier = Modifier.testTag("btn_day_next"),
+            ) {
                 Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = "Next day")
             }
         }
@@ -241,8 +266,10 @@ private fun SheetContent(
                 val isSelected = chronoIdx == selectedPointIdx
                 HistoryListItem(
                     point = point,
+                    address = addressCache[point.timestampMs],
                     isSelected = isSelected,
                     isLast = listIdx == reversed.size - 1,
+                    testTag = "history_item_$listIdx",
                     onClick = { onSelectPoint(chronoIdx) },
                 )
             }
@@ -279,8 +306,10 @@ private fun SheetContent(
 @Composable
 private fun HistoryListItem(
     point: HistoryPoint,
+    address: String?,
     isSelected: Boolean,
     isLast: Boolean,
+    testTag: String? = null,
     onClick: () -> Unit,
 ) {
     val bg = if (isSelected) MaterialTheme.colorScheme.primaryContainer
@@ -290,10 +319,10 @@ private fun HistoryListItem(
             .fillMaxWidth()
             .background(bg)
             .clickable { onClick() }
-            .padding(horizontal = 16.dp, vertical = 12.dp),
+            .padding(horizontal = 16.dp, vertical = 12.dp)
+            .then(if (testTag != null) Modifier.testTag(testTag) else Modifier),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        // Timeline pin
         Icon(
             Icons.Filled.LocationOn,
             contentDescription = null,
@@ -304,9 +333,11 @@ private fun HistoryListItem(
         Spacer(Modifier.width(16.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                "%.5f, %.5f".format(point.latitude, point.longitude),
+                address ?: "%.5f, %.5f".format(point.latitude, point.longitude),
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
+                maxLines = 2,
+                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
             )
             Text(
                 "At ${formatLocalTime(point.timestampMs)}",

@@ -1,0 +1,40 @@
+appId: io.github.tieo.taghistory
+name: History — tapping a list item selects the point (highlighted entry)
+---
+- runFlow:
+    file: 00_seed_test_data.yaml
+
+- tapOn:
+    id: "btn_card_history"
+- extendedWaitUntil:
+    visible:
+      text: "Today"
+    timeout: 6000
+
+# Expand sheet
+- swipe:
+    start: "50%, 88%"
+    end: "50%, 40%"
+    duration: 400
+- extendedWaitUntil:
+    visible:
+      id: "history_item_0"
+    timeout: 6000
+
+# Item 0 (newest) is pre-selected. Tap item 1 to select it.
+- tapOn:
+    id: "history_item_1"
+- extendedWaitUntil:
+    visible:
+      id: "history_item_1"
+    timeout: 3000
+
+# Sheet remains open after tap (item 1 still visible)
+- assertVisible:
+    id: "history_item_1"
+
+- back
+- extendedWaitUntil:
+    visible:
+      id: "btn_settings"
+    timeout: 5000

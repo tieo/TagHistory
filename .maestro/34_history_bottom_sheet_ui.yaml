@@ -1,0 +1,72 @@
+appId: io.github.tieo.taghistory
+name: History — bottom sheet shows day nav, point list, and "Fetch older"
+---
+- runFlow:
+    file: 00_seed_test_data.yaml
+
+# Open history from card (Car Keys has 6 seeded points across 3 days)
+- tapOn:
+    id: "btn_card_history"
+- extendedWaitUntil:
+    visible:
+      text: "Today"
+    timeout: 6000
+
+# Sheet peeked: day label visible at bottom
+- assertVisible:
+    text: "Today"
+
+# Expand sheet by swiping up the drag handle
+- swipe:
+    start: "50%, 88%"
+    end: "50%, 40%"
+    duration: 400
+
+# After expand: data points summary visible (Maestro uses full-string regex match)
+- extendedWaitUntil:
+    visible:
+      text: ".*data point.*"
+    timeout: 8000
+- assertVisible:
+    text: ".*data point.*"
+
+# First history item is always seeded — visible in list
+- extendedWaitUntil:
+    visible:
+      id: "history_item_0"
+    timeout: 4000
+- assertVisible:
+    id: "history_item_0"
+
+# Fetch older button present
+- assertVisible:
+    id: "btn_fetch_older"
+
+# Navigate to previous day (← arrow)
+- tapOn:
+    id: "btn_day_prev"
+    optional: true
+- extendedWaitUntil:
+    visible:
+      text: "Yesterday"
+    timeout: 4000
+- assertVisible:
+    text: "Yesterday"
+
+# Navigate forward (→ arrow) to come back
+- tapOn:
+    id: "btn_day_next"
+    optional: true
+- extendedWaitUntil:
+    visible:
+      text: "Today"
+    timeout: 4000
+- assertVisible:
+    text: "Today"
+
+# Back returns to map
+- back
+- extendedWaitUntil:
+    visible:
+      id: "btn_settings"
+    timeout: 5000
