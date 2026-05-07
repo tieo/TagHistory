@@ -54,6 +54,7 @@ actual fun HistoryMapView(
     points: List<HistoryPoint>,
     selectedPointIndex: Int?,
     basemap: MapBasemap?,
+    onRendered: (List<Long>) -> Unit,
     modifier: Modifier,
 ) {
     val context = LocalContext.current
@@ -112,26 +113,29 @@ actual fun HistoryMapView(
                 map.setStyle(Style.Builder().fromBasemap(effectiveBasemap)) { style ->
                     installLayers(style, lineColor, selectedColor)
                     val ordered = currentPoints.value.sortedBy { it.timestampMs }
-                    lastRenderedPointsKey[0] = ordered.map { it.timestampMs }
+                    val key = ordered.map { it.timestampMs }
+                    lastRenderedPointsKey[0] = key
                     renderPath(map, style, ordered, fitCamera = true)
                     renderSelectedPoint(map, style, ordered, currentSelectedIdx.value, panCamera = false)
+                    onRendered(key)
                 }
             }
             mapView
         },
-        update = {
+        update = { _ ->
+            val ordered = points.sortedBy { it.timestampMs }
+            val sel = selectedPointIndex
             mapView.getMapAsync { map ->
                 val style = map.style ?: return@getMapAsync
                 if (!style.isFullyLoaded) return@getMapAsync
-                val pts = currentPoints.value
-                val ordered = pts.sortedBy { it.timestampMs }
                 val newKey = ordered.map { it.timestampMs }
                 val pointsChanged = newKey != lastRenderedPointsKey[0]
                 if (pointsChanged) {
                     lastRenderedPointsKey[0] = newKey
                     renderPath(map, style, ordered, fitCamera = true)
+                    onRendered(newKey)
                 }
-                renderSelectedPoint(map, style, ordered, currentSelectedIdx.value, panCamera = !pointsChanged)
+                renderSelectedPoint(map, style, ordered, sel, panCamera = !pointsChanged)
             }
         },
         modifier = modifier,

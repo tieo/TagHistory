@@ -109,6 +109,8 @@ fun HistoryScreen(
     val themeDefault = defaultBasemap()
     var basemap by remember(themeDefault) { mutableStateOf(themeDefault) }
 
+    var lastRenderedCount by remember { mutableIntStateOf(-1) }
+
     val listState = rememberLazyListState()
     LaunchedEffect(selectedPointIdx, chronological.size) {
         if (chronological.isNotEmpty()) {
@@ -146,7 +148,21 @@ fun HistoryScreen(
                 points = chronological,
                 selectedPointIndex = selectedPointIdx,
                 basemap = basemap,
+                onRendered = { lastRenderedCount = it.size },
                 modifier = Modifier.fillMaxSize(),
+            )
+
+            // Test-observable: text reflects last successful map render. Maestro
+            // uses this to verify the map polyline actually updated after a day
+            // change (the points list updates via state, but the MapLibre layer
+            // is updated asynchronously inside getMapAsync).
+            Text(
+                text = "map_render_$lastRenderedCount",
+                modifier = Modifier
+                    .size(1.dp)
+                    .align(Alignment.TopStart)
+                    .testTag("map_render_indicator"),
+                color = androidx.compose.ui.graphics.Color.Transparent,
             )
 
             FilledIconButton(

@@ -9,5 +9,6 @@ expect fun HistoryMapView(
     points: List<HistoryPoint>,
     selectedPointIndex: Int? = null,
     basemap: MapBasemap? = null,
+    onRendered: (timestamps: List<Long>) -> Unit = {},
     modifier: Modifier = Modifier,
 )

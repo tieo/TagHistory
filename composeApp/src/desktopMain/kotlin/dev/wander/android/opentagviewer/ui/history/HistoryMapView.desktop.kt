@@ -14,6 +14,7 @@ actual fun HistoryMapView(
     points: List<HistoryPoint>,
     selectedPointIndex: Int?,
     basemap: MapBasemap?,
+    onRendered: (List<Long>) -> Unit,
     modifier: Modifier,
 ) {
     Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {

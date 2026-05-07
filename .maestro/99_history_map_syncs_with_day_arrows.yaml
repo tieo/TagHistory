@@ -1,0 +1,55 @@
+appId: io.github.tieo.taghistory
+name: History — map polyline actually re-renders when day arrows are tapped
+---
+- runFlow:
+    file: 00_seed_test_data.yaml
+
+# Car Keys: today=3 points, yesterday=2, 3 days ago=1.
+- tapOn:
+    id: "btn_card_history"
+- extendedWaitUntil:
+    visible:
+      text: "Today"
+    timeout: 4000
+
+# Map should have rendered Today's 3 points.
+- extendedWaitUntil:
+    visible:
+      text: "map_render_3"
+    timeout: 3000
+- assertVisible:
+    text: "map_render_3"
+
+# Navigate back one day. List shows 2 points; map indicator must drop to 2.
+- tapOn:
+    id: "btn_day_prev"
+- extendedWaitUntil:
+    visible:
+      text: "Yesterday"
+    timeout: 2000
+- extendedWaitUntil:
+    visible:
+      text: "map_render_2"
+    timeout: 2000
+- assertVisible:
+    text: "map_render_2"
+
+# Back to today: map must re-render to 3 points.
+- tapOn:
+    id: "btn_day_next"
+- extendedWaitUntil:
+    visible:
+      text: "Today"
+    timeout: 2000
+- extendedWaitUntil:
+    visible:
+      text: "map_render_3"
+    timeout: 2000
+- assertVisible:
+    text: "map_render_3"
+
+- back
+- extendedWaitUntil:
+    visible:
+      id: "btn_settings"
+    timeout: 4000
