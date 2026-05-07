@@ -1,23 +1,31 @@
 appId: io.github.tieo.taghistory
-name: History screen — opening from card pager different beacons
+name: History screen — opening from card pager renders different beacons correctly
 ---
 - runFlow:
     file: 00_seed_test_data.yaml
 
-# Car Keys history (6 reports seeded)
+# Car Keys history (6 reports seeded).
+- assertVisible:
+    text: "Car Keys"
 - tapOn:
     id: "btn_card_history"
 - extendedWaitUntil:
     visible:
-      id: "btn_fetch_older"
+      id: "btn_day_prev"
     timeout: 5000
+- assertVisible:
+    id: "btn_day_prev"
+- assertVisible:
+    text: "Today"
 - back
 - extendedWaitUntil:
     visible:
       id: "btn_settings"
     timeout: 5000
+- assertVisible:
+    text: "Car Keys"
 
-# Swipe to Backpack (2 reports seeded)
+# Swipe to Backpack (2 reports seeded).
 - swipe:
     start: "85%, 75%"
     end: "15%, 75%"
@@ -30,10 +38,46 @@ name: History screen — opening from card pager different beacons
     id: "btn_card_history"
 - extendedWaitUntil:
     visible:
-      id: "btn_fetch_older"
+      id: "btn_day_prev"
     timeout: 5000
+- assertVisible:
+    id: "btn_day_prev"
+- assertVisible:
+    text: "Today"
 - back
 - extendedWaitUntil:
     visible:
       id: "btn_settings"
     timeout: 5000
+- assertVisible:
+    text: "Backpack"
+- assertNotVisible:
+    text: "Car Keys"
+
+# Swipe to Bike (1 report seeded).
+- swipe:
+    start: "85%, 75%"
+    end: "15%, 75%"
+    duration: 400
+- extendedWaitUntil:
+    visible:
+      text: "Bike"
+    timeout: 5000
+- tapOn:
+    id: "btn_card_history"
+- extendedWaitUntil:
+    visible:
+      id: "btn_day_prev"
+    timeout: 5000
+# Bike has 1 report — 6 hours ago, so day label is "Today".
+- assertVisible:
+    text: "Today"
+- back
+- extendedWaitUntil:
+    visible:
+      id: "btn_settings"
+    timeout: 5000
+- assertVisible:
+    text: "Bike"
+- assertNotVisible:
+    text: "Backpack"

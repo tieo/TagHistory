@@ -62,6 +62,66 @@ name: Settings — sign-out cancel ×3 keeps user on settings (regression)
 - assertVisible:
     id: "btn_sign_out"
 
+# round 4: cancel via system back instead of Cancel button.
+- tapOn:
+    id: "btn_sign_out"
+- extendedWaitUntil:
+    visible:
+      text: "Sign out\\?"
+    timeout: 5000
+- back
+- assertNotVisible:
+    text: "Sign out\\?"
+- assertVisible:
+    id: "btn_sign_out"
+
+# round 5: open and cancel one more time to be thorough.
+- tapOn:
+    id: "btn_sign_out"
+- extendedWaitUntil:
+    visible:
+      text: "Sign out\\?"
+    timeout: 5000
+- tapOn:
+    text: "Cancel"
+- assertNotVisible:
+    text: "Sign out\\?"
+- assertVisible:
+    id: "btn_sign_out"
+
+# Back to map: still authenticated, still on map screen.
+- back
+- extendedWaitUntil:
+    visible:
+      id: "btn_settings"
+    timeout: 5000
+- assertVisible:
+    text: "Car Keys"
+- assertNotVisible:
+    text: "Welcome to TagHistory"
+
+# One more pass: open Settings again, scroll, sign-out dialog still works.
+- tapOn:
+    id: "btn_settings"
+- extendedWaitUntil:
+    visible:
+      text: "Settings"
+    timeout: 5000
+- scrollUntilVisible:
+    element:
+      id: "btn_sign_out"
+    direction: DOWN
+    timeout: 5000
+- tapOn:
+    id: "btn_sign_out"
+- extendedWaitUntil:
+    visible:
+      text: "Sign out\\?"
+    timeout: 5000
+- tapOn:
+    text: "Cancel"
+- assertNotVisible:
+    text: "Sign out\\?"
 - back
 - extendedWaitUntil:
     visible:

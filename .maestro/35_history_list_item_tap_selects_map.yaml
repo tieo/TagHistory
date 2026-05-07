@@ -29,12 +29,63 @@ name: History — tapping a list item selects the point (highlighted entry)
       id: "history_item_1"
     timeout: 3000
 
-# Sheet remains open after tap (item 1 still visible)
+# Sheet remains open after tap (item 1 still visible).
 - assertVisible:
     id: "history_item_1"
+- assertVisible:
+    id: "history_item_0"
+- assertVisible:
+    text: ".*data point.*"
+
+# Tap item 2 to select older point. Day label is still Today (3 points).
+- tapOn:
+    id: "history_item_2"
+- extendedWaitUntil:
+    visible:
+      id: "history_item_2"
+    timeout: 3000
+- assertVisible:
+    text: "Today"
+
+# Tap back to item 0 — selection bounces around without crashing.
+- tapOn:
+    id: "history_item_0"
+- extendedWaitUntil:
+    visible:
+      id: "history_item_0"
+    timeout: 3000
+- assertVisible:
+    id: "history_item_0"
+
+# At least one timestamp line is rendered — catches blank labels.
+- assertVisible:
+    text: ".*At \\d.*"
+
+# Day-prev to Yesterday — items reset, item 0 is now Yesterday's newest.
+- tapOn:
+    id: "btn_day_prev"
+    optional: true
+- extendedWaitUntil:
+    visible:
+      text: "Yesterday"
+    timeout: 4000
+- extendedWaitUntil:
+    visible:
+      id: "history_item_0"
+    timeout: 4000
+- tapOn:
+    id: "history_item_0"
+- extendedWaitUntil:
+    visible:
+      id: "history_item_0"
+    timeout: 3000
 
 - back
 - extendedWaitUntil:
     visible:
       id: "btn_settings"
     timeout: 5000
+- assertVisible:
+    text: "Car Keys"
+- assertNotVisible:
+    text: "Yesterday"

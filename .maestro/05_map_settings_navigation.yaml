@@ -4,6 +4,41 @@ name: Map screen — settings button opens settings screen
 - runFlow:
     file: 00_seed_test_data.yaml
 
+# Pre: on map. Map landmarks are visible.
+- assertVisible:
+    id: "btn_settings"
+- assertVisible:
+    text: "Car Keys"
+
+- tapOn:
+    id: "btn_settings"
+- extendedWaitUntil:
+    visible:
+      text: "Settings"
+    timeout: 5000
+
+# On settings: section headers visible, map landmarks gone.
+- assertVisible:
+    text: "Appearance"
+- assertVisible:
+    text: "Background sync"
+- assertNotVisible:
+    text: "Car Keys"
+- assertNotVisible:
+    id: "btn_card_details"
+
+- back
+
+- extendedWaitUntil:
+    visible:
+      id: "btn_settings"
+    timeout: 5000
+- assertVisible:
+    text: "Car Keys"
+- assertNotVisible:
+    text: "Appearance"
+
+# Round-trip again. Make sure the second open works the same.
 - tapOn:
     id: "btn_settings"
 - extendedWaitUntil:
@@ -12,10 +47,10 @@ name: Map screen — settings button opens settings screen
     timeout: 5000
 - assertVisible:
     text: "Appearance"
-- assertVisible:
-    text: "Background sync"
 - back
 - extendedWaitUntil:
     visible:
       id: "btn_settings"
     timeout: 5000
+- assertVisible:
+    text: "Car Keys"

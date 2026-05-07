@@ -1,5 +1,5 @@
 appId: io.github.tieo.taghistory
-name: Information screen — links present, back navigation works
+name: Information screen — links present, back navigation works, license sub-screen
 ---
 - runFlow:
     file: 00_seed_test_data.yaml
@@ -21,26 +21,88 @@ name: Information screen — links present, back navigation works
     visible:
       text: "TagHistory"
     timeout: 5000
+
+# All three links + version line visible. Settings widgets gone.
 - assertVisible:
     id: "btn_developer_website"
 - assertVisible:
     id: "btn_source_code"
 - assertVisible:
     id: "btn_license"
+- assertNotVisible:
+    text: "Appearance"
+- assertNotVisible:
+    id: "btn_sign_out"
+
+# Tap the license button — it should open a license sub-screen or external
+# action without crashing. The most reliable structural assertion is that
+# back returns us to the Information screen with all three links visible.
 - tapOn:
-    id: "btn_source_code"
+    id: "btn_license"
 - back
 - extendedWaitUntil:
     visible:
       text: "TagHistory"
     timeout: 5000
+- assertVisible:
+    id: "btn_license"
+- assertVisible:
+    id: "btn_source_code"
+- assertVisible:
+    id: "btn_developer_website"
+
+# Tap source code (external intent). After back/dismiss the chooser if any,
+# Information screen is back.
+- tapOn:
+    id: "btn_source_code"
+- runFlow:
+    when:
+      notVisible:
+        id: "btn_license"
+    commands:
+      - back
+- runFlow:
+    when:
+      notVisible:
+        id: "btn_license"
+    commands:
+      - openLink: taghistory://test/seed
+      - extendedWaitUntil:
+          visible:
+            id: "btn_settings"
+          timeout: 10000
+      - tapOn:
+          id: "btn_settings"
+      - extendedWaitUntil:
+          visible:
+            text: "Settings"
+          timeout: 5000
+      - scrollUntilVisible:
+          element:
+            id: "btn_about"
+          direction: DOWN
+          timeout: 5000
+      - tapOn:
+          id: "btn_about"
+      - extendedWaitUntil:
+          visible:
+            id: "btn_license"
+          timeout: 5000
+
+# Back chain: Information → Settings → Map.
 - back
 - extendedWaitUntil:
     visible:
       text: "Settings"
     timeout: 5000
+- assertVisible:
+    text: "Appearance"
 - back
 - extendedWaitUntil:
     visible:
       id: "btn_settings"
     timeout: 5000
+- assertVisible:
+    text: "Car Keys"
+- assertNotVisible:
+    text: "Appearance"

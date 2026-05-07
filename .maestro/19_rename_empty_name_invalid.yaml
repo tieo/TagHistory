@@ -1,7 +1,10 @@
 appId: io.github.tieo.taghistory
-name: Device info — rename with empty name keeps save button disabled or shows error
+name: Device info — rename with empty name keeps save disabled and original name intact
 ---
-# Invalid input path: erasing all text must prevent save (button disabled or validation shown).
+# Invalid input path: erasing all text must prevent save (button disabled or
+# validation shown). Verifies the original name survives across multiple
+# attempts and across nav round-trips. Dialog content uses text selectors
+# because Compose AlertDialog testTags are not reachable from Maestro.
 - runFlow:
     file: 00_seed_test_data.yaml
 
@@ -11,20 +14,68 @@ name: Device info — rename with empty name keeps save button disabled or shows
     visible:
       id: "btn_rename"
     timeout: 5000
+- assertVisible:
+    text: "Car Keys"
+
 - tapOn:
     id: "btn_rename"
 - assertVisible:
     text: "Rename device"
+
+# Tap the field's current text "Car Keys" to focus, then erase.
 - tapOn:
-    id: "field_rename_name"
+    text: "Car Keys"
 - eraseText: 50
-# Save with empty field must NOT dismiss dialog
+
+# Save with empty field must NOT dismiss dialog.
 - tapOn:
-    id: "btn_rename_save"
+    text: "Save"
 - assertVisible:
     text: "Rename device"
-# Dismiss cleanly
+
+# Whitespace-only must also be invalid. The keyboard remains focused on the
+# same field, so inputText goes to it.
+- inputText: "   "
 - tapOn:
-    id: "btn_rename_cancel"
+    text: "Save"
+- assertVisible:
+    text: "Rename device"
+
+# Type valid then erase again — Save should still not dismiss with empty input.
+- tapOn:
+    text: "   "
+- eraseText: 50
+- tapOn:
+    text: "Save"
+- assertVisible:
+    text: "Rename device"
+
+# Cancel cleanly. Original name preserved.
+- tapOn:
+    text: "Cancel"
 - assertNotVisible:
     text: "Rename device"
+- assertVisible:
+    text: "Car Keys"
+
+# Nav round-trip: leave details and reopen, name still Car Keys.
+- back
+- extendedWaitUntil:
+    visible:
+      id: "btn_settings"
+    timeout: 5000
+- assertVisible:
+    text: "Car Keys"
+- tapOn:
+    id: "btn_card_details"
+- extendedWaitUntil:
+    visible:
+      id: "btn_rename"
+    timeout: 5000
+- assertVisible:
+    text: "Car Keys"
+- back
+- extendedWaitUntil:
+    visible:
+      id: "btn_settings"
+    timeout: 5000

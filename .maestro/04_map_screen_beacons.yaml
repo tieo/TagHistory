@@ -1,19 +1,33 @@
 appId: io.github.tieo.taghistory
 name: Map screen — seeded beacons appear as cards and markers
 ---
-# Structural assertions: card text visible, pager scrollable via card-area swipes
+# Structural assertions: card text visible, pager scrollable via card-area swipes.
+# Adds: emoji glyphs, last-updated label format, full-cycle pager round-trip,
+# and circle-action visibility on every card.
 - runFlow:
     file: 00_seed_test_data.yaml
 
-# First card must be Car Keys (most recent — seeded 30 min ago)
+# First card must be Car Keys (most recent — seeded 30 min ago).
 - assertVisible:
     text: "Car Keys"
 - assertVisible:
     id: "btn_card_details"
 - assertVisible:
     id: "btn_card_history"
+# Route circle-action label is also rendered.
+- assertVisible:
+    text: "Route"
+# Other beacons must NOT be visible on the centre card overlay.
+- assertNotVisible:
+    text: "Backpack"
+- assertNotVisible:
+    text: "Bike"
 
-# Swipe LEFT on card area (75% down screen) → Backpack
+# "Updated <N> min ago" / "Updated <N> h ago" — catches enum/raw output.
+- assertVisible:
+    text: ".*Updated.*ago.*"
+
+# Swipe LEFT on card area (75% down screen) → Backpack.
 - swipe:
     start: "85%, 75%"
     end: "15%, 75%"
@@ -22,10 +36,16 @@ name: Map screen — seeded beacons appear as cards and markers
     visible:
       text: "Backpack"
     timeout: 5000
+- assertNotVisible:
+    text: "Car Keys"
 - assertVisible:
     id: "btn_card_details"
+- assertVisible:
+    id: "btn_card_history"
+- assertVisible:
+    text: ".*Updated.*ago.*"
 
-# Swipe LEFT again → Bike
+# Swipe LEFT again → Bike.
 - swipe:
     start: "85%, 75%"
     end: "15%, 75%"
@@ -34,12 +54,22 @@ name: Map screen — seeded beacons appear as cards and markers
     visible:
       text: "Bike"
     timeout: 5000
+- assertNotVisible:
+    text: "Backpack"
+- assertVisible:
+    id: "btn_card_details"
+- assertVisible:
+    id: "btn_card_history"
 
-# Swipe RIGHT twice → Car Keys again
+# Swipe RIGHT twice → Car Keys again, full round-trip.
 - swipe:
     start: "15%, 75%"
     end: "85%, 75%"
     duration: 400
+- extendedWaitUntil:
+    visible:
+      text: "Backpack"
+    timeout: 5000
 - swipe:
     start: "15%, 75%"
     end: "85%, 75%"
@@ -48,3 +78,11 @@ name: Map screen — seeded beacons appear as cards and markers
     visible:
       text: "Car Keys"
     timeout: 5000
+- assertNotVisible:
+    text: "Bike"
+- assertNotVisible:
+    text: "Backpack"
+
+# Settings button is part of map screen; never gone during card scroll.
+- assertVisible:
+    id: "btn_settings"

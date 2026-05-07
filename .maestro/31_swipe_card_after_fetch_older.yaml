@@ -12,13 +12,13 @@ name: "Stress: swipe cards after fetch-older — history loads independently per
     id: "btn_card_history"
 - extendedWaitUntil:
     visible:
-      id: "btn_fetch_older"
+      id: "btn_day_prev"
     timeout: 5000
 - tapOn:
-    id: "btn_fetch_older"
+    id: "btn_day_prev"
 - extendedWaitUntil:
     visible:
-      id: "btn_fetch_older"
+      id: "btn_day_prev"
     timeout: 15000
 - back
 - extendedWaitUntil:
@@ -39,13 +39,13 @@ name: "Stress: swipe cards after fetch-older — history loads independently per
     id: "btn_card_history"
 - extendedWaitUntil:
     visible:
-      id: "btn_fetch_older"
+      id: "btn_day_prev"
     timeout: 5000
 - tapOn:
-    id: "btn_fetch_older"
+    id: "btn_day_prev"
 - extendedWaitUntil:
     visible:
-      id: "btn_fetch_older"
+      id: "btn_day_prev"
     timeout: 15000
 - back
 - extendedWaitUntil:
@@ -68,8 +68,10 @@ name: "Stress: swipe cards after fetch-older — history loads independently per
     id: "btn_card_history"
 - extendedWaitUntil:
     visible:
-      id: "btn_fetch_older"
+      id: "btn_day_prev"
     timeout: 5000
+- assertVisible:
+    text: "Today"
 - back
 - extendedWaitUntil:
     visible:
@@ -77,3 +79,59 @@ name: "Stress: swipe cards after fetch-older — history loads independently per
     timeout: 5000
 - assertVisible:
     text: "Bike"
+
+# ── swipe back through Backpack and Car Keys, history each — pager-history sync ─
+- swipe:
+    start: "15%, 75%"
+    end: "85%, 75%"
+    duration: 400
+- extendedWaitUntil:
+    visible:
+      text: "Backpack"
+    timeout: 5000
+- tapOn:
+    id: "btn_card_history"
+- extendedWaitUntil:
+    visible:
+      id: "btn_day_prev"
+    timeout: 5000
+# Day-prev exercises VM reload at least once.
+- tapOn:
+    id: "btn_day_prev"
+- extendedWaitUntil:
+    visible:
+      text: "Yesterday"
+    timeout: 4000
+- back
+- extendedWaitUntil:
+    visible:
+      id: "btn_settings"
+    timeout: 5000
+- assertVisible:
+    text: "Backpack"
+- assertNotVisible:
+    text: "Bike"
+
+- swipe:
+    start: "15%, 75%"
+    end: "85%, 75%"
+    duration: 400
+- extendedWaitUntil:
+    visible:
+      text: "Car Keys"
+    timeout: 5000
+- tapOn:
+    id: "btn_card_history"
+- extendedWaitUntil:
+    visible:
+      id: "btn_day_prev"
+    timeout: 5000
+- assertVisible:
+    text: "Today"
+- back
+- extendedWaitUntil:
+    visible:
+      id: "btn_settings"
+    timeout: 5000
+- assertVisible:
+    text: "Car Keys"

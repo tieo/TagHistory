@@ -8,6 +8,8 @@ name: Login screen — UI elements present
     visible:
       text: "Welcome to TagHistory"
     timeout: 5000
+
+# Initial UI: credential fields visible, OTP path widgets hidden.
 - assertVisible:
     id: "field_email"
 - assertVisible:
@@ -18,3 +20,36 @@ name: Login screen — UI elements present
     id: "field_otp_code"
 - assertNotVisible:
     id: "btn_start_over"
+- assertNotVisible:
+    id: "btn_paste_code"
+
+# Map screen widgets must NOT be visible from the login screen.
+- assertNotVisible:
+    id: "btn_settings"
+- assertNotVisible:
+    text: "Car Keys"
+
+# Email field is empty by default. Tap → focus → still empty until typed.
+- tapOn:
+    id: "field_email"
+- assertVisible:
+    id: "field_email"
+- assertNotVisible:
+    id: "field_otp_code"
+
+# Hide app and bring it back: state survives backgrounding.
+- pressKey: HOME
+- launchApp:
+    clearState: false
+- extendedWaitUntil:
+    visible:
+      text: "Welcome to TagHistory"
+    timeout: 5000
+- assertVisible:
+    id: "field_email"
+- assertVisible:
+    id: "field_password"
+- assertVisible:
+    id: "btn_login"
+- assertNotVisible:
+    id: "field_otp_code"

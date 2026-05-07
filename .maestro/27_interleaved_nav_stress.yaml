@@ -49,7 +49,7 @@ name: "Stress: interleaved settings+details+history with card switches"
     id: "btn_card_history"
 - extendedWaitUntil:
     visible:
-      id: "btn_fetch_older"
+      id: "btn_day_prev"
     timeout: 5000
 - back
 - extendedWaitUntil:
@@ -101,7 +101,7 @@ name: "Stress: interleaved settings+details+history with card switches"
     id: "btn_card_history"
 - extendedWaitUntil:
     visible:
-      id: "btn_fetch_older"
+      id: "btn_day_prev"
     timeout: 5000
 - back
 - extendedWaitUntil:
@@ -137,3 +137,62 @@ name: "Stress: interleaved settings+details+history with card switches"
     timeout: 5000
 - assertVisible:
     text: "Car Keys"
+
+# ── from Car Keys: details, history, then back-back ────────────────────────
+- tapOn:
+    id: "btn_card_details"
+- extendedWaitUntil:
+    visible:
+      id: "btn_rename"
+    timeout: 5000
+- back
+- extendedWaitUntil:
+    visible:
+      id: "btn_settings"
+    timeout: 5000
+- assertVisible:
+    text: "Car Keys"
+
+- tapOn:
+    id: "btn_card_history"
+- extendedWaitUntil:
+    visible:
+      id: "btn_day_prev"
+    timeout: 5000
+- back
+- extendedWaitUntil:
+    visible:
+      id: "btn_settings"
+    timeout: 5000
+- assertVisible:
+    text: "Car Keys"
+
+# ── one more triplet on Backpack with rapid back-presses to stress the stack ──
+- swipe:
+    start: "85%, 75%"
+    end: "15%, 75%"
+    duration: 400
+- extendedWaitUntil:
+    visible:
+      text: "Backpack"
+    timeout: 5000
+- tapOn:
+    id: "btn_card_details"
+- extendedWaitUntil:
+    visible:
+      id: "btn_view_history"
+    timeout: 5000
+- tapOn:
+    id: "btn_view_history"
+- extendedWaitUntil:
+    visible:
+      id: "btn_day_prev"
+    timeout: 5000
+- back
+- back
+- extendedWaitUntil:
+    visible:
+      id: "btn_settings"
+    timeout: 8000
+- assertVisible:
+    text: "Backpack"

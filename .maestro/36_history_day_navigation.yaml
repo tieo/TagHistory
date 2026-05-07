@@ -61,9 +61,82 @@ name: History — day navigation prev/next changes point list
     timeout: 4000
 - assertVisible:
     text: "Today"
+- assertNotVisible:
+    text: "Yesterday"
+# Re-expand the sheet — day transitions may have collapsed it.
+- swipe:
+    start: "50%, 88%"
+    end: "50%, 40%"
+    duration: 400
+- extendedWaitUntil:
+    visible:
+      id: "history_item_0"
+    timeout: 6000
+# Today has 3 points (Car Keys seeded with 3 today, 2 yesterday, 1 older).
+- assertVisible:
+    id: "history_item_0"
+- assertVisible:
+    id: "history_item_1"
+- assertVisible:
+    id: "history_item_2"
+- assertVisible:
+    text: ".*data point.*"
+- assertVisible:
+    text: ".*At \\d.*"
+
+# Walk back two days, then forward two days again — exercises VM caching.
+- tapOn:
+    id: "btn_day_prev"
+    optional: true
+- extendedWaitUntil:
+    visible:
+      text: "Yesterday"
+    timeout: 4000
+- assertVisible:
+    id: "history_item_0"
+- assertVisible:
+    id: "history_item_1"
+- tapOn:
+    id: "btn_day_prev"
+    optional: true
+- extendedWaitUntil:
+    visible:
+      text: ".*\\d\\d\\d\\d-\\d\\d-\\d\\d.*"
+    timeout: 4000
+- assertVisible:
+    id: "history_item_0"
+- tapOn:
+    id: "btn_day_next"
+    optional: true
+- extendedWaitUntil:
+    visible:
+      text: "Yesterday"
+    timeout: 4000
+- tapOn:
+    id: "btn_day_next"
+    optional: true
+- extendedWaitUntil:
+    visible:
+      text: "Today"
+    timeout: 4000
+# Re-expand the sheet — day transitions may have collapsed it.
+- swipe:
+    start: "50%, 88%"
+    end: "50%, 40%"
+    duration: 400
+- extendedWaitUntil:
+    visible:
+      id: "history_item_0"
+    timeout: 6000
+- assertVisible:
+    id: "history_item_2"
 
 - back
 - extendedWaitUntil:
     visible:
       id: "btn_settings"
     timeout: 5000
+- assertVisible:
+    text: "Car Keys"
+- assertNotVisible:
+    id: "btn_day_prev"

@@ -16,7 +16,7 @@ name: History — pressing day-next at Today (boundary) is a no-op, day stays To
 - assertVisible:
     text: "Today"
 
-# Try to tap forward at the upper boundary
+# Try to tap forward at the upper boundary.
 - tapOn:
     id: "btn_day_next"
     optional: true
@@ -24,12 +24,60 @@ name: History — pressing day-next at Today (boundary) is a no-op, day stays To
     id: "btn_day_next"
     optional: true
 
-# Day stays Today (still visible after attempted forward navigation)
+# Day stays Today (still visible after attempted forward navigation).
 - assertVisible:
     text: "Today"
+- assertNotVisible:
+    text: "Yesterday"
+
+# Day-prev: Today -> Yesterday. Then try day-next twice -- last tap is no-op
+# since we are at the upper boundary again.
+- tapOn:
+    id: "btn_day_prev"
+    optional: true
+- extendedWaitUntil:
+    visible:
+      text: "Yesterday"
+    timeout: 4000
+- tapOn:
+    id: "btn_day_next"
+    optional: true
+- extendedWaitUntil:
+    visible:
+      text: "Today"
+    timeout: 4000
+- tapOn:
+    id: "btn_day_next"
+    optional: true
+- assertVisible:
+    text: "Today"
+- assertNotVisible:
+    text: "Yesterday"
+
+# Lower boundary: walk past the oldest seed via three day-prev presses, then
+# walk back forward — controls stay alive, never crash to white screen.
+- tapOn:
+    id: "btn_day_prev"
+    optional: true
+- tapOn:
+    id: "btn_day_prev"
+    optional: true
+- tapOn:
+    id: "btn_day_prev"
+    optional: true
+- tapOn:
+    id: "btn_day_prev"
+    optional: true
+- tapOn:
+    id: "btn_day_prev"
+    optional: true
+- assertVisible:
+    id: "btn_day_next"
 
 - back
 - extendedWaitUntil:
     visible:
       id: "btn_settings"
     timeout: 5000
+- assertVisible:
+    text: "Car Keys"

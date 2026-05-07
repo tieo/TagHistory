@@ -1,5 +1,5 @@
 appId: io.github.tieo.taghistory
-name: "Device info — remove dialog: cancel keeps device, confirm removes it"
+name: "Device info — remove dialog: cancel keeps device, dialog state idempotent"
 ---
 - runFlow:
     file: 00_seed_test_data.yaml
@@ -10,19 +10,50 @@ name: "Device info — remove dialog: cancel keeps device, confirm removes it"
     visible:
       id: "btn_remove"
     timeout: 5000
-
-# Cancel path: device survives
-- tapOn:
-    id: "btn_remove"
-- assertVisible:
-    text: "Remove device?"
-- assertVisible:
-    id: "btn_remove_cancel"
-- assertVisible:
-    id: "btn_remove_confirm"
-- tapOn:
-    id: "btn_remove_cancel"
 - assertNotVisible:
-    text: "Remove device?"
+    text: "Remove device\\?"
+
+# Cancel via Cancel button: device survives.
+- tapOn:
+    id: "btn_remove"
+- assertVisible:
+    text: "Remove device\\?"
+# Dialog buttons render in a separate window — text selectors most reliable.
+- assertVisible:
+    text: "Cancel"
+- assertVisible:
+    text: "Remove"
+- tapOn:
+    text: "Cancel"
+- assertNotVisible:
+    text: "Remove device\\?"
 - assertVisible:
     id: "btn_remove"
+- assertVisible:
+    id: "btn_rename"
+- assertVisible:
+    id: "btn_view_history"
+
+# Cancel via system back: device also survives.
+- tapOn:
+    id: "btn_remove"
+- extendedWaitUntil:
+    visible:
+      text: "Remove device\\?"
+    timeout: 3000
+- back
+- assertNotVisible:
+    text: "Remove device\\?"
+- assertVisible:
+    id: "btn_remove"
+
+# Round-trip back to map. Beacon name still on the pager (not removed).
+- back
+- extendedWaitUntil:
+    visible:
+      id: "btn_settings"
+    timeout: 5000
+- assertVisible:
+    text: "Car Keys"
+- assertVisible:
+    id: "btn_card_details"

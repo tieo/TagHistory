@@ -18,7 +18,7 @@ name: "Stress: map→details→history→back×2 — full back-stack depth"
     id: "btn_view_history"
 - extendedWaitUntil:
     visible:
-      id: "btn_fetch_older"
+      id: "btn_day_prev"
     timeout: 5000
 
 # ── Unwind level 1: history → details ────────────────────────────────────────
@@ -63,8 +63,12 @@ name: "Stress: map→details→history→back×2 — full back-stack depth"
     id: "btn_view_history"
 - extendedWaitUntil:
     visible:
-      id: "btn_fetch_older"
+      id: "btn_day_prev"
     timeout: 5000
+- assertVisible:
+    id: "btn_day_next"
+- assertNotVisible:
+    id: "btn_view_history"
 - back
 - extendedWaitUntil:
     visible:
@@ -72,6 +76,8 @@ name: "Stress: map→details→history→back×2 — full back-stack depth"
     timeout: 5000
 - assertNotVisible:
     id: "btn_settings"
+- assertNotVisible:
+    id: "btn_day_prev"
 - back
 - extendedWaitUntil:
     visible:
@@ -79,3 +85,43 @@ name: "Stress: map→details→history→back×2 — full back-stack depth"
     timeout: 5000
 - assertVisible:
     text: "Bike"
+- assertNotVisible:
+    id: "btn_view_history"
+
+# ── Third pass from Backpack: Map -> Details -> History -> back -> back ────
+- swipe:
+    start: "15%, 75%"
+    end: "85%, 75%"
+    duration: 400
+- extendedWaitUntil:
+    visible:
+      text: "Backpack"
+    timeout: 5000
+- tapOn:
+    id: "btn_card_details"
+- extendedWaitUntil:
+    visible:
+      id: "btn_view_history"
+    timeout: 5000
+- tapOn:
+    id: "btn_view_history"
+- extendedWaitUntil:
+    visible:
+      id: "btn_day_prev"
+    timeout: 5000
+- back
+- extendedWaitUntil:
+    visible:
+      id: "btn_view_history"
+    timeout: 5000
+- back
+- extendedWaitUntil:
+    visible:
+      id: "btn_settings"
+    timeout: 5000
+- assertVisible:
+    text: "Backpack"
+- assertNotVisible:
+    text: "Bike"
+- assertNotVisible:
+    text: "Car Keys"

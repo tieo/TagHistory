@@ -26,3 +26,53 @@ name: History — back from history returns to map (btn_settings reappears)
     id: "btn_settings"
 - assertVisible:
     text: "Car Keys"
+- assertNotVisible:
+    id: "btn_day_prev"
+- assertNotVisible:
+    id: "btn_day_next"
+- assertNotVisible:
+    text: "Today"
+
+# Re-enter history a second time, verify same flow works again.
+- tapOn:
+    id: "btn_card_history"
+- extendedWaitUntil:
+    visible:
+      id: "btn_day_prev"
+    timeout: 5000
+- assertNotVisible:
+    id: "btn_settings"
+- assertNotVisible:
+    id: "btn_card_details"
+- back
+- extendedWaitUntil:
+    visible:
+      id: "btn_settings"
+    timeout: 5000
+- assertVisible:
+    text: "Car Keys"
+- assertNotVisible:
+    id: "btn_day_prev"
+
+# Swipe to Backpack and verify same back-flow on a different beacon.
+- swipe:
+    start: "85%, 75%"
+    end: "15%, 75%"
+    duration: 400
+- extendedWaitUntil:
+    visible:
+      text: "Backpack"
+    timeout: 5000
+- tapOn:
+    id: "btn_card_history"
+- extendedWaitUntil:
+    visible:
+      id: "btn_day_prev"
+    timeout: 5000
+- back
+- extendedWaitUntil:
+    visible:
+      id: "btn_settings"
+    timeout: 5000
+- assertVisible:
+    text: "Backpack"

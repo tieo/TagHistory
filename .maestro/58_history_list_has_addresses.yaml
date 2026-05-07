@@ -24,16 +24,65 @@ name: History — expanded list shows item addresses or coords plus times
       id: "history_item_0"
     timeout: 6000
 
-# At least one "At HH:MM" timestamp visible (full-string regex)
+# At least one "At HH:MM" timestamp visible (full-string regex). Catches
+# UTC-vs-local format bugs and raw-enum/empty output bugs.
 - assertVisible:
     text: ".*At \\d.*"
+# Time format must match exactly two digits, colon, two digits — no seconds,
+# no AM/PM mixed in (the formatLocalTime is HH:MM 24-hour locally formatted).
+- assertVisible:
+    text: ".*At \\d\\d:\\d\\d.*"
 
-# And at least one history item, since seeded data has 3 points today
+# Three points today seeded — items 0, 1, 2 all present.
 - assertVisible:
     id: "history_item_0"
+- assertVisible:
+    id: "history_item_1"
+- assertVisible:
+    id: "history_item_2"
+
+- assertVisible:
+    text: ".*data point.*"
+
+# Day-prev to Yesterday — items still render with the same time format.
+- tapOn:
+    id: "btn_day_prev"
+    optional: true
+- extendedWaitUntil:
+    visible:
+      text: "Yesterday"
+    timeout: 4000
+- extendedWaitUntil:
+    visible:
+      id: "history_item_0"
+    timeout: 5000
+- assertVisible:
+    text: ".*At \\d\\d:\\d\\d.*"
+# Yesterday for Car Keys has 2 points — items 0 and 1 visible.
+- assertVisible:
+    id: "history_item_1"
+
+# Older bucket (3 days ago, 1 point) — date label is YYYY-MM-DD.
+- tapOn:
+    id: "btn_day_prev"
+    optional: true
+- extendedWaitUntil:
+    visible:
+      text: ".*\\d\\d\\d\\d-\\d\\d-\\d\\d.*"
+    timeout: 4000
+- extendedWaitUntil:
+    visible:
+      id: "history_item_0"
+    timeout: 5000
+- assertVisible:
+    text: ".*At \\d\\d:\\d\\d.*"
 
 - back
 - extendedWaitUntil:
     visible:
       id: "btn_settings"
     timeout: 5000
+- assertVisible:
+    text: "Car Keys"
+- assertNotVisible:
+    text: "Yesterday"

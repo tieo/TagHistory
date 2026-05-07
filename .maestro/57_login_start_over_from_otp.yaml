@@ -44,3 +44,50 @@ name: Login — start over from 2FA returns to credentials form
           id: "btn_start_over"
       - assertNotVisible:
           id: "field_otp_code"
+      - assertNotVisible:
+          id: "btn_paste_code"
+
+      # Email field is preserved or cleared — either is fine. The form must
+      # accept new input either way.
+      - tapOn:
+          id: "field_email"
+      - eraseText: 50
+      - inputText: "second@example.com"
+      - assertVisible:
+          text: "second@example.com"
+
+      # Try a different wrong password. Form does not crash, ends in same
+      # one-of-two state.
+      - tapOn:
+          id: "field_password"
+      - eraseText: 50
+      - inputText: "anotherwrongpassword"
+      - tapOn:
+          id: "btn_login"
+      - extendedWaitUntil:
+          visible:
+            text: "Welcome to TagHistory"
+          timeout: 5000
+
+      # If start-over reappears, exercise it again to fully unwind.
+      - runFlow:
+          when:
+            visible:
+              id: "btn_start_over"
+          commands:
+            - tapOn:
+                id: "btn_start_over"
+            - extendedWaitUntil:
+                visible:
+                  id: "field_email"
+                timeout: 5000
+            - assertVisible:
+                id: "field_email"
+            - assertNotVisible:
+                id: "btn_start_over"
+
+# Map widgets must never appear at any point.
+- assertNotVisible:
+    id: "btn_settings"
+- assertNotVisible:
+    text: "Car Keys"

@@ -33,3 +33,63 @@ name: Navigation — rapid back from deep stack does not crash
     id: "btn_settings"
 - assertVisible:
     text: "Car Keys"
+- assertNotVisible:
+    id: "btn_view_history"
+- assertNotVisible:
+    id: "btn_day_prev"
+
+# Round 2: drill down again on Backpack and double-back. Same outcome.
+- swipe:
+    start: "85%, 75%"
+    end: "15%, 75%"
+    duration: 400
+- extendedWaitUntil:
+    visible:
+      text: "Backpack"
+    timeout: 5000
+- tapOn:
+    id: "btn_card_details"
+- extendedWaitUntil:
+    visible:
+      id: "btn_view_history"
+    timeout: 5000
+- tapOn:
+    id: "btn_view_history"
+- extendedWaitUntil:
+    visible:
+      id: "btn_day_prev"
+    timeout: 5000
+- back
+- back
+- extendedWaitUntil:
+    visible:
+      id: "btn_settings"
+    timeout: 8000
+- assertVisible:
+    text: "Backpack"
+
+# Round 3: more rapid sequence with a settings interjection.
+- tapOn:
+    id: "btn_settings"
+- extendedWaitUntil:
+    visible:
+      text: "Settings"
+    timeout: 5000
+- back
+- extendedWaitUntil:
+    visible:
+      id: "btn_settings"
+    timeout: 5000
+- tapOn:
+    id: "btn_card_history"
+- extendedWaitUntil:
+    visible:
+      id: "btn_day_prev"
+    timeout: 5000
+- back
+- extendedWaitUntil:
+    visible:
+      id: "btn_settings"
+    timeout: 5000
+- assertVisible:
+    text: "Backpack"

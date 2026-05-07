@@ -43,3 +43,44 @@ name: Login — 2FA OTP field accepts six digits without crashing
           id: "field_email"
       - assertVisible:
           id: "btn_login"
+      - assertNotVisible:
+          id: "field_otp_code"
+
+# Hit Login with the same wrong creds again — must not crash, must end in
+# the same one of two states (login form OR start-over screen).
+- tapOn:
+    id: "btn_login"
+- extendedWaitUntil:
+    visible:
+      text: "Welcome to TagHistory"
+    timeout: 5000
+- runFlow:
+    when:
+      visible:
+        id: "btn_start_over"
+    commands:
+      - assertVisible:
+          id: "btn_start_over"
+      - assertNotVisible:
+          id: "field_email"
+      - assertNotVisible:
+          id: "btn_login"
+- runFlow:
+    when:
+      visible:
+        id: "field_email"
+    commands:
+      - assertVisible:
+          id: "field_email"
+      - assertVisible:
+          id: "field_password"
+      - assertVisible:
+          id: "btn_login"
+      - assertNotVisible:
+          id: "field_otp_code"
+
+# Map screen widgets must never appear on a wrong-cred attempt.
+- assertNotVisible:
+    id: "btn_settings"
+- assertNotVisible:
+    text: "Car Keys"

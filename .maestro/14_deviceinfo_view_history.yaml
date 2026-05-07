@@ -1,5 +1,5 @@
 appId: io.github.tieo.taghistory
-name: Device info — View history button navigates to history screen
+name: Device info — View history button navigates to history; back returns
 ---
 - runFlow:
     file: 00_seed_test_data.yaml
@@ -10,14 +10,62 @@ name: Device info — View history button navigates to history screen
     visible:
       id: "btn_view_history"
     timeout: 5000
+# Pre: details landmarks on screen, history-screen widgets not yet visible.
+- assertVisible:
+    id: "btn_rename"
+- assertVisible:
+    id: "btn_remove"
+- assertNotVisible:
+    id: "btn_day_prev"
+
 - tapOn:
     id: "btn_view_history"
 - extendedWaitUntil:
     visible:
-      id: "btn_fetch_older"
+      id: "btn_day_prev"
+    timeout: 5000
+
+# History screen: day-nav controls present, details widgets gone, map widgets gone.
+- assertVisible:
+    id: "btn_day_prev"
+- assertVisible:
+    id: "btn_day_next"
+- assertNotVisible:
+    id: "btn_rename"
+- assertNotVisible:
+    id: "btn_settings"
+- assertVisible:
+    text: "Today"
+
+# Back to details — view-history button is back, day-nav gone.
+- back
+- extendedWaitUntil:
+    visible:
+      id: "btn_view_history"
+    timeout: 5000
+- assertVisible:
+    id: "btn_rename"
+- assertNotVisible:
+    id: "btn_day_prev"
+
+# Reopen history a second time, verify symmetry.
+- tapOn:
+    id: "btn_view_history"
+- extendedWaitUntil:
+    visible:
+      id: "btn_day_prev"
     timeout: 5000
 - back
 - extendedWaitUntil:
     visible:
       id: "btn_view_history"
     timeout: 5000
+
+# Final back to map.
+- back
+- extendedWaitUntil:
+    visible:
+      id: "btn_settings"
+    timeout: 5000
+- assertVisible:
+    text: "Car Keys"

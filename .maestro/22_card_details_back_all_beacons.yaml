@@ -88,6 +88,13 @@ name: "Stress: details→back for every beacon — card stays synced"
     visible:
       id: "btn_rename"
     timeout: 5000
+# Details landmarks visible, map landmarks gone.
+- assertVisible:
+    id: "btn_remove"
+- assertVisible:
+    id: "btn_view_history"
+- assertNotVisible:
+    id: "btn_settings"
 - back
 - extendedWaitUntil:
     visible:
@@ -95,3 +102,72 @@ name: "Stress: details→back for every beacon — card stays synced"
     timeout: 5000
 - assertVisible:
     text: "Car Keys"
+- assertNotVisible:
+    text: "Bike"
+- assertNotVisible:
+    text: "Backpack"
+
+# ── second pass: same beacons, second time round-trip ────────────────────────
+- tapOn:
+    id: "btn_card_details"
+- extendedWaitUntil:
+    visible:
+      id: "btn_rename"
+    timeout: 5000
+- back
+- extendedWaitUntil:
+    visible:
+      id: "btn_settings"
+    timeout: 5000
+- assertVisible:
+    text: "Car Keys"
+
+- swipe:
+    start: "85%, 75%"
+    end: "15%, 75%"
+    duration: 400
+- extendedWaitUntil:
+    visible:
+      text: "Backpack"
+    timeout: 5000
+- tapOn:
+    id: "btn_card_details"
+- extendedWaitUntil:
+    visible:
+      id: "btn_rename"
+    timeout: 5000
+- back
+- extendedWaitUntil:
+    visible:
+      id: "btn_settings"
+    timeout: 5000
+- assertVisible:
+    text: "Backpack"
+
+- swipe:
+    start: "85%, 75%"
+    end: "15%, 75%"
+    duration: 400
+- extendedWaitUntil:
+    visible:
+      text: "Bike"
+    timeout: 5000
+- tapOn:
+    id: "btn_card_details"
+- extendedWaitUntil:
+    visible:
+      id: "btn_rename"
+    timeout: 5000
+- back
+- extendedWaitUntil:
+    visible:
+      id: "btn_settings"
+    timeout: 5000
+- assertVisible:
+    text: "Bike"
+
+# Final: btn_card_details still works, no leak from previous opens.
+- assertVisible:
+    id: "btn_card_details"
+- assertVisible:
+    id: "btn_card_history"

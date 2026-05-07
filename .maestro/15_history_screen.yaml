@@ -1,32 +1,76 @@
 appId: io.github.tieo.taghistory
-name: History screen — seeded reports visible, fetch older works, back returns to map
+name: History screen — seeded reports visible, day nav works, back returns to map
 ---
 - runFlow:
     file: 00_seed_test_data.yaml
 
-# Open history from map card (Car Keys has 6 seeded reports across 3 days)
+# Open history from map card (Car Keys has 6 seeded reports across 3 days).
 - tapOn:
     id: "btn_card_history"
 - extendedWaitUntil:
     visible:
-      id: "btn_fetch_older"
+      id: "btn_day_prev"
     timeout: 5000
 
-# At least one history entry must be rendered
+# History landmarks: day nav present, map widgets gone.
 - assertVisible:
-    id: "btn_fetch_older"
+    id: "btn_day_prev"
+- assertVisible:
+    id: "btn_day_next"
+- assertVisible:
+    text: "Today"
+- assertNotVisible:
+    id: "btn_settings"
+- assertNotVisible:
+    id: "btn_card_details"
 
-# Fetch older — button remains present after fetch completes
-- tapOn:
-    id: "btn_fetch_older"
+# Expand the bottom sheet so we can verify the chronological list renders.
+- swipe:
+    start: "50%, 88%"
+    end: "50%, 40%"
+    duration: 400
 - extendedWaitUntil:
     visible:
-      id: "btn_fetch_older"
-    timeout: 15000
+      id: "history_item_0"
+    timeout: 6000
+- assertVisible:
+    id: "history_item_0"
+# "data point" / "data points" pluralization rendered.
+- assertVisible:
+    text: ".*data point.*"
+# At least one "At HH:MM" timestamp visible — catches UTC-vs-local format bugs.
+- assertVisible:
+    text: ".*At \\d.*"
 
-# Back returns to map
+# Day-prev to Yesterday: list re-renders.
+- tapOn:
+    id: "btn_day_prev"
+- extendedWaitUntil:
+    visible:
+      text: "Yesterday"
+    timeout: 4000
+- assertVisible:
+    text: "Yesterday"
+- assertNotVisible:
+    text: "Today"
+
+# Day-next to Today again: round-trip.
+- tapOn:
+    id: "btn_day_next"
+- extendedWaitUntil:
+    visible:
+      text: "Today"
+    timeout: 4000
+- assertVisible:
+    text: "Today"
+
+# Back returns to map. Card pager picks up where we left off.
 - back
 - extendedWaitUntil:
     visible:
       id: "btn_settings"
     timeout: 5000
+- assertVisible:
+    text: "Car Keys"
+- assertNotVisible:
+    id: "btn_day_prev"

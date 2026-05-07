@@ -62,3 +62,63 @@ name: "Stress: swiping between cards does not reset map camera to world"
 # Not on login screen (btn_import would appear if no auth)
 - assertNotVisible:
     id: "btn_import"
+
+# Bounce burst at high speed — pager must not crash, settings still tappable.
+- swipe:
+    start: "85%, 75%"
+    end: "15%, 75%"
+    duration: 150
+- swipe:
+    start: "15%, 75%"
+    end: "85%, 75%"
+    duration: 150
+- swipe:
+    start: "85%, 75%"
+    end: "15%, 75%"
+    duration: 150
+- swipe:
+    start: "15%, 75%"
+    end: "85%, 75%"
+    duration: 150
+- swipe:
+    start: "85%, 75%"
+    end: "15%, 75%"
+    duration: 150
+- swipe:
+    start: "15%, 75%"
+    end: "85%, 75%"
+    duration: 150
+- extendedWaitUntil:
+    visible:
+      id: "btn_settings"
+    timeout: 5000
+
+# After all the bouncing, swipe deterministically to land on Bike, then back
+# to Backpack: the named card must be visible (camera is at street level so
+# the card overlay still renders; world-zoom would not show the card).
+- swipe:
+    start: "85%, 75%"
+    end: "15%, 75%"
+    duration: 400
+- swipe:
+    start: "85%, 75%"
+    end: "15%, 75%"
+    duration: 400
+- extendedWaitUntil:
+    visible:
+      text: "Bike"
+    timeout: 5000
+- assertVisible:
+    id: "btn_card_details"
+- swipe:
+    start: "15%, 75%"
+    end: "85%, 75%"
+    duration: 400
+- extendedWaitUntil:
+    visible:
+      text: "Backpack"
+    timeout: 5000
+- assertVisible:
+    id: "btn_card_details"
+- assertVisible:
+    id: "btn_settings"

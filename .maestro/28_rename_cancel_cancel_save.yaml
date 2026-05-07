@@ -3,6 +3,8 @@ name: "Stress: rename dialog open→cancel×3 then save — correct final name"
 ---
 # Opens the rename dialog, cancels multiple times without saving, then finally
 # saves. Verifies idempotency: cancelled input doesn't leak into the saved name.
+# Dialog content uses text selectors because Compose AlertDialog testTags are
+# not reachable from Maestro.
 - runFlow:
     file: 00_seed_test_data.yaml
 
@@ -12,61 +14,130 @@ name: "Stress: rename dialog open→cancel×3 then save — correct final name"
     visible:
       id: "btn_rename"
     timeout: 5000
+- assertVisible:
+    text: "Car Keys"
 
-# ── cancel 1: typed partial name, cancelled ───────────────────────────────────
+# ── cancel 1: typed partial name, cancelled via Cancel button ─────────────────
 - tapOn:
     id: "btn_rename"
+- extendedWaitUntil:
+    visible:
+      text: "Rename device"
+    timeout: 3000
 - tapOn:
-    id: "field_rename_name"
+    text: "Car Keys"
 - eraseText: 50
 - inputText: "Partial"
 - tapOn:
-    id: "btn_rename_cancel"
+    text: "Cancel"
 - assertNotVisible:
     text: "Rename device"
+- assertVisible:
+    text: "Car Keys"
+- assertNotVisible:
+    text: "Partial"
 
-# ── cancel 2: typed different partial name, cancelled ────────────────────────
+# ── cancel 2: typed different partial name, cancelled via Cancel ─────────────
 - tapOn:
     id: "btn_rename"
+- extendedWaitUntil:
+    visible:
+      text: "Rename device"
+    timeout: 3000
 - tapOn:
-    id: "field_rename_name"
+    text: "Car Keys"
 - eraseText: 50
 - inputText: "Also Partial"
 - tapOn:
-    id: "btn_rename_cancel"
+    text: "Cancel"
 - assertNotVisible:
     text: "Rename device"
+- assertVisible:
+    text: "Car Keys"
+- assertNotVisible:
+    text: "Also Partial"
 
-# ── cancel 3: erased everything, cancelled ───────────────────────────────────
+# ── cancel 3: erased everything, cancelled via Cancel button ────────────────
+# (System back may only dismiss the soft keyboard, not the dialog, when a
+# field is focused — so use the explicit Cancel button.)
 - tapOn:
     id: "btn_rename"
+- extendedWaitUntil:
+    visible:
+      text: "Rename device"
+    timeout: 3000
 - tapOn:
-    id: "field_rename_name"
+    text: "Car Keys"
 - eraseText: 50
 - tapOn:
-    id: "btn_rename_cancel"
+    text: "Cancel"
 - assertNotVisible:
     text: "Rename device"
+- assertVisible:
+    text: "Car Keys"
 
-# Name must still be "Car Keys" — none of the cancelled inputs leaked
+# ── cancel 4: dialog opened then closed without typing anything ──────────────
+- tapOn:
+    id: "btn_rename"
+- extendedWaitUntil:
+    visible:
+      text: "Rename device"
+    timeout: 3000
+- tapOn:
+    text: "Cancel"
+- assertNotVisible:
+    text: "Rename device"
+- assertVisible:
+    text: "Car Keys"
+
+# Name must still be "Car Keys" — none of the cancelled inputs leaked.
 - assertVisible:
     id: "btn_rename"
+- assertVisible:
+    text: "Car Keys"
 
 # ── happy path save ───────────────────────────────────────────────────────────
 - tapOn:
     id: "btn_rename"
+- extendedWaitUntil:
+    visible:
+      text: "Rename device"
+    timeout: 3000
 - tapOn:
-    id: "field_rename_name"
+    text: "Car Keys"
 - eraseText: 50
 - inputText: "Final Name"
 - tapOn:
-    id: "btn_rename_save"
+    text: "Save"
 - extendedWaitUntil:
     visible:
       text: "Final Name"
     timeout: 5000
+- assertNotVisible:
+    text: "Car Keys"
 
-# Back to map — final name visible in card
+# Back to map — final name visible in card.
+- back
+- extendedWaitUntil:
+    visible:
+      id: "btn_settings"
+    timeout: 5000
+- assertVisible:
+    text: "Final Name"
+- assertNotVisible:
+    text: "Car Keys"
+
+# Reopen details: name still Final Name.
+- tapOn:
+    id: "btn_card_details"
+- extendedWaitUntil:
+    visible:
+      id: "btn_rename"
+    timeout: 5000
+- assertVisible:
+    text: "Final Name"
+- assertNotVisible:
+    text: "Car Keys"
 - back
 - extendedWaitUntil:
     visible:

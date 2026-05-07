@@ -1,5 +1,5 @@
 appId: io.github.tieo.taghistory
-name: Settings screen — all section headers visible
+name: Settings screen — all section headers visible and reachable by scroll
 ---
 - runFlow:
     file: 00_seed_test_data.yaml
@@ -10,10 +10,17 @@ name: Settings screen — all section headers visible
     visible:
       text: "Settings"
     timeout: 5000
+
+# Top of settings: top sections visible.
 - assertVisible:
     text: "Appearance"
 - assertVisible:
     text: "Background sync"
+# Bottom sections not yet visible without scroll.
+- assertNotVisible:
+    text: "About"
+
+# Scroll down: Advanced/Account/About become visible.
 - swipe:
     direction: UP
     duration: 600
@@ -23,3 +30,31 @@ name: Settings screen — all section headers visible
     text: "Account"
 - assertVisible:
     text: "About"
+
+# btn_about and btn_sign_out exist by ID near the bottom.
+- assertVisible:
+    id: "btn_about"
+- assertVisible:
+    id: "btn_sign_out"
+
+# Scroll back to the top — Appearance returns to view.
+- scrollUntilVisible:
+    element:
+      text: "Appearance"
+    direction: UP
+    timeout: 5000
+- assertVisible:
+    text: "Appearance"
+- assertVisible:
+    id: "btn_theme_system"
+
+# Round-trip back to map.
+- back
+- extendedWaitUntil:
+    visible:
+      id: "btn_settings"
+    timeout: 5000
+- assertVisible:
+    text: "Car Keys"
+- assertNotVisible:
+    text: "Appearance"

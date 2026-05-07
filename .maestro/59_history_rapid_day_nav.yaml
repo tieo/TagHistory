@@ -46,9 +46,83 @@ name: History — rapid day prev/next does not crash, ends on valid label
     visible:
       text: "Today"
     timeout: 5000
+- assertVisible:
+    text: "Today"
+- assertNotVisible:
+    text: "Yesterday"
+
+# Round 2: heavier — 12 alternating taps, ending balanced.
+- tapOn:
+    id: "btn_day_prev"
+    optional: true
+- tapOn:
+    id: "btn_day_prev"
+    optional: true
+- tapOn:
+    id: "btn_day_next"
+    optional: true
+- tapOn:
+    id: "btn_day_prev"
+    optional: true
+- tapOn:
+    id: "btn_day_next"
+    optional: true
+- tapOn:
+    id: "btn_day_next"
+    optional: true
+- tapOn:
+    id: "btn_day_next"
+    optional: true
+- tapOn:
+    id: "btn_day_prev"
+    optional: true
+- tapOn:
+    id: "btn_day_next"
+    optional: true
+- tapOn:
+    id: "btn_day_prev"
+    optional: true
+- tapOn:
+    id: "btn_day_prev"
+    optional: true
+- tapOn:
+    id: "btn_day_next"
+    optional: true
+- assertVisible:
+    id: "btn_day_prev"
+- assertVisible:
+    id: "btn_day_next"
+
+# Round 3: walk to oldest seeded bucket, then back to Today.
+- tapOn:
+    id: "btn_day_prev"
+    optional: true
+- tapOn:
+    id: "btn_day_prev"
+    optional: true
+- tapOn:
+    id: "btn_day_prev"
+    optional: true
+- tapOn:
+    id: "btn_day_next"
+    optional: true
+- tapOn:
+    id: "btn_day_next"
+    optional: true
+- tapOn:
+    id: "btn_day_next"
+    optional: true
+- extendedWaitUntil:
+    visible:
+      text: "Today"
+    timeout: 5000
+- assertVisible:
+    text: "Today"
 
 - back
 - extendedWaitUntil:
     visible:
       id: "btn_settings"
     timeout: 5000
+- assertVisible:
+    text: "Car Keys"

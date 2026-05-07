@@ -1,5 +1,5 @@
 appId: io.github.tieo.taghistory
-name: Settings — Refresh now button visible and tappable
+name: Settings — Refresh now button visible, tappable, leaves screen alive
 ---
 - runFlow:
     file: 00_seed_test_data.yaml
@@ -12,10 +12,36 @@ name: Settings — Refresh now button visible and tappable
     timeout: 5000
 - assertVisible:
     id: "btn_refresh_now"
+
+# First press: refresh runs, screen stays on Settings.
 - tapOn:
     id: "btn_refresh_now"
-# Refresh triggers background work; Settings screen must still be visible after
 - extendedWaitUntil:
     visible:
-      text: "Settings"
-    timeout: 10000
+      text: ".*Refresh.*"
+    timeout: 15000
+- assertVisible:
+    text: "Settings"
+- assertVisible:
+    id: "btn_refresh_now"
+
+# Press again immediately — debounce/idempotency. App must not crash.
+- tapOn:
+    id: "btn_refresh_now"
+- extendedWaitUntil:
+    visible:
+      text: ".*Refresh.*"
+    timeout: 15000
+- assertVisible:
+    text: "Settings"
+
+# Back to map. Map widgets still rendered after a refresh from Settings.
+- back
+- extendedWaitUntil:
+    visible:
+      id: "btn_settings"
+    timeout: 5000
+- assertVisible:
+    text: "Car Keys"
+- assertVisible:
+    id: "btn_card_history"

@@ -1,8 +1,9 @@
 appId: io.github.tieo.taghistory
-name: Settings — background sync toggle shows/hides interval slider
+name: Settings — background sync toggle shows/hides interval and persists
 ---
 # Background sync defaults to ON (Interval visible initially).
 # Toggle OFF → Interval hidden. Toggle ON → Interval visible again.
+# Persists state across leaving Settings and reopening it.
 - runFlow:
     file: 00_seed_test_data.yaml
 
@@ -13,18 +14,58 @@ name: Settings — background sync toggle shows/hides interval slider
       text: "Background sync"
     timeout: 5000
 
-# Default: ON → Interval visible
+# Default: ON → Interval visible.
 - assertVisible:
     text: "Interval"
 
-# Toggle OFF → Interval hidden
+# Toggle OFF → Interval hidden, screen still alive.
 - tapOn:
     id: "toggle_background_sync"
 - assertNotVisible:
     text: "Interval"
+- assertVisible:
+    text: "Background sync"
 
-# Toggle ON → Interval shown again
+# Persistence: leave Settings and come back with OFF state.
+- back
+- extendedWaitUntil:
+    visible:
+      id: "btn_settings"
+    timeout: 5000
+- assertVisible:
+    text: "Car Keys"
+- tapOn:
+    id: "btn_settings"
+- extendedWaitUntil:
+    visible:
+      text: "Background sync"
+    timeout: 5000
+- assertNotVisible:
+    text: "Interval"
+
+# Toggle ON → Interval visible again.
 - tapOn:
     id: "toggle_background_sync"
 - assertVisible:
     text: "Interval"
+
+# Toggle OFF/ON rapidly twice — final state ON, Interval shown.
+- tapOn:
+    id: "toggle_background_sync"
+- assertNotVisible:
+    text: "Interval"
+- tapOn:
+    id: "toggle_background_sync"
+- assertVisible:
+    text: "Interval"
+
+# Back to map and ensure no leak of Settings UI.
+- back
+- extendedWaitUntil:
+    visible:
+      id: "btn_settings"
+    timeout: 5000
+- assertNotVisible:
+    text: "Background sync"
+- assertVisible:
+    text: "Car Keys"

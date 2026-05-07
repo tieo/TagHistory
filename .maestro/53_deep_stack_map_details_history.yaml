@@ -46,3 +46,51 @@ name: Navigation — Map -> Details -> History, three back-presses lands on Map
     timeout: 5000
 - assertVisible:
     text: "Car Keys"
+- assertNotVisible:
+    id: "btn_view_history"
+- assertNotVisible:
+    id: "btn_day_prev"
+
+# Repeat with Backpack to ensure the depth holds across pager swipes.
+- swipe:
+    start: "85%, 75%"
+    end: "15%, 75%"
+    duration: 400
+- extendedWaitUntil:
+    visible:
+      text: "Backpack"
+    timeout: 5000
+- tapOn:
+    id: "btn_card_details"
+- extendedWaitUntil:
+    visible:
+      id: "btn_view_history"
+    timeout: 5000
+- assertNotVisible:
+    id: "btn_settings"
+- assertNotVisible:
+    id: "btn_day_prev"
+- tapOn:
+    id: "btn_view_history"
+- extendedWaitUntil:
+    visible:
+      id: "btn_day_prev"
+    timeout: 5000
+- assertNotVisible:
+    id: "btn_view_history"
+- assertNotVisible:
+    id: "btn_settings"
+- back
+- extendedWaitUntil:
+    visible:
+      id: "btn_view_history"
+    timeout: 5000
+- back
+- extendedWaitUntil:
+    visible:
+      id: "btn_settings"
+    timeout: 5000
+- assertVisible:
+    text: "Backpack"
+- assertNotVisible:
+    text: "Car Keys"

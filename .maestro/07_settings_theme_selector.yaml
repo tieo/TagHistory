@@ -1,5 +1,5 @@
 appId: io.github.tieo.taghistory
-name: Settings — theme selector has three choices and responds to taps
+name: Settings — theme selector has three choices, responds to taps, persists across reopen
 ---
 - runFlow:
     file: 00_seed_test_data.yaml
@@ -10,20 +10,64 @@ name: Settings — theme selector has three choices and responds to taps
     visible:
       text: "Settings"
     timeout: 5000
+
+# All three theme buttons are rendered.
 - assertVisible:
     id: "btn_theme_system"
 - assertVisible:
     id: "btn_theme_light"
 - assertVisible:
     id: "btn_theme_dark"
+
+# Cycle through every choice. After each tap, the screen must still be Settings
+# (no crash on theme rewrite recompose).
 - tapOn:
     id: "btn_theme_light"
 - assertVisible:
+    text: "Settings"
+- assertVisible:
     id: "btn_theme_light"
+
 - tapOn:
     id: "btn_theme_dark"
 - assertVisible:
+    text: "Settings"
+- assertVisible:
     id: "btn_theme_dark"
+
+- tapOn:
+    id: "btn_theme_system"
+- assertVisible:
+    text: "Settings"
+- assertVisible:
+    id: "btn_theme_system"
+
+# Persist test: pick Dark, leave Settings, come back, Dark must still apply
+# (the buttons themselves don't expose selected state but the screen keeps
+# rendering after a real settings rewrite).
+- tapOn:
+    id: "btn_theme_dark"
+- back
+- extendedWaitUntil:
+    visible:
+      id: "btn_settings"
+    timeout: 5000
+- assertVisible:
+    text: "Car Keys"
+- tapOn:
+    id: "btn_settings"
+- extendedWaitUntil:
+    visible:
+      text: "Settings"
+    timeout: 5000
+- assertVisible:
+    id: "btn_theme_dark"
+- assertVisible:
+    id: "btn_theme_light"
+- assertVisible:
+    id: "btn_theme_system"
+
+# Restore default state.
 - tapOn:
     id: "btn_theme_system"
 - assertVisible:

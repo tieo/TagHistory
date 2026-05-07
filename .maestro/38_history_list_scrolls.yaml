@@ -36,16 +36,68 @@ name: History — list scrolls when expanded with multiple items
     end: "50%, 70%"
     duration: 400
 
-# Back to first item still rendered
+# Back to first item still rendered.
 - extendedWaitUntil:
     visible:
       id: "history_item_0"
     timeout: 5000
 - assertVisible:
     id: "history_item_0"
+- assertVisible:
+    text: ".*data point.*"
+- assertVisible:
+    text: ".*At \\d.*"
+
+# Aggressive scroll burst — list does not crash.
+- swipe:
+    start: "50%, 70%"
+    end: "50%, 20%"
+    duration: 400
+- swipe:
+    start: "50%, 70%"
+    end: "50%, 20%"
+    duration: 400
+- swipe:
+    start: "50%, 20%"
+    end: "50%, 70%"
+    duration: 400
+- swipe:
+    start: "50%, 20%"
+    end: "50%, 70%"
+    duration: 400
+- extendedWaitUntil:
+    visible:
+      id: "history_item_0"
+    timeout: 5000
+
+# Day-prev to Yesterday: the list re-renders with Yesterday's points.
+- tapOn:
+    id: "btn_day_prev"
+    optional: true
+- extendedWaitUntil:
+    visible:
+      text: "Yesterday"
+    timeout: 4000
+- extendedWaitUntil:
+    visible:
+      id: "history_item_0"
+    timeout: 5000
+# Re-scroll inside Yesterday — list still alive.
+- swipe:
+    start: "50%, 70%"
+    end: "50%, 30%"
+    duration: 400
+- swipe:
+    start: "50%, 30%"
+    end: "50%, 70%"
+    duration: 400
 
 - back
 - extendedWaitUntil:
     visible:
       id: "btn_settings"
     timeout: 5000
+- assertVisible:
+    text: "Car Keys"
+- assertNotVisible:
+    id: "history_item_0"

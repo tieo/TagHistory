@@ -1,9 +1,11 @@
 appId: io.github.tieo.taghistory
-name: "Stress: rename two beacons — new names survive card swipes"
+name: "Stress: rename three beacons — new names survive card swipes and reopens"
 ---
-# Renames two different beacons, swipes away and back, and confirms the names
-# persisted. Catches write-through bugs where UI state is cached but DB wasn't
-# updated, or the card reloads stale data after pager animation.
+# Renames all three beacons (one each), swipes away and back, and confirms the
+# names persisted. Catches write-through bugs where UI state is cached but DB
+# wasn't updated, or the card reloads stale data after pager animation.
+# Dialog content uses text selectors because Compose AlertDialog testTags are
+# not reachable from Maestro.
 - runFlow:
     file: 00_seed_test_data.yaml
 
@@ -16,16 +18,22 @@ name: "Stress: rename two beacons — new names survive card swipes"
     timeout: 5000
 - tapOn:
     id: "btn_rename"
+- extendedWaitUntil:
+    visible:
+      text: "Rename device"
+    timeout: 3000
 - tapOn:
-    id: "field_rename_name"
+    text: "Car Keys"
 - eraseText: 50
 - inputText: "Alpha Tag"
 - tapOn:
-    id: "btn_rename_save"
+    text: "Save"
 - extendedWaitUntil:
     visible:
       text: "Alpha Tag"
     timeout: 5000
+- assertNotVisible:
+    text: "Rename device"
 - back
 - extendedWaitUntil:
     visible:
@@ -33,6 +41,8 @@ name: "Stress: rename two beacons — new names survive card swipes"
     timeout: 5000
 - assertVisible:
     text: "Alpha Tag"
+- assertNotVisible:
+    text: "Car Keys"
 
 # ── Swipe to Backpack, rename → "Beta Tag" ───────────────────────────────────
 - swipe:
@@ -51,12 +61,16 @@ name: "Stress: rename two beacons — new names survive card swipes"
     timeout: 5000
 - tapOn:
     id: "btn_rename"
+- extendedWaitUntil:
+    visible:
+      text: "Rename device"
+    timeout: 3000
 - tapOn:
-    id: "field_rename_name"
+    text: "Backpack"
 - eraseText: 50
 - inputText: "Beta Tag"
 - tapOn:
-    id: "btn_rename_save"
+    text: "Save"
 - extendedWaitUntil:
     visible:
       text: "Beta Tag"
@@ -68,16 +82,62 @@ name: "Stress: rename two beacons — new names survive card swipes"
     timeout: 5000
 - assertVisible:
     text: "Beta Tag"
+- assertNotVisible:
+    text: "Backpack"
 
-# ── Swipe wildly and back — both names must survive ──────────────────────────
+# ── Swipe to Bike, rename → "Gamma Tag" ──────────────────────────────────────
 - swipe:
     start: "85%, 75%"
     end: "15%, 75%"
-    duration: 300
+    duration: 400
+- extendedWaitUntil:
+    visible:
+      text: "Bike"
+    timeout: 5000
+- tapOn:
+    id: "btn_card_details"
+- extendedWaitUntil:
+    visible:
+      id: "btn_rename"
+    timeout: 5000
+- tapOn:
+    id: "btn_rename"
+- extendedWaitUntil:
+    visible:
+      text: "Rename device"
+    timeout: 3000
+- tapOn:
+    text: "Bike"
+- eraseText: 50
+- inputText: "Gamma Tag"
+- tapOn:
+    text: "Save"
+- extendedWaitUntil:
+    visible:
+      text: "Gamma Tag"
+    timeout: 5000
+- back
+- extendedWaitUntil:
+    visible:
+      id: "btn_settings"
+    timeout: 5000
+- assertVisible:
+    text: "Gamma Tag"
+- assertNotVisible:
+    text: "Bike"
+
+# ── Swipe wildly and back — all three names must survive ─────────────────────
 - swipe:
     start: "15%, 75%"
     end: "85%, 75%"
     duration: 300
+- extendedWaitUntil:
+    visible:
+      text: "Beta Tag"
+    timeout: 5000
+- assertNotVisible:
+    text: "Backpack"
+
 - swipe:
     start: "15%, 75%"
     end: "85%, 75%"
@@ -86,6 +146,8 @@ name: "Stress: rename two beacons — new names survive card swipes"
     visible:
       text: "Alpha Tag"
     timeout: 5000
+- assertNotVisible:
+    text: "Car Keys"
 
 - swipe:
     start: "85%, 75%"
@@ -95,3 +157,31 @@ name: "Stress: rename two beacons — new names survive card swipes"
     visible:
       text: "Beta Tag"
     timeout: 5000
+
+- swipe:
+    start: "85%, 75%"
+    end: "15%, 75%"
+    duration: 300
+- extendedWaitUntil:
+    visible:
+      text: "Gamma Tag"
+    timeout: 5000
+- assertNotVisible:
+    text: "Bike"
+
+# ── Reopen each via details to confirm names persist on reload ───────────────
+- tapOn:
+    id: "btn_card_details"
+- extendedWaitUntil:
+    visible:
+      id: "btn_rename"
+    timeout: 5000
+- assertVisible:
+    text: "Gamma Tag"
+- back
+- extendedWaitUntil:
+    visible:
+      id: "btn_settings"
+    timeout: 5000
+- assertVisible:
+    text: "Gamma Tag"

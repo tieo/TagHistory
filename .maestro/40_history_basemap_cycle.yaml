@@ -15,9 +15,15 @@ name: History — basemap cycle button cycles through light/dark/satellite
 
 # Find the button (one of the three states). Tap it to cycle. We don't
 # assume the starting state because it follows the system theme.
-- tapOn:
+- assertVisible:
     text: "Basemap: .*"
 - tapOn:
+    text: "Basemap: .*"
+- assertVisible:
+    text: "Basemap: .*"
+- tapOn:
+    text: "Basemap: .*"
+- assertVisible:
     text: "Basemap: .*"
 - tapOn:
     text: "Basemap: .*"
@@ -26,9 +32,45 @@ name: History — basemap cycle button cycles through light/dark/satellite
 # is still alive and day controls are still rendering.
 - assertVisible:
     id: "btn_day_prev"
+- assertVisible:
+    id: "btn_day_next"
+- assertVisible:
+    text: "Today"
+
+# Cycle three more times — full second loop. Day controls remain alive.
+- tapOn:
+    text: "Basemap: .*"
+- tapOn:
+    text: "Basemap: .*"
+- tapOn:
+    text: "Basemap: .*"
+- assertVisible:
+    id: "btn_day_prev"
+- assertVisible:
+    text: "Today"
+
+# Day-prev → Yesterday: cycling basemap doesn't break day nav state.
+- tapOn:
+    id: "btn_day_prev"
+- extendedWaitUntil:
+    visible:
+      text: "Yesterday"
+    timeout: 4000
+- tapOn:
+    text: "Basemap: .*"
+- assertVisible:
+    text: "Yesterday"
+- tapOn:
+    id: "btn_day_next"
+- extendedWaitUntil:
+    visible:
+      text: "Today"
+    timeout: 4000
 
 - back
 - extendedWaitUntil:
     visible:
       id: "btn_settings"
     timeout: 5000
+- assertVisible:
+    text: "Car Keys"

@@ -58,3 +58,59 @@ name: "Stress: settings deep scroll then back — card at non-zero index unchang
     text: "Bike"
 - assertNotVisible:
     id: "btn_import"
+
+# ── second pass: from Bike, swipe to Backpack, deep-scroll settings, theme,
+# deep-scroll to bottom, back → Backpack still active ────────────────────────
+- swipe:
+    start: "15%, 75%"
+    end: "85%, 75%"
+    duration: 400
+- extendedWaitUntil:
+    visible:
+      text: "Backpack"
+    timeout: 5000
+- tapOn:
+    id: "btn_settings"
+- extendedWaitUntil:
+    visible:
+      text: "Settings"
+    timeout: 5000
+- swipe:
+    direction: UP
+    duration: 800
+- swipe:
+    direction: UP
+    duration: 800
+- assertVisible:
+    text: "Account"
+- assertVisible:
+    text: "About"
+- scrollUntilVisible:
+    element:
+      id: "btn_theme_light"
+    direction: UP
+    timeout: 5000
+- tapOn:
+    id: "btn_theme_light"
+- tapOn:
+    id: "btn_theme_dark"
+- tapOn:
+    id: "btn_theme_system"
+- swipe:
+    direction: UP
+    duration: 800
+- assertVisible:
+    text: "About"
+- back
+- extendedWaitUntil:
+    visible:
+      id: "btn_settings"
+    timeout: 5000
+- assertVisible:
+    text: "Backpack"
+- assertNotVisible:
+    text: "Bike"
+- assertNotVisible:
+    text: "Car Keys"
+- assertNotVisible:
+    id: "btn_import"

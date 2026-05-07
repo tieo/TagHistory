@@ -18,17 +18,62 @@ name: Login — Start over returns to credentials screen
 - tapOn:
     id: "btn_login"
 
-# If Start over appears (error path), verify it returns to credentials screen
+# If Start over appears (error path), exercise it twice to confirm
+# the credentials screen restores idempotently with empty/clean fields.
 - runFlow:
     when:
       visible:
         id: "btn_start_over"
     commands:
+      # On the OTP/2FA screen the credentials widgets must be hidden.
+      - assertNotVisible:
+          id: "field_password"
+      - assertNotVisible:
+          id: "btn_login"
+
+      # First Start over: OTP-screen widgets disappear, credentials reappear.
       - tapOn:
           id: "btn_start_over"
+      - extendedWaitUntil:
+          visible:
+            id: "field_email"
+          timeout: 5000
       - assertVisible:
           id: "field_email"
       - assertVisible:
           id: "field_password"
       - assertVisible:
           id: "btn_login"
+      - assertNotVisible:
+          id: "btn_start_over"
+      - assertNotVisible:
+          id: "field_otp_code"
+
+      # Welcome banner must still read the same text.
+      - assertVisible:
+          text: "Welcome to TagHistory"
+
+      # Second attempt loops back to the same OTP/2FA screen and back again.
+      - tapOn:
+          id: "field_email"
+      - eraseText: 50
+      - inputText: "second@example.com"
+      - tapOn:
+          id: "field_password"
+      - eraseText: 50
+      - inputText: "wrongpassword2"
+      - tapOn:
+          id: "btn_login"
+      - runFlow:
+          when:
+            visible:
+              id: "btn_start_over"
+          commands:
+            - tapOn:
+                id: "btn_start_over"
+            - extendedWaitUntil:
+                visible:
+                  id: "field_email"
+                timeout: 5000
+            - assertNotVisible:
+                id: "btn_start_over"

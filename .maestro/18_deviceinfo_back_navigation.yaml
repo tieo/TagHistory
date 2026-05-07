@@ -4,7 +4,7 @@ name: Device info — back button returns to map with same beacon selected
 - runFlow:
     file: 00_seed_test_data.yaml
 
-# Swipe to Backpack (index 1)
+# Swipe to Backpack (index 1).
 - swipe:
     start: "85%, 75%"
     end: "15%, 75%"
@@ -13,6 +13,10 @@ name: Device info — back button returns to map with same beacon selected
     visible:
       text: "Backpack"
     timeout: 5000
+- assertNotVisible:
+    text: "Car Keys"
+- assertNotVisible:
+    text: "Bike"
 
 - tapOn:
     id: "btn_card_details"
@@ -20,11 +24,50 @@ name: Device info — back button returns to map with same beacon selected
     visible:
       id: "btn_rename"
     timeout: 5000
+# On details: card pager / map landmarks gone, details ones present.
+- assertVisible:
+    text: "Backpack"
+- assertNotVisible:
+    id: "btn_settings"
+- assertNotVisible:
+    id: "btn_card_history"
 
 - back
 - extendedWaitUntil:
     visible:
       id: "btn_settings"
     timeout: 5000
+# Back on map: same card index restored.
 - assertVisible:
+    text: "Backpack"
+- assertNotVisible:
+    text: "Car Keys"
+- assertNotVisible:
+    id: "btn_rename"
+
+# Swipe further to Bike, open details, back — same flow.
+- swipe:
+    start: "85%, 75%"
+    end: "15%, 75%"
+    duration: 400
+- extendedWaitUntil:
+    visible:
+      text: "Bike"
+    timeout: 5000
+- tapOn:
+    id: "btn_card_details"
+- extendedWaitUntil:
+    visible:
+      id: "btn_rename"
+    timeout: 5000
+- assertVisible:
+    text: "Bike"
+- back
+- extendedWaitUntil:
+    visible:
+      id: "btn_settings"
+    timeout: 5000
+- assertVisible:
+    text: "Bike"
+- assertNotVisible:
     text: "Backpack"

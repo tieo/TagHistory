@@ -36,7 +36,37 @@ name: "Stress: open details ×3 in a row for same beacon — no state corruption
 - assertVisible:
     text: "Car Keys"
 
-# ── open 3: do actual rename to confirm data integrity ───────────────────────
+# ── open 3 ───────────────────────────────────────────────────────────────────
+- tapOn:
+    id: "btn_card_details"
+- extendedWaitUntil:
+    visible:
+      id: "btn_rename"
+    timeout: 5000
+- back
+- extendedWaitUntil:
+    visible:
+      id: "btn_settings"
+    timeout: 5000
+- assertVisible:
+    text: "Car Keys"
+
+# ── open 4 ───────────────────────────────────────────────────────────────────
+- tapOn:
+    id: "btn_card_details"
+- extendedWaitUntil:
+    visible:
+      id: "btn_rename"
+    timeout: 5000
+- back
+- extendedWaitUntil:
+    visible:
+      id: "btn_settings"
+    timeout: 5000
+- assertVisible:
+    text: "Car Keys"
+
+# ── open 5: do actual rename to confirm data integrity after rapid reopens ──
 - tapOn:
     id: "btn_card_details"
 - extendedWaitUntil:
@@ -45,16 +75,41 @@ name: "Stress: open details ×3 in a row for same beacon — no state corruption
     timeout: 5000
 - tapOn:
     id: "btn_rename"
+- extendedWaitUntil:
+    visible:
+      text: "Rename device"
+    timeout: 3000
 - tapOn:
-    id: "field_rename_name"
+    text: "Car Keys"
 - eraseText: 50
 - inputText: "Triple Check"
 - tapOn:
-    id: "btn_rename_save"
+    text: "Save"
 - extendedWaitUntil:
     visible:
       text: "Triple Check"
     timeout: 5000
+- assertNotVisible:
+    text: "Rename device"
+- back
+- extendedWaitUntil:
+    visible:
+      id: "btn_settings"
+    timeout: 5000
+- assertVisible:
+    text: "Triple Check"
+- assertNotVisible:
+    text: "Car Keys"
+
+# ── reopen details once more: name still persisted, no reset ─────────────────
+- tapOn:
+    id: "btn_card_details"
+- extendedWaitUntil:
+    visible:
+      id: "btn_rename"
+    timeout: 5000
+- assertVisible:
+    text: "Triple Check"
 - back
 - extendedWaitUntil:
     visible:

@@ -1,40 +1,104 @@
 appId: io.github.tieo.taghistory
-name: Device info — rename dialog opens, cancel dismisses, happy-path save works
+name: Device info — rename dialog opens, cancel dismisses, save persists across screens
 ---
+# Dialog buttons render in a separate window — tapping by testTag id is
+# unreliable for AlertDialog content. Use text selectors for everything inside
+# the dialog (title "Rename device", buttons "Save"/"Cancel", "Name" label).
 - runFlow:
     file: 00_seed_test_data.yaml
 
-# Open device info for the first beacon (Car Keys)
+# Open device info for the first beacon (Car Keys).
 - tapOn:
     id: "btn_card_details"
 - extendedWaitUntil:
     visible:
       id: "btn_rename"
     timeout: 5000
+- assertVisible:
+    text: "Car Keys"
+- assertNotVisible:
+    text: "Rename device"
 
-# Cancel path: dialog opens and closes without saving
+# Cancel path: dialog opens and closes without saving.
 - tapOn:
     id: "btn_rename"
 - assertVisible:
     text: "Rename device"
+- assertVisible:
+    text: "Save"
+- assertVisible:
+    text: "Cancel"
+
 - tapOn:
-    id: "btn_rename_cancel"
+    text: "Cancel"
 - assertNotVisible:
     text: "Rename device"
 - assertVisible:
     id: "btn_rename"
+# Name unchanged after cancel.
+- assertVisible:
+    text: "Car Keys"
 
-# Happy path: type new name, save, dialog dismissed
+# Cancel via system back: also dismisses without saving.
 - tapOn:
     id: "btn_rename"
+- extendedWaitUntil:
+    visible:
+      text: "Rename device"
+    timeout: 3000
+- back
+- assertNotVisible:
+    text: "Rename device"
+- assertVisible:
+    text: "Car Keys"
+
+# Happy path: type new name, save, dialog dismissed. Tap existing text in
+# the TextField (Compose OutlinedTextField testTag is unreachable from a
+# Dialog window — tap the existing "Car Keys" content to focus the input).
 - tapOn:
-    id: "field_rename_name"
+    id: "btn_rename"
+- extendedWaitUntil:
+    visible:
+      text: "Rename device"
+    timeout: 3000
+- tapOn:
+    text: "Car Keys"
 - eraseText: 50
 - inputText: "My Test Tag"
 - tapOn:
-    id: "btn_rename_save"
+    text: "Save"
 - assertNotVisible:
     text: "Rename device"
-# Name persisted — visible in device info header
+# Name persisted — visible in device info header.
+- assertVisible:
+    text: "My Test Tag"
+- assertNotVisible:
+    text: "Car Keys"
+
+# Back to map: card pager must show the new name on the active card.
+- back
+- extendedWaitUntil:
+    visible:
+      id: "btn_settings"
+    timeout: 5000
+- assertVisible:
+    text: "My Test Tag"
+- assertNotVisible:
+    text: "Car Keys"
+
+# Reopen details to confirm name is still persisted (no reset on reload).
+- tapOn:
+    id: "btn_card_details"
+- extendedWaitUntil:
+    visible:
+      id: "btn_rename"
+    timeout: 5000
+- assertVisible:
+    text: "My Test Tag"
+- back
+- extendedWaitUntil:
+    visible:
+      id: "btn_settings"
+    timeout: 5000
 - assertVisible:
     text: "My Test Tag"

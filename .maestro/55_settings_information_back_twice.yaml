@@ -46,3 +46,57 @@ name: Navigation — Settings -> Information -> back twice lands on Map
     timeout: 5000
 - assertVisible:
     text: "Car Keys"
+- assertNotVisible:
+    text: "Appearance"
+- assertNotVisible:
+    id: "btn_developer_website"
+
+# Round 2: Map -> Settings -> Information -> Settings -> Information ->
+# back×3 -> Map. Tests that the back-stack tolerates re-entering Information.
+- tapOn:
+    id: "btn_settings"
+- extendedWaitUntil:
+    visible:
+      text: "Settings"
+    timeout: 5000
+- scrollUntilVisible:
+    element:
+      id: "btn_about"
+    direction: DOWN
+    timeout: 5000
+- tapOn:
+    id: "btn_about"
+- extendedWaitUntil:
+    visible:
+      id: "btn_developer_website"
+    timeout: 5000
+- back
+- extendedWaitUntil:
+    visible:
+      text: "Settings"
+    timeout: 5000
+- scrollUntilVisible:
+    element:
+      id: "btn_about"
+    direction: DOWN
+    timeout: 5000
+- tapOn:
+    id: "btn_about"
+- extendedWaitUntil:
+    visible:
+      id: "btn_developer_website"
+    timeout: 5000
+- back
+- extendedWaitUntil:
+    visible:
+      text: "Settings"
+    timeout: 5000
+- back
+- extendedWaitUntil:
+    visible:
+      id: "btn_settings"
+    timeout: 5000
+- assertVisible:
+    text: "Car Keys"
+- assertNotVisible:
+    text: "Appearance"

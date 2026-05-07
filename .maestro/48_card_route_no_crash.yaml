@@ -43,3 +43,45 @@ name: Map — tapping btn_card_route launches chooser without crashing
 
 - assertVisible:
     id: "btn_settings"
+
+# Once we are confirmed back on Map, the card overlay must still render
+# Car Keys (the original active card before the route intent).
+- assertVisible:
+    text: "Car Keys"
+- assertVisible:
+    id: "btn_card_details"
+- assertVisible:
+    id: "btn_card_history"
+
+# Repeat the route flow on a different beacon — Backpack also has location
+# so the Route action is enabled.
+- swipe:
+    start: "85%, 75%"
+    end: "15%, 75%"
+    duration: 400
+- extendedWaitUntil:
+    visible:
+      text: "Backpack"
+    timeout: 5000
+- assertVisible:
+    text: "Route"
+- tapOn:
+    text: "Route"
+- runFlow:
+    when:
+      notVisible:
+        id: "btn_settings"
+    commands:
+      - back
+- runFlow:
+    when:
+      notVisible:
+        id: "btn_settings"
+    commands:
+      - openLink: taghistory://test/seed
+      - extendedWaitUntil:
+          visible:
+            id: "btn_settings"
+          timeout: 10000
+- assertVisible:
+    id: "btn_settings"

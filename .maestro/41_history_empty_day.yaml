@@ -29,7 +29,51 @@ name: History — navigating past the oldest seeded day still keeps controls ali
 - assertVisible:
     id: "btn_day_next"
 
-# Walk forward all the way back to Today
+# Walk forward all the way back to Today.
+- tapOn:
+    id: "btn_day_next"
+    optional: true
+- tapOn:
+    id: "btn_day_next"
+    optional: true
+- tapOn:
+    id: "btn_day_next"
+    optional: true
+- extendedWaitUntil:
+    visible:
+      text: "Today"
+    timeout: 5000
+
+# Today seeded with 3 items — list is non-empty.
+- swipe:
+    start: "50%, 88%"
+    end: "50%, 40%"
+    duration: 400
+- extendedWaitUntil:
+    visible:
+      id: "history_item_0"
+    timeout: 6000
+- assertVisible:
+    text: ".*data point.*"
+
+# Walk past the end again, then forward — the boundary holds without crash.
+- tapOn:
+    id: "btn_day_prev"
+    optional: true
+- tapOn:
+    id: "btn_day_prev"
+    optional: true
+- tapOn:
+    id: "btn_day_prev"
+    optional: true
+- tapOn:
+    id: "btn_day_prev"
+    optional: true
+- assertVisible:
+    id: "btn_day_next"
+- tapOn:
+    id: "btn_day_next"
+    optional: true
 - tapOn:
     id: "btn_day_next"
     optional: true
@@ -49,3 +93,45 @@ name: History — navigating past the oldest seeded day still keeps controls ali
     visible:
       id: "btn_settings"
     timeout: 5000
+- assertVisible:
+    text: "Car Keys"
+- assertNotVisible:
+    id: "btn_day_prev"
+
+# Run the same boundary stress on Bike (1 report only — only Today bucket).
+- swipe:
+    start: "85%, 75%"
+    end: "15%, 75%"
+    duration: 400
+- swipe:
+    start: "85%, 75%"
+    end: "15%, 75%"
+    duration: 400
+- extendedWaitUntil:
+    visible:
+      text: "Bike"
+    timeout: 5000
+- tapOn:
+    id: "btn_card_history"
+- extendedWaitUntil:
+    visible:
+      text: "Today"
+    timeout: 6000
+- tapOn:
+    id: "btn_day_prev"
+    optional: true
+- tapOn:
+    id: "btn_day_prev"
+    optional: true
+- tapOn:
+    id: "btn_day_next"
+    optional: true
+- assertVisible:
+    id: "btn_day_next"
+- back
+- extendedWaitUntil:
+    visible:
+      id: "btn_settings"
+    timeout: 5000
+- assertVisible:
+    text: "Bike"

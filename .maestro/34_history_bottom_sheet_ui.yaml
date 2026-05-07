@@ -60,9 +60,65 @@ name: History — bottom sheet shows day nav, point list, and "Fetch older"
 - assertVisible:
     text: "Today"
 
-# Back returns to map
+# Day-prev to Yesterday: state transition fully visible.
+- tapOn:
+    id: "btn_day_prev"
+    optional: true
+- extendedWaitUntil:
+    visible:
+      text: "Yesterday"
+    timeout: 4000
+- assertVisible:
+    text: "Yesterday"
+# Yesterday for Car Keys has 2 reports.
+- assertVisible:
+    text: ".*data point.*"
+- assertVisible:
+    id: "history_item_0"
+- assertVisible:
+    text: ".*At \\d.*"
+
+# Day-prev once more — older bucket (3 days ago, 1 report). The label is a
+# YYYY-MM-DD because it's older than Yesterday.
+- tapOn:
+    id: "btn_day_prev"
+    optional: true
+- extendedWaitUntil:
+    visible:
+      text: ".*\\d\\d\\d\\d-\\d\\d-\\d\\d.*"
+    timeout: 4000
+- assertNotVisible:
+    text: "Yesterday"
+- assertNotVisible:
+    text: "Today"
+
+# Walk back forward to Today via two day-next presses.
+- tapOn:
+    id: "btn_day_next"
+    optional: true
+- extendedWaitUntil:
+    visible:
+      text: "Yesterday"
+    timeout: 4000
+- tapOn:
+    id: "btn_day_next"
+    optional: true
+- extendedWaitUntil:
+    visible:
+      text: "Today"
+    timeout: 4000
+- assertVisible:
+    text: "Today"
+
+# Back returns to map.
 - back
 - extendedWaitUntil:
     visible:
       id: "btn_settings"
     timeout: 5000
+- assertVisible:
+    text: "Car Keys"
+- assertNotVisible:
+    id: "btn_day_prev"
+- assertNotVisible:
+    text: "Yesterday"

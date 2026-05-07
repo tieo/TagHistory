@@ -30,9 +30,45 @@ name: Settings — Refresh now shows a non-empty result message
 
 - assertVisible:
     text: "Settings"
+- assertVisible:
+    id: "btn_refresh_now"
+
+# Press Refresh now a second time — the button stays tappable, message updates.
+- tapOn:
+    id: "btn_refresh_now"
+- extendedWaitUntil:
+    visible:
+      text: ".*Refresh.*"
+    timeout: 15000
+- assertVisible:
+    text: "Settings"
+
+# Open the debug panel to verify the refresh actually fired and produced
+# log events (catches the historical bug where Refresh didn't log).
+- tapOn:
+    text: "Show debug data"
+- extendedWaitUntil:
+    visible:
+      id: "sync_log_header"
+    timeout: 3000
+- assertVisible:
+    text: ".*Refresh started.*"
+- assertVisible:
+    text: "START"
+# Hide debug panel.
+- tapOn:
+    text: "Show debug data"
+- extendedWaitUntil:
+    visible:
+      text: "Show debug data"
+    timeout: 2000
+- assertNotVisible:
+    id: "sync_log_header"
 
 - back
 - extendedWaitUntil:
     visible:
       id: "btn_settings"
     timeout: 5000
+- assertVisible:
+    text: "Car Keys"

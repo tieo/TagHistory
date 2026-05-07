@@ -18,6 +18,10 @@ name: Map — tapping btn_card_details opens DeviceInfo for that card
     id: "btn_rename"
 - assertVisible:
     id: "btn_remove"
+- assertNotVisible:
+    id: "btn_settings"
+- assertNotVisible:
+    id: "btn_card_history"
 - back
 - extendedWaitUntil:
     visible:
@@ -25,3 +29,60 @@ name: Map — tapping btn_card_details opens DeviceInfo for that card
     timeout: 5000
 - assertVisible:
     text: "Car Keys"
+- assertNotVisible:
+    id: "btn_rename"
+
+# Repeat for Backpack and Bike — details opens fresh for each card.
+- swipe:
+    start: "85%, 75%"
+    end: "15%, 75%"
+    duration: 400
+- extendedWaitUntil:
+    visible:
+      text: "Backpack"
+    timeout: 5000
+- tapOn:
+    id: "btn_card_details"
+- extendedWaitUntil:
+    visible:
+      id: "btn_view_history"
+    timeout: 5000
+- assertVisible:
+    text: "Backpack"
+- assertVisible:
+    id: "btn_rename"
+- assertVisible:
+    id: "btn_remove"
+- back
+- extendedWaitUntil:
+    visible:
+      id: "btn_settings"
+    timeout: 5000
+- assertVisible:
+    text: "Backpack"
+
+- swipe:
+    start: "85%, 75%"
+    end: "15%, 75%"
+    duration: 400
+- extendedWaitUntil:
+    visible:
+      text: "Bike"
+    timeout: 5000
+- tapOn:
+    id: "btn_card_details"
+- extendedWaitUntil:
+    visible:
+      id: "btn_view_history"
+    timeout: 5000
+- assertVisible:
+    text: "Bike"
+- assertVisible:
+    id: "btn_rename"
+- back
+- extendedWaitUntil:
+    visible:
+      id: "btn_settings"
+    timeout: 5000
+- assertVisible:
+    text: "Bike"

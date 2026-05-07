@@ -9,24 +9,31 @@ name: Login screen — fields accept input and login button is tappable
       text: "Welcome to TagHistory"
     timeout: 5000
 
+# Type email, immediately readable back from the field.
 - tapOn:
     id: "field_email"
 - inputText: "test@example.com"
 - assertVisible:
     text: "test@example.com"
 
+# The OTP-flow widgets must NOT appear yet.
+- assertNotVisible:
+    id: "field_otp_code"
+- assertNotVisible:
+    id: "btn_start_over"
+
 - tapOn:
     id: "field_password"
 - inputText: "test_password"
 
-# Login button must be tappable (enabled by non-empty input)
+# Login button must still be present and tappable (enabled by non-empty input).
 - assertVisible:
     id: "btn_login"
 - tapOn:
     id: "btn_login"
 
-# App must still be alive — either still on login or transitioned to 2FA.
-# Either way some TagHistory UI is visible.
+# After tap, EITHER still on credentials screen with email retained
+# (network blocked / failed locally, no transition) OR moved to 2FA screen.
 - runFlow:
     when:
       visible:
@@ -34,6 +41,13 @@ name: Login screen — fields accept input and login button is tappable
     commands:
       - assertVisible:
           text: "Welcome to TagHistory"
+      - assertVisible:
+          id: "field_email"
+      - assertVisible:
+          id: "btn_login"
+      # Email text was retained across the failed login attempt.
+      - assertVisible:
+          text: "test@example.com"
 - runFlow:
     when:
       visible:
@@ -41,3 +55,14 @@ name: Login screen — fields accept input and login button is tappable
     commands:
       - assertVisible:
           id: "field_otp_code"
+      - assertVisible:
+          id: "btn_start_over"
+      # Once on OTP screen, the credentials fields must be hidden.
+      - assertNotVisible:
+          id: "field_password"
+      - assertNotVisible:
+          id: "btn_login"
+
+# Map widgets must never appear from a failed login.
+- assertNotVisible:
+    id: "btn_settings"

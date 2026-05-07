@@ -1,5 +1,5 @@
 appId: io.github.tieo.taghistory
-name: Settings — About button navigates to information screen
+name: Settings — About button navigates to information screen, back returns
 ---
 - runFlow:
     file: 00_seed_test_data.yaml
@@ -10,6 +10,52 @@ name: Settings — About button navigates to information screen
     visible:
       text: "Settings"
     timeout: 5000
+
+# Pre: btn_about not visible until scroll, settings landmarks present.
+- scrollUntilVisible:
+    element:
+      id: "btn_about"
+    direction: DOWN
+    timeout: 5000
+- assertVisible:
+    id: "btn_about"
+
+- tapOn:
+    id: "btn_about"
+- extendedWaitUntil:
+    visible:
+      text: "TagHistory"
+    timeout: 5000
+
+# Information screen: links present, settings landmarks gone.
+- assertVisible:
+    id: "btn_source_code"
+- assertVisible:
+    id: "btn_developer_website"
+- assertVisible:
+    id: "btn_license"
+- assertNotVisible:
+    text: "Appearance"
+- assertNotVisible:
+    text: "Background sync"
+- assertNotVisible:
+    id: "btn_sign_out"
+
+- back
+- extendedWaitUntil:
+    visible:
+      text: "Settings"
+    timeout: 5000
+
+# Back: information links gone, settings sections back.
+- assertNotVisible:
+    id: "btn_source_code"
+- assertNotVisible:
+    id: "btn_developer_website"
+- assertVisible:
+    text: "Appearance"
+
+# Reopen About a second time to ensure idempotent navigation.
 - scrollUntilVisible:
     element:
       id: "btn_about"
@@ -19,16 +65,18 @@ name: Settings — About button navigates to information screen
     id: "btn_about"
 - extendedWaitUntil:
     visible:
-      text: "TagHistory"
+      id: "btn_license"
     timeout: 5000
-- assertVisible:
-    id: "btn_source_code"
-- assertVisible:
-    id: "btn_developer_website"
-- assertVisible:
-    id: "btn_license"
 - back
 - extendedWaitUntil:
     visible:
       text: "Settings"
     timeout: 5000
+
+- back
+- extendedWaitUntil:
+    visible:
+      id: "btn_settings"
+    timeout: 5000
+- assertVisible:
+    text: "Car Keys"

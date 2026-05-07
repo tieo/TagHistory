@@ -16,9 +16,61 @@ name: History — opens within 3s on cached data (btn_day_prev visible quickly)
     id: "btn_day_prev"
 - assertVisible:
     id: "btn_day_next"
+# Today label visible immediately too — proves DB load did not block.
+- assertVisible:
+    text: "Today"
+- assertNotVisible:
+    id: "btn_settings"
+- assertNotVisible:
+    id: "btn_card_details"
 
 - back
 - extendedWaitUntil:
     visible:
       id: "btn_settings"
     timeout: 5000
+- assertNotVisible:
+    id: "btn_day_prev"
+
+# Reopen — must still open quickly (cached path the second time).
+- tapOn:
+    id: "btn_card_history"
+- extendedWaitUntil:
+    visible:
+      id: "btn_day_prev"
+    timeout: 3000
+- assertVisible:
+    text: "Today"
+- assertNotVisible:
+    id: "btn_settings"
+
+- back
+- extendedWaitUntil:
+    visible:
+      id: "btn_settings"
+    timeout: 5000
+
+# Swipe to Backpack and open history — also fast.
+- swipe:
+    start: "85%, 75%"
+    end: "15%, 75%"
+    duration: 400
+- extendedWaitUntil:
+    visible:
+      text: "Backpack"
+    timeout: 5000
+- tapOn:
+    id: "btn_card_history"
+- extendedWaitUntil:
+    visible:
+      id: "btn_day_prev"
+    timeout: 4000
+- assertVisible:
+    text: "Today"
+- back
+- extendedWaitUntil:
+    visible:
+      id: "btn_settings"
+    timeout: 5000
+- assertVisible:
+    text: "Backpack"
