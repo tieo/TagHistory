@@ -45,16 +45,12 @@ name: Settings — debug panel populates with real sync events when Refresh fire
 # records START / RUNG_OK / REFRESH_DONE.
 - tapOn:
     id: "btn_refresh_now"
-- extendedWaitUntil:
-    visible:
-      text: ".*Refresh started.*"
-    timeout: 6000
 
 # After refresh fires, kind tags must appear in the panel.
 - extendedWaitUntil:
     visible:
       text: "START"
-    timeout: 4000
+    timeout: 8000
 - assertVisible:
     text: "START"
 

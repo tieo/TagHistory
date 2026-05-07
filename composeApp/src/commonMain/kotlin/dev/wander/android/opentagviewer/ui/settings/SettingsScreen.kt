@@ -161,13 +161,14 @@ fun SettingsScreen(
             val refreshMsg = refreshMessage
             if (refreshMsg != null) {
                 LaunchedEffect(refreshMsg) {
-                    delay(4000)
+                    delay(8000)
                     refreshMessage = null
                 }
                 Text(
                     refreshMsg,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.testTag("refresh_message"),
                 )
             }
             if (onImport != null) {
