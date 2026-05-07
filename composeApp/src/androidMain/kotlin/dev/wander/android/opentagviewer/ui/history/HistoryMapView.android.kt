@@ -95,7 +95,7 @@ actual fun HistoryMapView(
         if (lastAppliedBasemap[0] == effectiveBasemap) return@LaunchedEffect
         lastAppliedBasemap[0] = effectiveBasemap
         mapView.getMapAsync { map ->
-            map.setStyle(Style.Builder().fromBasemap(effectiveBasemap)) { style ->
+            map.setStyle(Style.Builder().fromBasemap(effectiveBasemap, context)) { style ->
                 installLayers(style, lineColor, selectedColor)
                 val ordered = currentPoints.value.sortedBy { it.timestampMs }
                 renderPath(map, style, ordered, fitCamera = false)
@@ -110,7 +110,7 @@ actual fun HistoryMapView(
                 map.uiSettings.isRotateGesturesEnabled = false
                 map.uiSettings.isCompassEnabled = false
                 map.uiSettings.isLogoEnabled = false
-                map.setStyle(Style.Builder().fromBasemap(effectiveBasemap)) { style ->
+                map.setStyle(Style.Builder().fromBasemap(effectiveBasemap, context)) { style ->
                     installLayers(style, lineColor, selectedColor)
                     val ordered = currentPoints.value.sortedBy { it.timestampMs }
                     val key = ordered.map { it.timestampMs }

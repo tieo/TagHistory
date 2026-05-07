@@ -20,6 +20,7 @@
     </queries>
 
     <application
+        android:name="io.github.tieo.taghistory.TagHistoryApp"
         android:allowBackup="false"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"

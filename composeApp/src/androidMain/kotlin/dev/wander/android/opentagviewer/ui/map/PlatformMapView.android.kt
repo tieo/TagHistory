@@ -153,7 +153,7 @@ actual fun PlatformMapView(
         if (lastAppliedBasemap[0] == basemap) return@LaunchedEffect
         lastAppliedBasemap[0] = basemap
         mapView.getMapAsync { map ->
-            map.setStyle(Style.Builder().fromBasemap(basemap))
+            map.setStyle(Style.Builder().fromBasemap(basemap, context))
         }
     }
 
@@ -174,7 +174,7 @@ actual fun PlatformMapView(
                             .zoom(it.zoom.toDouble())
                             .build()
                     }
-                    map.setStyle(Style.Builder().fromBasemap(basemap))
+                    map.setStyle(Style.Builder().fromBasemap(basemap, context))
                     map.addOnCameraMoveListener {
                         cameraTick++
                         bearing = map.cameraPosition.bearing.toFloat()
