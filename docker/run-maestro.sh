@@ -9,7 +9,8 @@ set -euo pipefail
 APK_PATH="${APK_PATH:-/apk/androidApp-debug.apk}"
 TESTS_ROOT="${TESTS_ROOT:-/tests}"
 
-/start.sh &
+# budtmo image's default startup (boots the emulator, supervisord, etc).
+${APP_PATH}/mixins/scripts/run.sh &
 
 echo "Waiting for ADB to be available..."
 for _ in $(seq 1 60); do

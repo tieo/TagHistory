@@ -29,7 +29,12 @@ services:
     environment:
       EMULATOR_DEVICE: "${EMULATOR_DEVICE:-Samsung Galaxy S10}"
       EMULATOR_VERSION: "${EMULATOR_VERSION:-13.0}"
+      EMULATOR_HEADLESS: "true"
+      EMULATOR_NO_SKIN: "true"
       WEB_VNC: "false"
+      WEB_LOG: "false"
+      APPIUM: "false"
+      DISPLAY_AS_VIDEO: "false"
     entrypoint: ["/bin/bash", "/run-maestro.sh"]
 
 volumes:
