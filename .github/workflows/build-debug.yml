@@ -50,6 +50,25 @@ jobs:
           java-version: '21'
           cache: 'gradle'
 
+      - name: Set up Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android,armv7-linux-androideabi,x86_64-linux-android,i686-linux-android
+
+      - name: Cache cargo registry and target
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            rust/target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('rust/Cargo.lock', 'rust/**/Cargo.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
+      - name: Install cargo-ndk
+        run: cargo install cargo-ndk --locked
+
       - name: Change wrapper permissions
         run: chmod +x ./gradlew
 
@@ -62,9 +81,13 @@ jobs:
 
       - name: Run gradle tests
         run: ./gradlew test
+        env:
+          OTTJNI_SKIP_NIX: "1"
 
       - name: Build Debug APK
         run: ./gradlew :androidApp:assembleDebug
+        env:
+          OTTJNI_SKIP_NIX: "1"
 
       - name: Upload APK Debug
         uses: actions/upload-artifact@v4
