@@ -182,11 +182,26 @@ private fun AuthedNav(
                     LaunchedEffect(settingsVm) {
                         settingsVm.state.collect { s -> if (s.signedOut) onSignedOut() }
                     }
+                    // Route refresh through the live MapViewModel so SyncLog
+                    // and per-card fetching spinners pick it up. Falls back to
+                    // the host's standalone callback only if the VM never
+                    // booted (e.g. user opened settings before login finished).
+                    val refreshNow: (suspend () -> String?)? = remember(mapVm, factories.onRefreshNow) {
+                        when {
+                            mapVm != null -> {
+                                {
+                                    mapVm.refresh()
+                                    "Refresh started"
+                                }
+                            }
+                            else -> factories.onRefreshNow
+                        }
+                    }
                     SettingsScreen(
                         viewModel = settingsVm,
                         onOpenInformation = { nav = nav.push(Screen.Information) },
                         onImport = onImport,
-                        onRefreshNow = factories.onRefreshNow,
+                        onRefreshNow = refreshNow,
                     )
                 }
                 is Screen.Information -> {

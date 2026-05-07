@@ -380,15 +380,6 @@ private fun ThemeChoice(
     }
 }
 
-@OptIn(kotlin.time.ExperimentalTime::class)
-private fun formatHHmmss(ms: Long): String {
-    val instant = kotlin.time.Instant.fromEpochMilliseconds(ms)
-    val s = instant.toString()
-    val t = s.substringAfter('T').substringBefore('.').substringBefore('Z')
-    return if (t.length >= 8) t.substring(0, 8) else t
-}
-
-@OptIn(kotlin.time.ExperimentalTime::class)
 @Composable
 private fun SyncLogPanel() {
     val events by io.github.tieo.taghistory.sync.SyncLog.events
@@ -427,7 +418,8 @@ private fun SyncLogPanel() {
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     Text(
-                        formatHHmmss(event.timestampMs),
+                        io.github.tieo.taghistory.ui.history
+                            .formatLocalTimeWithSeconds(event.timestampMs),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.outline,
                         modifier = Modifier.padding(top = 2.dp),

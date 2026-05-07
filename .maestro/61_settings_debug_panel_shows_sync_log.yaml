@@ -1,19 +1,24 @@
 appId: io.github.tieo.taghistory
-name: Settings — Show debug data reveals the Sync log panel
+name: Settings — debug panel populates with real sync events when Refresh fires
 ---
 - runFlow:
     file: 00_seed_test_data.yaml
 
+# Initial nav: open settings, panel must be hidden by default.
 - tapOn:
     id: "btn_settings"
 - extendedWaitUntil:
     visible:
       text: "Show debug data"
     timeout: 3000
-
 - assertNotVisible:
     id: "sync_log_header"
+- assertNotVisible:
+    id: "btn_clear_sync_log"
 
+# Toggle on. Header + clear visible. The MapViewModel boots a refresh on
+# launch, so the log already has events from that. Clear it to start
+# from a known empty state.
 - tapOn:
     text: "Show debug data"
 - extendedWaitUntil:
@@ -27,5 +32,67 @@ name: Settings — Show debug data reveals the Sync log panel
 
 - tapOn:
     id: "btn_clear_sync_log"
+- extendedWaitUntil:
+    visible:
+      text: ".*No sync events yet.*"
+    timeout: 3000
 - assertVisible:
+    text: ".*No sync events yet.*"
+- assertNotVisible:
+    text: "START"
+
+# Press Refresh now. Refresh routes through MapViewModel so SyncLog
+# records START / RUNG_OK / REFRESH_DONE.
+- tapOn:
+    id: "btn_refresh_now"
+- extendedWaitUntil:
+    visible:
+      text: ".*Refresh started.*"
+    timeout: 6000
+
+# After refresh fires, kind tags must appear in the panel.
+- extendedWaitUntil:
+    visible:
+      text: "START"
+    timeout: 4000
+- assertVisible:
+    text: "START"
+
+# At least one rung label must appear (RUNG_OK on success path).
+- extendedWaitUntil:
+    visible:
+      text: ".*RUNG.*"
+    timeout: 6000
+
+# The Refresh started message must be visible in the log.
+- assertVisible:
+    text: ".*Refresh started.*"
+
+# Time format must be HH:MM:SS (8 chars, two digits each), not the
+# YYYY-MM-DDTHH:mm full ISO that the broken first attempt produced.
+# Match exactly two digits, colon, two digits, colon, two digits.
+- assertVisible:
+    text: "^\\d\\d:\\d\\d:\\d\\d$"
+
+# Clear empties the log back to the hint.
+- tapOn:
+    id: "btn_clear_sync_log"
+- extendedWaitUntil:
+    visible:
+      text: ".*No sync events yet.*"
+    timeout: 3000
+- assertNotVisible:
+    text: "START"
+
+# Toggling debug off hides the whole panel; the switch state is per-app
+# session so no need to reset.
+- tapOn:
+    text: "Show debug data"
+- extendedWaitUntil:
+    visible:
+      text: "Show debug data"
+    timeout: 2000
+- assertNotVisible:
     id: "sync_log_header"
+- assertNotVisible:
+    id: "btn_clear_sync_log"
