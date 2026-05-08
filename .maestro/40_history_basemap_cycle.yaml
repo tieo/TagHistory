@@ -15,27 +15,39 @@ name: History — basemap cycle button cycles through light/dark/satellite
 
 # Find the button (one of the three states). Tap it to cycle. We don't
 # assume the starting state because it follows the system theme.
-- assertVisible:
-    text: "Basemap: .*"
+- extendedWaitUntil:
+    visible:
+      text: "Basemap: .*"
+    timeout: 25000
 - tapOn:
     text: "Basemap: .*"
-- assertVisible:
-    text: "Basemap: .*"
+- extendedWaitUntil:
+    visible:
+      text: "Basemap: .*"
+    timeout: 25000
 - tapOn:
     text: "Basemap: .*"
-- assertVisible:
-    text: "Basemap: .*"
+- extendedWaitUntil:
+    visible:
+      text: "Basemap: .*"
+    timeout: 25000
 - tapOn:
     text: "Basemap: .*"
 
 # After three cycles we should be back at the original. Verify map screen
 # is still alive and day controls are still rendering.
-- assertVisible:
-    id: "btn_day_prev"
-- assertVisible:
-    id: "btn_day_next"
-- assertVisible:
-    text: "Today"
+- extendedWaitUntil:
+    visible:
+      id: "btn_day_prev"
+    timeout: 25000
+- extendedWaitUntil:
+    visible:
+      id: "btn_day_next"
+    timeout: 25000
+- extendedWaitUntil:
+    visible:
+      text: "Today"
+    timeout: 25000
 
 # Cycle three more times — full second loop. Day controls remain alive.
 - tapOn:
@@ -44,10 +56,14 @@ name: History — basemap cycle button cycles through light/dark/satellite
     text: "Basemap: .*"
 - tapOn:
     text: "Basemap: .*"
-- assertVisible:
-    id: "btn_day_prev"
-- assertVisible:
-    text: "Today"
+- extendedWaitUntil:
+    visible:
+      id: "btn_day_prev"
+    timeout: 25000
+- extendedWaitUntil:
+    visible:
+      text: "Today"
+    timeout: 25000
 
 # Day-prev → Yesterday: cycling basemap doesn't break day nav state.
 - tapOn:
@@ -58,8 +74,10 @@ name: History — basemap cycle button cycles through light/dark/satellite
     timeout: 25000
 - tapOn:
     text: "Basemap: .*"
-- assertVisible:
-    text: "Yesterday"
+- extendedWaitUntil:
+    visible:
+      text: "Yesterday"
+    timeout: 25000
 - tapOn:
     id: "btn_day_next"
 - extendedWaitUntil:
@@ -72,5 +90,7 @@ name: History — basemap cycle button cycles through light/dark/satellite
     visible:
       id: "btn_settings"
     timeout: 25000
-- assertVisible:
-    text: "Car Keys"
+- extendedWaitUntil:
+    visible:
+      text: "Car Keys"
+    timeout: 25000

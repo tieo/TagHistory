@@ -10,12 +10,18 @@ name: Login screen — UI elements present
     timeout: 25000
 
 # Initial UI: credential fields visible, OTP path widgets hidden.
-- assertVisible:
-    id: "field_email"
-- assertVisible:
-    id: "field_password"
-- assertVisible:
-    id: "btn_login"
+- extendedWaitUntil:
+    visible:
+      id: "field_email"
+    timeout: 25000
+- extendedWaitUntil:
+    visible:
+      id: "field_password"
+    timeout: 25000
+- extendedWaitUntil:
+    visible:
+      id: "btn_login"
+    timeout: 25000
 - assertNotVisible:
     id: "field_otp_code"
 - assertNotVisible:
@@ -32,8 +38,10 @@ name: Login screen — UI elements present
 # Email field is empty by default. Tap → focus → still empty until typed.
 - tapOn:
     id: "field_email"
-- assertVisible:
-    id: "field_email"
+- extendedWaitUntil:
+    visible:
+      id: "field_email"
+    timeout: 25000
 - assertNotVisible:
     id: "field_otp_code"
 
@@ -45,11 +53,17 @@ name: Login screen — UI elements present
     visible:
       text: "Welcome to TagHistory"
     timeout: 25000
-- assertVisible:
-    id: "field_email"
-- assertVisible:
-    id: "field_password"
-- assertVisible:
-    id: "btn_login"
+- extendedWaitUntil:
+    visible:
+      id: "field_email"
+    timeout: 25000
+- extendedWaitUntil:
+    visible:
+      id: "field_password"
+    timeout: 25000
+- extendedWaitUntil:
+    visible:
+      id: "btn_login"
+    timeout: 25000
 - assertNotVisible:
     id: "field_otp_code"

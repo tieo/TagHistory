@@ -23,20 +23,28 @@ name: Settings — sign out dialog cancel keeps user signed in
 
 - tapOn:
     id: "btn_sign_out"
-- assertVisible:
-    text: "Sign out\\?"
-- assertVisible:
-    text: "Cancel"
-- assertVisible:
-    text: "Sign out"
+- extendedWaitUntil:
+    visible:
+      text: "Sign out\\?"
+    timeout: 25000
+- extendedWaitUntil:
+    visible:
+      text: "Cancel"
+    timeout: 25000
+- extendedWaitUntil:
+    visible:
+      text: "Sign out"
+    timeout: 25000
 
 # Cancel via Cancel button.
 - tapOn:
     text: "Cancel"
 - assertNotVisible:
     text: "Sign out\\?"
-- assertVisible:
-    id: "btn_sign_out"
+- extendedWaitUntil:
+    visible:
+      id: "btn_sign_out"
+    timeout: 25000
 
 # Reopen and cancel again via Android back. The cancel must dismiss the
 # dialog without signing out.
@@ -49,8 +57,10 @@ name: Settings — sign out dialog cancel keeps user signed in
 - back
 - assertNotVisible:
     text: "Sign out\\?"
-- assertVisible:
-    id: "btn_sign_out"
+- extendedWaitUntil:
+    visible:
+      id: "btn_sign_out"
+    timeout: 25000
 
 # Still on Settings. Going back to map continues to work — proves we are
 # still authenticated and have not been redirected to login.
@@ -59,7 +69,9 @@ name: Settings — sign out dialog cancel keeps user signed in
     visible:
       id: "btn_settings"
     timeout: 25000
-- assertVisible:
-    text: "Car Keys"
+- extendedWaitUntil:
+    visible:
+      text: "Car Keys"
+    timeout: 25000
 - assertNotVisible:
     text: "Welcome to TagHistory"

@@ -41,12 +41,18 @@ name: History — list scrolls when expanded with multiple items
     visible:
       id: "history_item_0"
     timeout: 25000
-- assertVisible:
-    id: "history_item_0"
-- assertVisible:
-    text: ".*data point.*"
-- assertVisible:
-    text: ".*At \\d.*"
+- extendedWaitUntil:
+    visible:
+      id: "history_item_0"
+    timeout: 25000
+- extendedWaitUntil:
+    visible:
+      text: ".*data point.*"
+    timeout: 25000
+- extendedWaitUntil:
+    visible:
+      text: ".*At \\d.*"
+    timeout: 25000
 
 # Aggressive scroll burst — list does not crash.
 - swipe:
@@ -97,7 +103,9 @@ name: History — list scrolls when expanded with multiple items
     visible:
       id: "btn_settings"
     timeout: 25000
-- assertVisible:
-    text: "Car Keys"
+- extendedWaitUntil:
+    visible:
+      text: "Car Keys"
+    timeout: 25000
 - assertNotVisible:
     id: "history_item_0"

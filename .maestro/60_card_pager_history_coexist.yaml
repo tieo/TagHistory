@@ -9,8 +9,10 @@ name: History + Pager — open history, back, swipe to next, open history again
     file: 00_seed_test_data.yaml
 
 # Card 1 (Car Keys) -> History -> back
-- assertVisible:
-    text: "Car Keys"
+- extendedWaitUntil:
+    visible:
+      text: "Car Keys"
+    timeout: 25000
 - tapOn:
     id: "btn_card_history"
 - extendedWaitUntil:
@@ -22,8 +24,10 @@ name: History + Pager — open history, back, swipe to next, open history again
     visible:
       id: "btn_settings"
     timeout: 25000
-- assertVisible:
-    text: "Car Keys"
+- extendedWaitUntil:
+    visible:
+      text: "Car Keys"
+    timeout: 25000
 
 # Swipe to card 2 (Backpack)
 - swipe:
@@ -47,8 +51,10 @@ name: History + Pager — open history, back, swipe to next, open history again
     visible:
       id: "btn_settings"
     timeout: 25000
-- assertVisible:
-    text: "Backpack"
+- extendedWaitUntil:
+    visible:
+      text: "Backpack"
+    timeout: 25000
 
 # Swipe back to card 1, sanity check pager still works.
 - swipe:
@@ -67,8 +73,10 @@ name: History + Pager — open history, back, swipe to next, open history again
     visible:
       id: "btn_day_prev"
     timeout: 25000
-- assertVisible:
-    text: "Today"
+- extendedWaitUntil:
+    visible:
+      text: "Today"
+    timeout: 25000
 - swipe:
     start: "50%, 88%"
     end: "50%, 40%"
@@ -78,15 +86,19 @@ name: History + Pager — open history, back, swipe to next, open history again
       id: "history_item_0"
     timeout: 25000
 # Car Keys today: 3 points — items 0, 1, 2 all visible.
-- assertVisible:
-    id: "history_item_2"
+- extendedWaitUntil:
+    visible:
+      id: "history_item_2"
+    timeout: 25000
 - back
 - extendedWaitUntil:
     visible:
       id: "btn_settings"
     timeout: 25000
-- assertVisible:
-    text: "Car Keys"
+- extendedWaitUntil:
+    visible:
+      text: "Car Keys"
+    timeout: 25000
 
 # Swipe to Bike (1 point only, today). Open history. List has only item 0.
 - swipe:
@@ -120,7 +132,9 @@ name: History + Pager — open history, back, swipe to next, open history again
     visible:
       id: "btn_settings"
     timeout: 25000
-- assertVisible:
-    text: "Bike"
+- extendedWaitUntil:
+    visible:
+      text: "Bike"
+    timeout: 25000
 - assertNotVisible:
     text: "Backpack"

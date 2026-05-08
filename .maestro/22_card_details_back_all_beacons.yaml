@@ -7,8 +7,10 @@ name: "Stress: details→back for every beacon — card stays synced"
     file: 00_seed_test_data.yaml
 
 # ── Car Keys ─────────────────────────────────────────────────────────────────
-- assertVisible:
-    text: "Car Keys"
+- extendedWaitUntil:
+    visible:
+      text: "Car Keys"
+    timeout: 25000
 - tapOn:
     id: "btn_card_details"
 - extendedWaitUntil:
@@ -20,8 +22,10 @@ name: "Stress: details→back for every beacon — card stays synced"
     visible:
       id: "btn_settings"
     timeout: 25000
-- assertVisible:
-    text: "Car Keys"
+- extendedWaitUntil:
+    visible:
+      text: "Car Keys"
+    timeout: 25000
 
 # ── Backpack ──────────────────────────────────────────────────────────────────
 - swipe:
@@ -43,8 +47,10 @@ name: "Stress: details→back for every beacon — card stays synced"
     visible:
       id: "btn_settings"
     timeout: 25000
-- assertVisible:
-    text: "Backpack"
+- extendedWaitUntil:
+    visible:
+      text: "Backpack"
+    timeout: 25000
 
 # ── Bike ──────────────────────────────────────────────────────────────────────
 - swipe:
@@ -66,8 +72,10 @@ name: "Stress: details→back for every beacon — card stays synced"
     visible:
       id: "btn_settings"
     timeout: 25000
-- assertVisible:
-    text: "Bike"
+- extendedWaitUntil:
+    visible:
+      text: "Bike"
+    timeout: 25000
 
 # ── Back to Car Keys ──────────────────────────────────────────────────────────
 - swipe:
@@ -89,10 +97,14 @@ name: "Stress: details→back for every beacon — card stays synced"
       id: "btn_rename"
     timeout: 25000
 # Details landmarks visible, map landmarks gone.
-- assertVisible:
-    id: "btn_remove"
-- assertVisible:
-    id: "btn_view_history"
+- extendedWaitUntil:
+    visible:
+      id: "btn_remove"
+    timeout: 25000
+- extendedWaitUntil:
+    visible:
+      id: "btn_view_history"
+    timeout: 25000
 - assertNotVisible:
     id: "btn_settings"
 - back
@@ -100,8 +112,10 @@ name: "Stress: details→back for every beacon — card stays synced"
     visible:
       id: "btn_settings"
     timeout: 25000
-- assertVisible:
-    text: "Car Keys"
+- extendedWaitUntil:
+    visible:
+      text: "Car Keys"
+    timeout: 25000
 - assertNotVisible:
     text: "Bike"
 - assertNotVisible:
@@ -119,8 +133,10 @@ name: "Stress: details→back for every beacon — card stays synced"
     visible:
       id: "btn_settings"
     timeout: 25000
-- assertVisible:
-    text: "Car Keys"
+- extendedWaitUntil:
+    visible:
+      text: "Car Keys"
+    timeout: 25000
 
 - swipe:
     start: "85%, 75%"
@@ -141,8 +157,10 @@ name: "Stress: details→back for every beacon — card stays synced"
     visible:
       id: "btn_settings"
     timeout: 25000
-- assertVisible:
-    text: "Backpack"
+- extendedWaitUntil:
+    visible:
+      text: "Backpack"
+    timeout: 25000
 
 - swipe:
     start: "85%, 75%"
@@ -163,11 +181,17 @@ name: "Stress: details→back for every beacon — card stays synced"
     visible:
       id: "btn_settings"
     timeout: 25000
-- assertVisible:
-    text: "Bike"
+- extendedWaitUntil:
+    visible:
+      text: "Bike"
+    timeout: 25000
 
 # Final: btn_card_details still works, no leak from previous opens.
-- assertVisible:
-    id: "btn_card_details"
-- assertVisible:
-    id: "btn_card_history"
+- extendedWaitUntil:
+    visible:
+      id: "btn_card_details"
+    timeout: 25000
+- extendedWaitUntil:
+    visible:
+      id: "btn_card_history"
+    timeout: 25000

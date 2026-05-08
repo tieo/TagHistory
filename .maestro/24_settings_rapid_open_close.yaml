@@ -29,8 +29,10 @@ name: "Stress: settings open/close ×5 — map and card unchanged"
     visible:
       id: "btn_settings"
     timeout: 25000
-- assertVisible:
-    text: "Backpack"
+- extendedWaitUntil:
+    visible:
+      text: "Backpack"
+    timeout: 25000
 
 # ── round 2 ──────────────────────────────────────────────────────────────────
 - tapOn:
@@ -44,8 +46,10 @@ name: "Stress: settings open/close ×5 — map and card unchanged"
     visible:
       id: "btn_settings"
     timeout: 25000
-- assertVisible:
-    text: "Backpack"
+- extendedWaitUntil:
+    visible:
+      text: "Backpack"
+    timeout: 25000
 
 # ── round 3 ──────────────────────────────────────────────────────────────────
 - tapOn:
@@ -59,8 +63,10 @@ name: "Stress: settings open/close ×5 — map and card unchanged"
     visible:
       id: "btn_settings"
     timeout: 25000
-- assertVisible:
-    text: "Backpack"
+- extendedWaitUntil:
+    visible:
+      text: "Backpack"
+    timeout: 25000
 
 # ── round 4 ──────────────────────────────────────────────────────────────────
 - tapOn:
@@ -74,8 +80,10 @@ name: "Stress: settings open/close ×5 — map and card unchanged"
     visible:
       id: "btn_settings"
     timeout: 25000
-- assertVisible:
-    text: "Backpack"
+- extendedWaitUntil:
+    visible:
+      text: "Backpack"
+    timeout: 25000
 
 # ── round 5 ──────────────────────────────────────────────────────────────────
 - tapOn:
@@ -89,8 +97,10 @@ name: "Stress: settings open/close ×5 — map and card unchanged"
     visible:
       id: "btn_settings"
     timeout: 25000
-- assertVisible:
-    text: "Backpack"
+- extendedWaitUntil:
+    visible:
+      text: "Backpack"
+    timeout: 25000
 
 # ── rounds 6-10 ──────────────────────────────────────────────────────────────
 - tapOn:
@@ -104,8 +114,10 @@ name: "Stress: settings open/close ×5 — map and card unchanged"
     visible:
       id: "btn_settings"
     timeout: 25000
-- assertVisible:
-    text: "Backpack"
+- extendedWaitUntil:
+    visible:
+      text: "Backpack"
+    timeout: 25000
 
 - tapOn:
     id: "btn_settings"
@@ -118,8 +130,10 @@ name: "Stress: settings open/close ×5 — map and card unchanged"
     visible:
       id: "btn_settings"
     timeout: 25000
-- assertVisible:
-    text: "Backpack"
+- extendedWaitUntil:
+    visible:
+      text: "Backpack"
+    timeout: 25000
 
 - tapOn:
     id: "btn_settings"
@@ -132,8 +146,10 @@ name: "Stress: settings open/close ×5 — map and card unchanged"
     visible:
       id: "btn_settings"
     timeout: 25000
-- assertVisible:
-    text: "Backpack"
+- extendedWaitUntil:
+    visible:
+      text: "Backpack"
+    timeout: 25000
 
 - tapOn:
     id: "btn_settings"
@@ -146,8 +162,10 @@ name: "Stress: settings open/close ×5 — map and card unchanged"
     visible:
       id: "btn_settings"
     timeout: 25000
-- assertVisible:
-    text: "Backpack"
+- extendedWaitUntil:
+    visible:
+      text: "Backpack"
+    timeout: 25000
 
 - tapOn:
     id: "btn_settings"
@@ -160,8 +178,10 @@ name: "Stress: settings open/close ×5 — map and card unchanged"
     visible:
       id: "btn_settings"
     timeout: 25000
-- assertVisible:
-    text: "Backpack"
+- extendedWaitUntil:
+    visible:
+      text: "Backpack"
+    timeout: 25000
 
 # ── Swipe to Bike, run 5 more rounds, verify Bike persists ───────────────────
 - swipe:
@@ -184,8 +204,10 @@ name: "Stress: settings open/close ×5 — map and card unchanged"
     visible:
       id: "btn_settings"
     timeout: 25000
-- assertVisible:
-    text: "Bike"
+- extendedWaitUntil:
+    visible:
+      text: "Bike"
+    timeout: 25000
 
 - tapOn:
     id: "btn_settings"
@@ -198,8 +220,10 @@ name: "Stress: settings open/close ×5 — map and card unchanged"
     visible:
       id: "btn_settings"
     timeout: 25000
-- assertVisible:
-    text: "Bike"
+- extendedWaitUntil:
+    visible:
+      text: "Bike"
+    timeout: 25000
 
 - tapOn:
     id: "btn_settings"
@@ -212,8 +236,10 @@ name: "Stress: settings open/close ×5 — map and card unchanged"
     visible:
       id: "btn_settings"
     timeout: 25000
-- assertVisible:
-    text: "Bike"
+- extendedWaitUntil:
+    visible:
+      text: "Bike"
+    timeout: 25000
 
 # Final: card pager still responds. Swipe back to Car Keys works.
 - swipe:

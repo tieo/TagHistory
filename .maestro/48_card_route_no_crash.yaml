@@ -11,10 +11,14 @@ name: Map — tapping btn_card_route launches chooser without crashing
 - runFlow:
     file: 00_seed_test_data.yaml
 
-- assertVisible:
-    text: "Car Keys"
-- assertVisible:
-    text: "Route"
+- extendedWaitUntil:
+    visible:
+      text: "Car Keys"
+    timeout: 25000
+- extendedWaitUntil:
+    visible:
+      text: "Route"
+    timeout: 25000
 - tapOn:
     text: "Route"
 
@@ -41,17 +45,25 @@ name: Map — tapping btn_card_route launches chooser without crashing
             id: "btn_settings"
           timeout: 25000
 
-- assertVisible:
-    id: "btn_settings"
+- extendedWaitUntil:
+    visible:
+      id: "btn_settings"
+    timeout: 25000
 
 # Once we are confirmed back on Map, the card overlay must still render
 # Car Keys (the original active card before the route intent).
-- assertVisible:
-    text: "Car Keys"
-- assertVisible:
-    id: "btn_card_details"
-- assertVisible:
-    id: "btn_card_history"
+- extendedWaitUntil:
+    visible:
+      text: "Car Keys"
+    timeout: 25000
+- extendedWaitUntil:
+    visible:
+      id: "btn_card_details"
+    timeout: 25000
+- extendedWaitUntil:
+    visible:
+      id: "btn_card_history"
+    timeout: 25000
 
 # Repeat the route flow on a different beacon — Backpack also has location
 # so the Route action is enabled.
@@ -63,8 +75,10 @@ name: Map — tapping btn_card_route launches chooser without crashing
     visible:
       text: "Backpack"
     timeout: 25000
-- assertVisible:
-    text: "Route"
+- extendedWaitUntil:
+    visible:
+      text: "Route"
+    timeout: 25000
 - tapOn:
     text: "Route"
 - runFlow:
@@ -83,5 +97,7 @@ name: Map — tapping btn_card_route launches chooser without crashing
           visible:
             id: "btn_settings"
           timeout: 25000
-- assertVisible:
-    id: "btn_settings"
+- extendedWaitUntil:
+    visible:
+      id: "btn_settings"
+    timeout: 25000

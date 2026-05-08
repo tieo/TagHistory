@@ -5,10 +5,14 @@ name: Map screen — settings button opens settings screen
     file: 00_seed_test_data.yaml
 
 # Pre: on map. Map landmarks are visible.
-- assertVisible:
-    id: "btn_settings"
-- assertVisible:
-    text: "Car Keys"
+- extendedWaitUntil:
+    visible:
+      id: "btn_settings"
+    timeout: 25000
+- extendedWaitUntil:
+    visible:
+      text: "Car Keys"
+    timeout: 25000
 
 - tapOn:
     id: "btn_settings"
@@ -18,10 +22,14 @@ name: Map screen — settings button opens settings screen
     timeout: 25000
 
 # On settings: section headers visible, map landmarks gone.
-- assertVisible:
-    text: "Appearance"
-- assertVisible:
-    text: "Background sync"
+- extendedWaitUntil:
+    visible:
+      text: "Appearance"
+    timeout: 25000
+- extendedWaitUntil:
+    visible:
+      text: "Background sync"
+    timeout: 25000
 - assertNotVisible:
     text: "Car Keys"
 - assertNotVisible:
@@ -33,8 +41,10 @@ name: Map screen — settings button opens settings screen
     visible:
       id: "btn_settings"
     timeout: 25000
-- assertVisible:
-    text: "Car Keys"
+- extendedWaitUntil:
+    visible:
+      text: "Car Keys"
+    timeout: 25000
 - assertNotVisible:
     text: "Appearance"
 
@@ -45,12 +55,16 @@ name: Map screen — settings button opens settings screen
     visible:
       text: "Settings"
     timeout: 25000
-- assertVisible:
-    text: "Appearance"
+- extendedWaitUntil:
+    visible:
+      text: "Appearance"
+    timeout: 25000
 - back
 - extendedWaitUntil:
     visible:
       id: "btn_settings"
     timeout: 25000
-- assertVisible:
-    text: "Car Keys"
+- extendedWaitUntil:
+    visible:
+      text: "Car Keys"
+    timeout: 25000

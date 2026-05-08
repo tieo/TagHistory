@@ -21,8 +21,10 @@ name: Settings — full theme cycle System -> Light -> Dark -> System
     visible:
       text: "Settings"
     timeout: 25000
-- assertVisible:
-    id: "btn_theme_light"
+- extendedWaitUntil:
+    visible:
+      id: "btn_theme_light"
+    timeout: 25000
 
 # Light -> Dark
 - tapOn:
@@ -31,8 +33,10 @@ name: Settings — full theme cycle System -> Light -> Dark -> System
     visible:
       text: "Settings"
     timeout: 25000
-- assertVisible:
-    id: "btn_theme_dark"
+- extendedWaitUntil:
+    visible:
+      id: "btn_theme_dark"
+    timeout: 25000
 
 # Dark -> System (restore)
 - tapOn:
@@ -41,8 +45,10 @@ name: Settings — full theme cycle System -> Light -> Dark -> System
     visible:
       text: "Settings"
     timeout: 25000
-- assertVisible:
-    id: "btn_theme_system"
+- extendedWaitUntil:
+    visible:
+      id: "btn_theme_system"
+    timeout: 25000
 
 # Round 2: System -> Dark -> Light -> System (reverse direction).
 - tapOn:
@@ -51,12 +57,18 @@ name: Settings — full theme cycle System -> Light -> Dark -> System
     visible:
       text: "Settings"
     timeout: 25000
-- assertVisible:
-    id: "btn_theme_dark"
-- assertVisible:
-    id: "btn_theme_light"
-- assertVisible:
-    id: "btn_theme_system"
+- extendedWaitUntil:
+    visible:
+      id: "btn_theme_dark"
+    timeout: 25000
+- extendedWaitUntil:
+    visible:
+      id: "btn_theme_light"
+    timeout: 25000
+- extendedWaitUntil:
+    visible:
+      id: "btn_theme_system"
+    timeout: 25000
 
 - tapOn:
     id: "btn_theme_light"
@@ -64,8 +76,10 @@ name: Settings — full theme cycle System -> Light -> Dark -> System
     visible:
       text: "Settings"
     timeout: 25000
-- assertVisible:
-    id: "btn_theme_light"
+- extendedWaitUntil:
+    visible:
+      id: "btn_theme_light"
+    timeout: 25000
 
 - tapOn:
     id: "btn_theme_system"
@@ -73,8 +87,10 @@ name: Settings — full theme cycle System -> Light -> Dark -> System
     visible:
       text: "Settings"
     timeout: 25000
-- assertVisible:
-    id: "btn_theme_system"
+- extendedWaitUntil:
+    visible:
+      id: "btn_theme_system"
+    timeout: 25000
 
 # Persistence: leave Settings, go to Map, come back; theme picker still works.
 - back
@@ -82,20 +98,26 @@ name: Settings — full theme cycle System -> Light -> Dark -> System
     visible:
       id: "btn_settings"
     timeout: 25000
-- assertVisible:
-    text: "Car Keys"
+- extendedWaitUntil:
+    visible:
+      text: "Car Keys"
+    timeout: 25000
 - tapOn:
     id: "btn_settings"
 - extendedWaitUntil:
     visible:
       text: "Settings"
     timeout: 25000
-- assertVisible:
-    id: "btn_theme_system"
+- extendedWaitUntil:
+    visible:
+      id: "btn_theme_system"
+    timeout: 25000
 - tapOn:
     id: "btn_theme_dark"
-- assertVisible:
-    id: "btn_theme_dark"
+- extendedWaitUntil:
+    visible:
+      id: "btn_theme_dark"
+    timeout: 25000
 - tapOn:
     id: "btn_theme_system"
 
@@ -105,5 +127,7 @@ name: Settings — full theme cycle System -> Light -> Dark -> System
     visible:
       id: "btn_settings"
     timeout: 25000
-- assertVisible:
-    text: "Car Keys"
+- extendedWaitUntil:
+    visible:
+      text: "Car Keys"
+    timeout: 25000

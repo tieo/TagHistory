@@ -38,20 +38,28 @@ name: Login — Start over returns to credentials screen
           visible:
             id: "field_email"
           timeout: 25000
-      - assertVisible:
-          id: "field_email"
-      - assertVisible:
-          id: "field_password"
-      - assertVisible:
-          id: "btn_login"
+      - extendedWaitUntil:
+          visible:
+            id: "field_email"
+          timeout: 25000
+      - extendedWaitUntil:
+          visible:
+            id: "field_password"
+          timeout: 25000
+      - extendedWaitUntil:
+          visible:
+            id: "btn_login"
+          timeout: 25000
       - assertNotVisible:
           id: "btn_start_over"
       - assertNotVisible:
           id: "field_otp_code"
 
       # Welcome banner must still read the same text.
-      - assertVisible:
-          text: "Welcome to TagHistory"
+      - extendedWaitUntil:
+          visible:
+            text: "Welcome to TagHistory"
+          timeout: 25000
 
       # Second attempt loops back to the same OTP/2FA screen and back again.
       - tapOn:

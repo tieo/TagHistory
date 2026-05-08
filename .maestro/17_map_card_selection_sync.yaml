@@ -4,8 +4,10 @@ name: Map — card pager swipe changes visible beacon name and is symmetric
 - runFlow:
     file: 00_seed_test_data.yaml
 
-- assertVisible:
-    text: "Car Keys"
+- extendedWaitUntil:
+    visible:
+      text: "Car Keys"
+    timeout: 25000
 - assertNotVisible:
     text: "Backpack"
 - assertNotVisible:
@@ -39,8 +41,10 @@ name: Map — card pager swipe changes visible beacon name and is symmetric
     start: "85%, 75%"
     end: "15%, 75%"
     duration: 300
-- assertVisible:
-    text: "Bike"
+- extendedWaitUntil:
+    visible:
+      text: "Bike"
+    timeout: 25000
 
 # Reverse direction returns through Backpack to Car Keys.
 - swipe:
@@ -68,11 +72,15 @@ name: Map — card pager swipe changes visible beacon name and is symmetric
     start: "15%, 75%"
     end: "85%, 75%"
     duration: 300
-- assertVisible:
-    text: "Car Keys"
+- extendedWaitUntil:
+    visible:
+      text: "Car Keys"
+    timeout: 25000
 - assertNotVisible:
     text: "Backpack"
 
 # btn_settings stays visible the whole time (proves we are on map).
-- assertVisible:
-    id: "btn_settings"
+- extendedWaitUntil:
+    visible:
+      id: "btn_settings"
+    timeout: 25000

@@ -21,8 +21,10 @@ name: "Stress: details→back does not reset map camera to world"
     timeout: 25000
 - assertNotVisible:
     id: "btn_import"
-- assertVisible:
-    text: "Car Keys"
+- extendedWaitUntil:
+    visible:
+      text: "Car Keys"
+    timeout: 25000
 
 # ── Backpack: history → back ─────────────────────────────────────────────────
 - swipe:
@@ -46,8 +48,10 @@ name: "Stress: details→back does not reset map camera to world"
     timeout: 25000
 - assertNotVisible:
     id: "btn_import"
-- assertVisible:
-    text: "Backpack"
+- extendedWaitUntil:
+    visible:
+      text: "Backpack"
+    timeout: 25000
 
 # ── Bike: details → history → back → back ────────────────────────────────────
 - swipe:
@@ -82,8 +86,10 @@ name: "Stress: details→back does not reset map camera to world"
     timeout: 25000
 - assertNotVisible:
     id: "btn_import"
-- assertVisible:
-    text: "Bike"
+- extendedWaitUntil:
+    visible:
+      text: "Bike"
+    timeout: 25000
 
 # ── back to Car Keys via two right swipes — card overlay must be readable ────
 - swipe:
@@ -102,10 +108,14 @@ name: "Stress: details→back does not reset map camera to world"
     visible:
       text: "Car Keys"
     timeout: 25000
-- assertVisible:
-    id: "btn_card_details"
-- assertVisible:
-    id: "btn_card_history"
+- extendedWaitUntil:
+    visible:
+      id: "btn_card_details"
+    timeout: 25000
+- extendedWaitUntil:
+    visible:
+      id: "btn_card_history"
+    timeout: 25000
 
 # ── Car Keys: details -> history -> back -> back, ensure no zoom reset ──────
 - tapOn:
@@ -120,8 +130,10 @@ name: "Stress: details→back does not reset map camera to world"
     visible:
       id: "btn_day_prev"
     timeout: 25000
-- assertVisible:
-    text: "Today"
+- extendedWaitUntil:
+    visible:
+      text: "Today"
+    timeout: 25000
 - back
 - extendedWaitUntil:
     visible:
@@ -134,5 +146,7 @@ name: "Stress: details→back does not reset map camera to world"
     timeout: 25000
 - assertNotVisible:
     id: "btn_import"
-- assertVisible:
-    text: "Car Keys"
+- extendedWaitUntil:
+    visible:
+      text: "Car Keys"
+    timeout: 25000

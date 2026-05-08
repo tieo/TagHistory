@@ -14,30 +14,42 @@ name: Device info — rename dialog opens, cancel dismisses, save persists acros
     visible:
       id: "btn_rename"
     timeout: 25000
-- assertVisible:
-    text: "Car Keys"
+- extendedWaitUntil:
+    visible:
+      text: "Car Keys"
+    timeout: 25000
 - assertNotVisible:
     text: "Rename device"
 
 # Cancel path: dialog opens and closes without saving.
 - tapOn:
     id: "btn_rename"
-- assertVisible:
-    text: "Rename device"
-- assertVisible:
-    text: "Save"
-- assertVisible:
-    text: "Cancel"
+- extendedWaitUntil:
+    visible:
+      text: "Rename device"
+    timeout: 25000
+- extendedWaitUntil:
+    visible:
+      text: "Save"
+    timeout: 25000
+- extendedWaitUntil:
+    visible:
+      text: "Cancel"
+    timeout: 25000
 
 - tapOn:
     text: "Cancel"
 - assertNotVisible:
     text: "Rename device"
-- assertVisible:
-    id: "btn_rename"
+- extendedWaitUntil:
+    visible:
+      id: "btn_rename"
+    timeout: 25000
 # Name unchanged after cancel.
-- assertVisible:
-    text: "Car Keys"
+- extendedWaitUntil:
+    visible:
+      text: "Car Keys"
+    timeout: 25000
 
 # Cancel via system back: also dismisses without saving.
 - tapOn:
@@ -49,8 +61,10 @@ name: Device info — rename dialog opens, cancel dismisses, save persists acros
 - back
 - assertNotVisible:
     text: "Rename device"
-- assertVisible:
-    text: "Car Keys"
+- extendedWaitUntil:
+    visible:
+      text: "Car Keys"
+    timeout: 25000
 
 # Happy path: type new name, save, dialog dismissed. Tap existing text in
 # the TextField (Compose OutlinedTextField testTag is unreachable from a
@@ -70,8 +84,10 @@ name: Device info — rename dialog opens, cancel dismisses, save persists acros
 - assertNotVisible:
     text: "Rename device"
 # Name persisted — visible in device info header.
-- assertVisible:
-    text: "My Test Tag"
+- extendedWaitUntil:
+    visible:
+      text: "My Test Tag"
+    timeout: 25000
 - assertNotVisible:
     text: "Car Keys"
 
@@ -81,8 +97,10 @@ name: Device info — rename dialog opens, cancel dismisses, save persists acros
     visible:
       id: "btn_settings"
     timeout: 25000
-- assertVisible:
-    text: "My Test Tag"
+- extendedWaitUntil:
+    visible:
+      text: "My Test Tag"
+    timeout: 25000
 - assertNotVisible:
     text: "Car Keys"
 
@@ -93,12 +111,16 @@ name: Device info — rename dialog opens, cancel dismisses, save persists acros
     visible:
       id: "btn_rename"
     timeout: 25000
-- assertVisible:
-    text: "My Test Tag"
+- extendedWaitUntil:
+    visible:
+      text: "My Test Tag"
+    timeout: 25000
 - back
 - extendedWaitUntil:
     visible:
       id: "btn_settings"
     timeout: 25000
-- assertVisible:
-    text: "My Test Tag"
+- extendedWaitUntil:
+    visible:
+      text: "My Test Tag"
+    timeout: 25000

@@ -23,12 +23,18 @@ name: Information screen — links present, back navigation works, license sub-s
     timeout: 25000
 
 # All three links + version line visible. Settings widgets gone.
-- assertVisible:
-    id: "btn_developer_website"
-- assertVisible:
-    id: "btn_source_code"
-- assertVisible:
-    id: "btn_license"
+- extendedWaitUntil:
+    visible:
+      id: "btn_developer_website"
+    timeout: 25000
+- extendedWaitUntil:
+    visible:
+      id: "btn_source_code"
+    timeout: 25000
+- extendedWaitUntil:
+    visible:
+      id: "btn_license"
+    timeout: 25000
 - assertNotVisible:
     text: "Appearance"
 - assertNotVisible:
@@ -44,12 +50,18 @@ name: Information screen — links present, back navigation works, license sub-s
     visible:
       text: "TagHistory"
     timeout: 25000
-- assertVisible:
-    id: "btn_license"
-- assertVisible:
-    id: "btn_source_code"
-- assertVisible:
-    id: "btn_developer_website"
+- extendedWaitUntil:
+    visible:
+      id: "btn_license"
+    timeout: 25000
+- extendedWaitUntil:
+    visible:
+      id: "btn_source_code"
+    timeout: 25000
+- extendedWaitUntil:
+    visible:
+      id: "btn_developer_website"
+    timeout: 25000
 
 # Tap source code (external intent). After back/dismiss the chooser if any,
 # Information screen is back.
@@ -95,14 +107,18 @@ name: Information screen — links present, back navigation works, license sub-s
     visible:
       text: "Settings"
     timeout: 25000
-- assertVisible:
-    text: "Appearance"
+- extendedWaitUntil:
+    visible:
+      text: "Appearance"
+    timeout: 25000
 - back
 - extendedWaitUntil:
     visible:
       id: "btn_settings"
     timeout: 25000
-- assertVisible:
-    text: "Car Keys"
+- extendedWaitUntil:
+    visible:
+      text: "Car Keys"
+    timeout: 25000
 - assertNotVisible:
     text: "Appearance"

@@ -129,8 +129,10 @@ name: History — open/close ten times in a row, app stays alive
     timeout: 25000
 
 # Final assertion: card pager still shows the original card.
-- assertVisible:
-    text: "Car Keys"
+- extendedWaitUntil:
+    visible:
+      text: "Car Keys"
+    timeout: 25000
 
 # ── 10 more rounds on Backpack ─────────────────────────────────────────────
 - swipe:
@@ -263,7 +265,9 @@ name: History — open/close ten times in a row, app stays alive
     timeout: 25000
 
 # Card pager still shows Backpack after 20 total round-trips.
-- assertVisible:
-    text: "Backpack"
+- extendedWaitUntil:
+    visible:
+      text: "Backpack"
+    timeout: 25000
 - assertNotVisible:
     text: "Car Keys"

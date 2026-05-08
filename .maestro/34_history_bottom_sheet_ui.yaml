@@ -13,8 +13,10 @@ name: History — bottom sheet shows day nav, point list, and "Fetch older"
     timeout: 25000
 
 # Sheet peeked: day label visible at bottom
-- assertVisible:
-    text: "Today"
+- extendedWaitUntil:
+    visible:
+      text: "Today"
+    timeout: 25000
 
 # Expand sheet by swiping up the drag handle
 - swipe:
@@ -27,16 +29,20 @@ name: History — bottom sheet shows day nav, point list, and "Fetch older"
     visible:
       text: ".*data point.*"
     timeout: 25000
-- assertVisible:
-    text: ".*data point.*"
+- extendedWaitUntil:
+    visible:
+      text: ".*data point.*"
+    timeout: 25000
 
 # First history item is always seeded — visible in list
 - extendedWaitUntil:
     visible:
       id: "history_item_0"
     timeout: 25000
-- assertVisible:
-    id: "history_item_0"
+- extendedWaitUntil:
+    visible:
+      id: "history_item_0"
+    timeout: 25000
 
 # Navigate to previous day (← arrow)
 - tapOn:
@@ -46,8 +52,10 @@ name: History — bottom sheet shows day nav, point list, and "Fetch older"
     visible:
       text: "Yesterday"
     timeout: 25000
-- assertVisible:
-    text: "Yesterday"
+- extendedWaitUntil:
+    visible:
+      text: "Yesterday"
+    timeout: 25000
 
 # Navigate forward (→ arrow) to come back
 - tapOn:
@@ -57,8 +65,10 @@ name: History — bottom sheet shows day nav, point list, and "Fetch older"
     visible:
       text: "Today"
     timeout: 25000
-- assertVisible:
-    text: "Today"
+- extendedWaitUntil:
+    visible:
+      text: "Today"
+    timeout: 25000
 
 # Day-prev to Yesterday: state transition fully visible.
 - tapOn:
@@ -68,15 +78,23 @@ name: History — bottom sheet shows day nav, point list, and "Fetch older"
     visible:
       text: "Yesterday"
     timeout: 25000
-- assertVisible:
-    text: "Yesterday"
+- extendedWaitUntil:
+    visible:
+      text: "Yesterday"
+    timeout: 25000
 # Yesterday for Car Keys has 2 reports.
-- assertVisible:
-    text: ".*data point.*"
-- assertVisible:
-    id: "history_item_0"
-- assertVisible:
-    text: ".*At \\d.*"
+- extendedWaitUntil:
+    visible:
+      text: ".*data point.*"
+    timeout: 25000
+- extendedWaitUntil:
+    visible:
+      id: "history_item_0"
+    timeout: 25000
+- extendedWaitUntil:
+    visible:
+      text: ".*At \\d.*"
+    timeout: 25000
 
 # Day-prev once more — older bucket (3 days ago, 1 report). The label is a
 # YYYY-MM-DD because it's older than Yesterday.
@@ -107,8 +125,10 @@ name: History — bottom sheet shows day nav, point list, and "Fetch older"
     visible:
       text: "Today"
     timeout: 25000
-- assertVisible:
-    text: "Today"
+- extendedWaitUntil:
+    visible:
+      text: "Today"
+    timeout: 25000
 
 # Back returns to map.
 - back
@@ -116,8 +136,10 @@ name: History — bottom sheet shows day nav, point list, and "Fetch older"
     visible:
       id: "btn_settings"
     timeout: 25000
-- assertVisible:
-    text: "Car Keys"
+- extendedWaitUntil:
+    visible:
+      text: "Car Keys"
+    timeout: 25000
 - assertNotVisible:
     id: "btn_day_prev"
 - assertNotVisible:

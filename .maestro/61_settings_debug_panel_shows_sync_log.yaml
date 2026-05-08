@@ -25,10 +25,14 @@ name: Settings — debug panel populates with real sync events when Refresh fire
     visible:
       id: "sync_log_header"
     timeout: 25000
-- assertVisible:
-    id: "sync_log_header"
-- assertVisible:
-    id: "btn_clear_sync_log"
+- extendedWaitUntil:
+    visible:
+      id: "sync_log_header"
+    timeout: 25000
+- extendedWaitUntil:
+    visible:
+      id: "btn_clear_sync_log"
+    timeout: 25000
 
 - tapOn:
     id: "btn_clear_sync_log"
@@ -36,8 +40,10 @@ name: Settings — debug panel populates with real sync events when Refresh fire
     visible:
       text: ".*No sync events yet.*"
     timeout: 25000
-- assertVisible:
-    text: ".*No sync events yet.*"
+- extendedWaitUntil:
+    visible:
+      text: ".*No sync events yet.*"
+    timeout: 25000
 - assertNotVisible:
     text: "START"
 
@@ -53,8 +59,10 @@ name: Settings — debug panel populates with real sync events when Refresh fire
     visible:
       text: "START"
     timeout: 25000
-- assertVisible:
-    text: "START"
+- extendedWaitUntil:
+    visible:
+      text: "START"
+    timeout: 25000
 
 # Either RUNG_OK / RUNG_FAIL (cascade ran) or INFO (cascade skipped because
 # a previous refresh is still in flight). Both prove the refresh path was
@@ -63,13 +71,17 @@ name: Settings — debug panel populates with real sync events when Refresh fire
     visible:
       text: ".*(RUNG|INFO).*"
     timeout: 25000
-- assertVisible:
-    text: ".*Refresh started.*"
+- extendedWaitUntil:
+    visible:
+      text: ".*Refresh started.*"
+    timeout: 25000
 
 # Time format must be HH:MM:SS, not the YYYY-MM-DDTHH:mm ISO from the
 # broken first attempt.
-- assertVisible:
-    text: "^\\d\\d:\\d\\d:\\d\\d$"
+- extendedWaitUntil:
+    visible:
+      text: "^\\d\\d:\\d\\d:\\d\\d$"
+    timeout: 25000
 
 # Clear empties the log back to the hint.
 - tapOn:

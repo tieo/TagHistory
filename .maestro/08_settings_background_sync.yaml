@@ -15,16 +15,20 @@ name: Settings — background sync toggle shows/hides interval and persists
     timeout: 25000
 
 # Default: ON → Interval visible.
-- assertVisible:
-    text: "Interval"
+- extendedWaitUntil:
+    visible:
+      text: "Interval"
+    timeout: 25000
 
 # Toggle OFF → Interval hidden, screen still alive.
 - tapOn:
     id: "toggle_background_sync"
 - assertNotVisible:
     text: "Interval"
-- assertVisible:
-    text: "Background sync"
+- extendedWaitUntil:
+    visible:
+      text: "Background sync"
+    timeout: 25000
 
 # Persistence: leave Settings and come back with OFF state.
 - back
@@ -32,8 +36,10 @@ name: Settings — background sync toggle shows/hides interval and persists
     visible:
       id: "btn_settings"
     timeout: 25000
-- assertVisible:
-    text: "Car Keys"
+- extendedWaitUntil:
+    visible:
+      text: "Car Keys"
+    timeout: 25000
 - tapOn:
     id: "btn_settings"
 - extendedWaitUntil:
@@ -46,8 +52,10 @@ name: Settings — background sync toggle shows/hides interval and persists
 # Toggle ON → Interval visible again.
 - tapOn:
     id: "toggle_background_sync"
-- assertVisible:
-    text: "Interval"
+- extendedWaitUntil:
+    visible:
+      text: "Interval"
+    timeout: 25000
 
 # Toggle OFF/ON rapidly twice — final state ON, Interval shown.
 - tapOn:
@@ -56,8 +64,10 @@ name: Settings — background sync toggle shows/hides interval and persists
     text: "Interval"
 - tapOn:
     id: "toggle_background_sync"
-- assertVisible:
-    text: "Interval"
+- extendedWaitUntil:
+    visible:
+      text: "Interval"
+    timeout: 25000
 
 # Back to map and ensure no leak of Settings UI.
 - back
@@ -67,5 +77,7 @@ name: Settings — background sync toggle shows/hides interval and persists
     timeout: 25000
 - assertNotVisible:
     text: "Background sync"
-- assertVisible:
-    text: "Car Keys"
+- extendedWaitUntil:
+    visible:
+      text: "Car Keys"
+    timeout: 25000

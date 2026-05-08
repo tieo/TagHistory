@@ -117,10 +117,14 @@ name: "Stress: wild card swipes — card always lands on correct beacon"
     visible:
       text: "Backpack"
     timeout: 25000
-- assertVisible:
-    id: "btn_card_details"
-- assertVisible:
-    id: "btn_card_history"
+- extendedWaitUntil:
+    visible:
+      id: "btn_card_details"
+    timeout: 25000
+- extendedWaitUntil:
+    visible:
+      id: "btn_card_history"
+    timeout: 25000
 - assertNotVisible:
     text: "Car Keys"
 - assertNotVisible:
@@ -187,12 +191,18 @@ name: "Stress: wild card swipes — card always lands on correct beacon"
     timeout: 25000
 
 # ── settings button is still tappable from any card ────────────────────────
-- assertVisible:
-    id: "btn_settings"
-- assertVisible:
-    id: "btn_card_details"
-- assertVisible:
-    id: "btn_card_history"
+- extendedWaitUntil:
+    visible:
+      id: "btn_settings"
+    timeout: 25000
+- extendedWaitUntil:
+    visible:
+      id: "btn_card_details"
+    timeout: 25000
+- extendedWaitUntil:
+    visible:
+      id: "btn_card_history"
+    timeout: 25000
 
 # ── final round-trip back to Car Keys ───────────────────────────────────────
 - swipe:

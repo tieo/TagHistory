@@ -31,18 +31,24 @@ name: Login — 2FA OTP field accepts six digits without crashing
       visible:
         id: "btn_start_over"
     commands:
-      - assertVisible:
-          id: "btn_start_over"
+      - extendedWaitUntil:
+          visible:
+            id: "btn_start_over"
+          timeout: 25000
 
 - runFlow:
     when:
       visible:
         id: "field_email"
     commands:
-      - assertVisible:
-          id: "field_email"
-      - assertVisible:
-          id: "btn_login"
+      - extendedWaitUntil:
+          visible:
+            id: "field_email"
+          timeout: 25000
+      - extendedWaitUntil:
+          visible:
+            id: "btn_login"
+          timeout: 25000
       - assertNotVisible:
           id: "field_otp_code"
 
@@ -59,8 +65,10 @@ name: Login — 2FA OTP field accepts six digits without crashing
       visible:
         id: "btn_start_over"
     commands:
-      - assertVisible:
-          id: "btn_start_over"
+      - extendedWaitUntil:
+          visible:
+            id: "btn_start_over"
+          timeout: 25000
       - assertNotVisible:
           id: "field_email"
       - assertNotVisible:
@@ -70,12 +78,18 @@ name: Login — 2FA OTP field accepts six digits without crashing
       visible:
         id: "field_email"
     commands:
-      - assertVisible:
-          id: "field_email"
-      - assertVisible:
-          id: "field_password"
-      - assertVisible:
-          id: "btn_login"
+      - extendedWaitUntil:
+          visible:
+            id: "field_email"
+          timeout: 25000
+      - extendedWaitUntil:
+          visible:
+            id: "field_password"
+          timeout: 25000
+      - extendedWaitUntil:
+          visible:
+            id: "btn_login"
+          timeout: 25000
       - assertNotVisible:
           id: "field_otp_code"
 

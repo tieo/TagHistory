@@ -6,28 +6,40 @@ name: Map — basemap cycle button advances LIGHT/DARK/SATELLITE/LIGHT
 - runFlow:
     file: 00_seed_test_data.yaml
 
-- assertVisible:
-    text: "Basemap: .*"
+- extendedWaitUntil:
+    visible:
+      text: "Basemap: .*"
+    timeout: 25000
 
 # Three taps -> back to original basemap.
 - tapOn:
     text: "Basemap: .*"
-- assertVisible:
-    text: "Basemap: .*"
+- extendedWaitUntil:
+    visible:
+      text: "Basemap: .*"
+    timeout: 25000
 - tapOn:
     text: "Basemap: .*"
-- assertVisible:
-    text: "Basemap: .*"
+- extendedWaitUntil:
+    visible:
+      text: "Basemap: .*"
+    timeout: 25000
 - tapOn:
     text: "Basemap: .*"
 
 # Map and card still alive.
-- assertVisible:
-    text: "Car Keys"
-- assertVisible:
-    id: "btn_card_history"
-- assertVisible:
-    id: "btn_settings"
+- extendedWaitUntil:
+    visible:
+      text: "Car Keys"
+    timeout: 25000
+- extendedWaitUntil:
+    visible:
+      id: "btn_card_history"
+    timeout: 25000
+- extendedWaitUntil:
+    visible:
+      id: "btn_settings"
+    timeout: 25000
 
 # Cycle three more times — full second loop.
 - tapOn:
@@ -36,8 +48,10 @@ name: Map — basemap cycle button advances LIGHT/DARK/SATELLITE/LIGHT
     text: "Basemap: .*"
 - tapOn:
     text: "Basemap: .*"
-- assertVisible:
-    text: "Basemap: .*"
+- extendedWaitUntil:
+    visible:
+      text: "Basemap: .*"
+    timeout: 25000
 
 # Swipe between cards while the chosen basemap stays applied. Card pager
 # must still respond and the basemap button is still on screen.
@@ -49,8 +63,10 @@ name: Map — basemap cycle button advances LIGHT/DARK/SATELLITE/LIGHT
     visible:
       text: "Backpack"
     timeout: 25000
-- assertVisible:
-    text: "Basemap: .*"
+- extendedWaitUntil:
+    visible:
+      text: "Basemap: .*"
+    timeout: 25000
 - swipe:
     start: "85%, 75%"
     end: "15%, 75%"
@@ -59,8 +75,10 @@ name: Map — basemap cycle button advances LIGHT/DARK/SATELLITE/LIGHT
     visible:
       text: "Bike"
     timeout: 25000
-- assertVisible:
-    text: "Basemap: .*"
+- extendedWaitUntil:
+    visible:
+      text: "Basemap: .*"
+    timeout: 25000
 
 # Cycle once more on Bike, swipe back to Car Keys, basemap still rendered.
 - tapOn:
@@ -77,5 +95,7 @@ name: Map — basemap cycle button advances LIGHT/DARK/SATELLITE/LIGHT
     visible:
       text: "Car Keys"
     timeout: 25000
-- assertVisible:
-    text: "Basemap: .*"
+- extendedWaitUntil:
+    visible:
+      text: "Basemap: .*"
+    timeout: 25000

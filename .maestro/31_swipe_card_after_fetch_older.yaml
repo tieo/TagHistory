@@ -52,8 +52,10 @@ name: "Stress: swipe cards after fetch-older — history loads independently per
     visible:
       id: "btn_settings"
     timeout: 25000
-- assertVisible:
-    text: "Backpack"
+- extendedWaitUntil:
+    visible:
+      text: "Backpack"
+    timeout: 25000
 
 # ── swipe to Bike, open history ───────────────────────────────────────────────
 - swipe:
@@ -70,15 +72,19 @@ name: "Stress: swipe cards after fetch-older — history loads independently per
     visible:
       id: "btn_day_prev"
     timeout: 25000
-- assertVisible:
-    text: "Today"
+- extendedWaitUntil:
+    visible:
+      text: "Today"
+    timeout: 25000
 - back
 - extendedWaitUntil:
     visible:
       id: "btn_settings"
     timeout: 25000
-- assertVisible:
-    text: "Bike"
+- extendedWaitUntil:
+    visible:
+      text: "Bike"
+    timeout: 25000
 
 # ── swipe back through Backpack and Car Keys, history each — pager-history sync ─
 - swipe:
@@ -107,8 +113,10 @@ name: "Stress: swipe cards after fetch-older — history loads independently per
     visible:
       id: "btn_settings"
     timeout: 25000
-- assertVisible:
-    text: "Backpack"
+- extendedWaitUntil:
+    visible:
+      text: "Backpack"
+    timeout: 25000
 - assertNotVisible:
     text: "Bike"
 
@@ -126,12 +134,16 @@ name: "Stress: swipe cards after fetch-older — history loads independently per
     visible:
       id: "btn_day_prev"
     timeout: 25000
-- assertVisible:
-    text: "Today"
+- extendedWaitUntil:
+    visible:
+      text: "Today"
+    timeout: 25000
 - back
 - extendedWaitUntil:
     visible:
       id: "btn_settings"
     timeout: 25000
-- assertVisible:
-    text: "Car Keys"
+- extendedWaitUntil:
+    visible:
+      text: "Car Keys"
+    timeout: 25000

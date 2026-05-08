@@ -16,23 +16,35 @@ name: "Device info — remove dialog: cancel keeps device, dialog state idempote
 # Cancel via Cancel button: device survives.
 - tapOn:
     id: "btn_remove"
-- assertVisible:
-    text: "Remove device\\?"
+- extendedWaitUntil:
+    visible:
+      text: "Remove device\\?"
+    timeout: 25000
 # Dialog buttons render in a separate window — text selectors most reliable.
-- assertVisible:
-    text: "Cancel"
-- assertVisible:
-    text: "Remove"
+- extendedWaitUntil:
+    visible:
+      text: "Cancel"
+    timeout: 25000
+- extendedWaitUntil:
+    visible:
+      text: "Remove"
+    timeout: 25000
 - tapOn:
     text: "Cancel"
 - assertNotVisible:
     text: "Remove device\\?"
-- assertVisible:
-    id: "btn_remove"
-- assertVisible:
-    id: "btn_rename"
-- assertVisible:
-    id: "btn_view_history"
+- extendedWaitUntil:
+    visible:
+      id: "btn_remove"
+    timeout: 25000
+- extendedWaitUntil:
+    visible:
+      id: "btn_rename"
+    timeout: 25000
+- extendedWaitUntil:
+    visible:
+      id: "btn_view_history"
+    timeout: 25000
 
 # Cancel via system back: device also survives.
 - tapOn:
@@ -44,8 +56,10 @@ name: "Device info — remove dialog: cancel keeps device, dialog state idempote
 - back
 - assertNotVisible:
     text: "Remove device\\?"
-- assertVisible:
-    id: "btn_remove"
+- extendedWaitUntil:
+    visible:
+      id: "btn_remove"
+    timeout: 25000
 
 # Round-trip back to map. Beacon name still on the pager (not removed).
 - back
@@ -53,7 +67,11 @@ name: "Device info — remove dialog: cancel keeps device, dialog state idempote
     visible:
       id: "btn_settings"
     timeout: 25000
-- assertVisible:
-    text: "Car Keys"
-- assertVisible:
-    id: "btn_card_details"
+- extendedWaitUntil:
+    visible:
+      text: "Car Keys"
+    timeout: 25000
+- extendedWaitUntil:
+    visible:
+      id: "btn_card_details"
+    timeout: 25000

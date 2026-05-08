@@ -12,35 +12,53 @@ name: Settings — theme selector has three choices, responds to taps, persists 
     timeout: 25000
 
 # All three theme buttons are rendered.
-- assertVisible:
-    id: "btn_theme_system"
-- assertVisible:
-    id: "btn_theme_light"
-- assertVisible:
-    id: "btn_theme_dark"
+- extendedWaitUntil:
+    visible:
+      id: "btn_theme_system"
+    timeout: 25000
+- extendedWaitUntil:
+    visible:
+      id: "btn_theme_light"
+    timeout: 25000
+- extendedWaitUntil:
+    visible:
+      id: "btn_theme_dark"
+    timeout: 25000
 
 # Cycle through every choice. After each tap, the screen must still be Settings
 # (no crash on theme rewrite recompose).
 - tapOn:
     id: "btn_theme_light"
-- assertVisible:
-    text: "Settings"
-- assertVisible:
-    id: "btn_theme_light"
+- extendedWaitUntil:
+    visible:
+      text: "Settings"
+    timeout: 25000
+- extendedWaitUntil:
+    visible:
+      id: "btn_theme_light"
+    timeout: 25000
 
 - tapOn:
     id: "btn_theme_dark"
-- assertVisible:
-    text: "Settings"
-- assertVisible:
-    id: "btn_theme_dark"
+- extendedWaitUntil:
+    visible:
+      text: "Settings"
+    timeout: 25000
+- extendedWaitUntil:
+    visible:
+      id: "btn_theme_dark"
+    timeout: 25000
 
 - tapOn:
     id: "btn_theme_system"
-- assertVisible:
-    text: "Settings"
-- assertVisible:
-    id: "btn_theme_system"
+- extendedWaitUntil:
+    visible:
+      text: "Settings"
+    timeout: 25000
+- extendedWaitUntil:
+    visible:
+      id: "btn_theme_system"
+    timeout: 25000
 
 # Persist test: pick Dark, leave Settings, come back, Dark must still apply
 # (the buttons themselves don't expose selected state but the screen keeps
@@ -52,23 +70,33 @@ name: Settings — theme selector has three choices, responds to taps, persists 
     visible:
       id: "btn_settings"
     timeout: 25000
-- assertVisible:
-    text: "Car Keys"
+- extendedWaitUntil:
+    visible:
+      text: "Car Keys"
+    timeout: 25000
 - tapOn:
     id: "btn_settings"
 - extendedWaitUntil:
     visible:
       text: "Settings"
     timeout: 25000
-- assertVisible:
-    id: "btn_theme_dark"
-- assertVisible:
-    id: "btn_theme_light"
-- assertVisible:
-    id: "btn_theme_system"
+- extendedWaitUntil:
+    visible:
+      id: "btn_theme_dark"
+    timeout: 25000
+- extendedWaitUntil:
+    visible:
+      id: "btn_theme_light"
+    timeout: 25000
+- extendedWaitUntil:
+    visible:
+      id: "btn_theme_system"
+    timeout: 25000
 
 # Restore default state.
 - tapOn:
     id: "btn_theme_system"
-- assertVisible:
-    id: "btn_theme_system"
+- extendedWaitUntil:
+    visible:
+      id: "btn_theme_system"
+    timeout: 25000

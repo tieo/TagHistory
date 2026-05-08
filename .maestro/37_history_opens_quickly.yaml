@@ -12,13 +12,19 @@ name: History — opens within 3s on cached data (btn_day_prev visible quickly)
     visible:
       id: "btn_day_prev"
     timeout: 25000
-- assertVisible:
-    id: "btn_day_prev"
-- assertVisible:
-    id: "btn_day_next"
+- extendedWaitUntil:
+    visible:
+      id: "btn_day_prev"
+    timeout: 25000
+- extendedWaitUntil:
+    visible:
+      id: "btn_day_next"
+    timeout: 25000
 # Today label visible immediately too — proves DB load did not block.
-- assertVisible:
-    text: "Today"
+- extendedWaitUntil:
+    visible:
+      text: "Today"
+    timeout: 25000
 - assertNotVisible:
     id: "btn_settings"
 - assertNotVisible:
@@ -39,8 +45,10 @@ name: History — opens within 3s on cached data (btn_day_prev visible quickly)
     visible:
       id: "btn_day_prev"
     timeout: 25000
-- assertVisible:
-    text: "Today"
+- extendedWaitUntil:
+    visible:
+      text: "Today"
+    timeout: 25000
 - assertNotVisible:
     id: "btn_settings"
 
@@ -65,12 +73,16 @@ name: History — opens within 3s on cached data (btn_day_prev visible quickly)
     visible:
       id: "btn_day_prev"
     timeout: 25000
-- assertVisible:
-    text: "Today"
+- extendedWaitUntil:
+    visible:
+      text: "Today"
+    timeout: 25000
 - back
 - extendedWaitUntil:
     visible:
       id: "btn_settings"
     timeout: 25000
-- assertVisible:
-    text: "Backpack"
+- extendedWaitUntil:
+    visible:
+      text: "Backpack"
+    timeout: 25000

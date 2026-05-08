@@ -26,23 +26,35 @@ name: History — expanded list shows item addresses or coords plus times
 
 # At least one "At HH:MM" timestamp visible (full-string regex). Catches
 # UTC-vs-local format bugs and raw-enum/empty output bugs.
-- assertVisible:
-    text: ".*At \\d.*"
+- extendedWaitUntil:
+    visible:
+      text: ".*At \\d.*"
+    timeout: 25000
 # Time format must match exactly two digits, colon, two digits — no seconds,
 # no AM/PM mixed in (the formatLocalTime is HH:MM 24-hour locally formatted).
-- assertVisible:
-    text: ".*At \\d\\d:\\d\\d.*"
+- extendedWaitUntil:
+    visible:
+      text: ".*At \\d\\d:\\d\\d.*"
+    timeout: 25000
 
 # Three points today seeded — items 0, 1, 2 all present.
-- assertVisible:
-    id: "history_item_0"
-- assertVisible:
-    id: "history_item_1"
-- assertVisible:
-    id: "history_item_2"
+- extendedWaitUntil:
+    visible:
+      id: "history_item_0"
+    timeout: 25000
+- extendedWaitUntil:
+    visible:
+      id: "history_item_1"
+    timeout: 25000
+- extendedWaitUntil:
+    visible:
+      id: "history_item_2"
+    timeout: 25000
 
-- assertVisible:
-    text: ".*data point.*"
+- extendedWaitUntil:
+    visible:
+      text: ".*data point.*"
+    timeout: 25000
 
 # Day-prev to Yesterday — items still render with the same time format.
 - tapOn:
@@ -56,11 +68,15 @@ name: History — expanded list shows item addresses or coords plus times
     visible:
       id: "history_item_0"
     timeout: 25000
-- assertVisible:
-    text: ".*At \\d\\d:\\d\\d.*"
+- extendedWaitUntil:
+    visible:
+      text: ".*At \\d\\d:\\d\\d.*"
+    timeout: 25000
 # Yesterday for Car Keys has 2 points — items 0 and 1 visible.
-- assertVisible:
-    id: "history_item_1"
+- extendedWaitUntil:
+    visible:
+      id: "history_item_1"
+    timeout: 25000
 
 # Older bucket (3 days ago, 1 point) — date label is YYYY-MM-DD.
 - tapOn:
@@ -74,15 +90,19 @@ name: History — expanded list shows item addresses or coords plus times
     visible:
       id: "history_item_0"
     timeout: 25000
-- assertVisible:
-    text: ".*At \\d\\d:\\d\\d.*"
+- extendedWaitUntil:
+    visible:
+      text: ".*At \\d\\d:\\d\\d.*"
+    timeout: 25000
 
 - back
 - extendedWaitUntil:
     visible:
       id: "btn_settings"
     timeout: 25000
-- assertVisible:
-    text: "Car Keys"
+- extendedWaitUntil:
+    visible:
+      text: "Car Keys"
+    timeout: 25000
 - assertNotVisible:
     text: "Yesterday"

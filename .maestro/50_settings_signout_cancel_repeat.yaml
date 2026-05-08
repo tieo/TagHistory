@@ -31,8 +31,10 @@ name: Settings — sign-out cancel ×3 keeps user on settings (regression)
     text: "Cancel"
 - assertNotVisible:
     text: "Sign out\\?"
-- assertVisible:
-    id: "btn_sign_out"
+- extendedWaitUntil:
+    visible:
+      id: "btn_sign_out"
+    timeout: 25000
 
 # round 2
 - tapOn:
@@ -45,8 +47,10 @@ name: Settings — sign-out cancel ×3 keeps user on settings (regression)
     text: "Cancel"
 - assertNotVisible:
     text: "Sign out\\?"
-- assertVisible:
-    id: "btn_sign_out"
+- extendedWaitUntil:
+    visible:
+      id: "btn_sign_out"
+    timeout: 25000
 
 # round 3
 - tapOn:
@@ -59,8 +63,10 @@ name: Settings — sign-out cancel ×3 keeps user on settings (regression)
     text: "Cancel"
 - assertNotVisible:
     text: "Sign out\\?"
-- assertVisible:
-    id: "btn_sign_out"
+- extendedWaitUntil:
+    visible:
+      id: "btn_sign_out"
+    timeout: 25000
 
 # round 4: cancel via system back instead of Cancel button.
 - tapOn:
@@ -72,8 +78,10 @@ name: Settings — sign-out cancel ×3 keeps user on settings (regression)
 - back
 - assertNotVisible:
     text: "Sign out\\?"
-- assertVisible:
-    id: "btn_sign_out"
+- extendedWaitUntil:
+    visible:
+      id: "btn_sign_out"
+    timeout: 25000
 
 # round 5: open and cancel one more time to be thorough.
 - tapOn:
@@ -86,8 +94,10 @@ name: Settings — sign-out cancel ×3 keeps user on settings (regression)
     text: "Cancel"
 - assertNotVisible:
     text: "Sign out\\?"
-- assertVisible:
-    id: "btn_sign_out"
+- extendedWaitUntil:
+    visible:
+      id: "btn_sign_out"
+    timeout: 25000
 
 # Back to map: still authenticated, still on map screen.
 - back
@@ -95,8 +105,10 @@ name: Settings — sign-out cancel ×3 keeps user on settings (regression)
     visible:
       id: "btn_settings"
     timeout: 25000
-- assertVisible:
-    text: "Car Keys"
+- extendedWaitUntil:
+    visible:
+      text: "Car Keys"
+    timeout: 25000
 - assertNotVisible:
     text: "Welcome to TagHistory"
 

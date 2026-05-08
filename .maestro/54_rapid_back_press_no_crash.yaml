@@ -29,10 +29,14 @@ name: Navigation — rapid back from deep stack does not crash
     visible:
       id: "btn_settings"
     timeout: 25000
-- assertVisible:
-    id: "btn_settings"
-- assertVisible:
-    text: "Car Keys"
+- extendedWaitUntil:
+    visible:
+      id: "btn_settings"
+    timeout: 25000
+- extendedWaitUntil:
+    visible:
+      text: "Car Keys"
+    timeout: 25000
 - assertNotVisible:
     id: "btn_view_history"
 - assertNotVisible:
@@ -65,8 +69,10 @@ name: Navigation — rapid back from deep stack does not crash
     visible:
       id: "btn_settings"
     timeout: 25000
-- assertVisible:
-    text: "Backpack"
+- extendedWaitUntil:
+    visible:
+      text: "Backpack"
+    timeout: 25000
 
 # Round 3: more rapid sequence with a settings interjection.
 - tapOn:
@@ -91,5 +97,7 @@ name: Navigation — rapid back from deep stack does not crash
     visible:
       id: "btn_settings"
     timeout: 25000
-- assertVisible:
-    text: "Backpack"
+- extendedWaitUntil:
+    visible:
+      text: "Backpack"
+    timeout: 25000

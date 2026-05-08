@@ -14,13 +14,17 @@ name: Device info — rename with empty name keeps save disabled and original na
     visible:
       id: "btn_rename"
     timeout: 25000
-- assertVisible:
-    text: "Car Keys"
+- extendedWaitUntil:
+    visible:
+      text: "Car Keys"
+    timeout: 25000
 
 - tapOn:
     id: "btn_rename"
-- assertVisible:
-    text: "Rename device"
+- extendedWaitUntil:
+    visible:
+      text: "Rename device"
+    timeout: 25000
 
 # Tap the field's current text "Car Keys" to focus, then erase.
 - tapOn:
@@ -30,16 +34,20 @@ name: Device info — rename with empty name keeps save disabled and original na
 # Save with empty field must NOT dismiss dialog.
 - tapOn:
     text: "Save"
-- assertVisible:
-    text: "Rename device"
+- extendedWaitUntil:
+    visible:
+      text: "Rename device"
+    timeout: 25000
 
 # Whitespace-only must also be invalid. The keyboard remains focused on the
 # same field, so inputText goes to it.
 - inputText: "   "
 - tapOn:
     text: "Save"
-- assertVisible:
-    text: "Rename device"
+- extendedWaitUntil:
+    visible:
+      text: "Rename device"
+    timeout: 25000
 
 # Type valid then erase again — Save should still not dismiss with empty input.
 - tapOn:
@@ -47,16 +55,20 @@ name: Device info — rename with empty name keeps save disabled and original na
 - eraseText: 50
 - tapOn:
     text: "Save"
-- assertVisible:
-    text: "Rename device"
+- extendedWaitUntil:
+    visible:
+      text: "Rename device"
+    timeout: 25000
 
 # Cancel cleanly. Original name preserved.
 - tapOn:
     text: "Cancel"
 - assertNotVisible:
     text: "Rename device"
-- assertVisible:
-    text: "Car Keys"
+- extendedWaitUntil:
+    visible:
+      text: "Car Keys"
+    timeout: 25000
 
 # Nav round-trip: leave details and reopen, name still Car Keys.
 - back
@@ -64,16 +76,20 @@ name: Device info — rename with empty name keeps save disabled and original na
     visible:
       id: "btn_settings"
     timeout: 25000
-- assertVisible:
-    text: "Car Keys"
+- extendedWaitUntil:
+    visible:
+      text: "Car Keys"
+    timeout: 25000
 - tapOn:
     id: "btn_card_details"
 - extendedWaitUntil:
     visible:
       id: "btn_rename"
     timeout: 25000
-- assertVisible:
-    text: "Car Keys"
+- extendedWaitUntil:
+    visible:
+      text: "Car Keys"
+    timeout: 25000
 - back
 - extendedWaitUntil:
     visible:

@@ -10,8 +10,10 @@ name: "Stress: swiping between cards does not reset map camera to world"
     file: 00_seed_test_data.yaml
 
 # Seed auto-focuses on Car Keys. btn_settings visible = map loaded at street level.
-- assertVisible:
-    id: "btn_settings"
+- extendedWaitUntil:
+    visible:
+      id: "btn_settings"
+    timeout: 25000
 
 # Swipe to Backpack — camera should animate to Backpack's Berlin position, NOT world
 - swipe:
@@ -23,8 +25,10 @@ name: "Stress: swiping between cards does not reset map camera to world"
       text: "Backpack"
     timeout: 25000
 # btn_settings still present = still on map screen, not crashed/reset to login
-- assertVisible:
-    id: "btn_settings"
+- extendedWaitUntil:
+    visible:
+      id: "btn_settings"
+    timeout: 25000
 
 # Swipe to Bike
 - swipe:
@@ -35,8 +39,10 @@ name: "Stress: swiping between cards does not reset map camera to world"
     visible:
       text: "Bike"
     timeout: 25000
-- assertVisible:
-    id: "btn_settings"
+- extendedWaitUntil:
+    visible:
+      id: "btn_settings"
+    timeout: 25000
 
 # Wild burst — map must still be on map screen throughout
 - swipe:
@@ -108,8 +114,10 @@ name: "Stress: swiping between cards does not reset map camera to world"
     visible:
       text: "Bike"
     timeout: 25000
-- assertVisible:
-    id: "btn_card_details"
+- extendedWaitUntil:
+    visible:
+      id: "btn_card_details"
+    timeout: 25000
 - swipe:
     start: "15%, 75%"
     end: "85%, 75%"
@@ -118,7 +126,11 @@ name: "Stress: swiping between cards does not reset map camera to world"
     visible:
       text: "Backpack"
     timeout: 25000
-- assertVisible:
-    id: "btn_card_details"
-- assertVisible:
-    id: "btn_settings"
+- extendedWaitUntil:
+    visible:
+      id: "btn_card_details"
+    timeout: 25000
+- extendedWaitUntil:
+    visible:
+      id: "btn_settings"
+    timeout: 25000

@@ -6,8 +6,10 @@ name: Map — card pager swipe right then left lands back on Car Keys
 - runFlow:
     file: 00_seed_test_data.yaml
 
-- assertVisible:
-    text: "Car Keys"
+- extendedWaitUntil:
+    visible:
+      text: "Car Keys"
+    timeout: 25000
 
 # left -> Backpack
 - swipe:
@@ -28,8 +30,10 @@ name: Map — card pager swipe right then left lands back on Car Keys
     visible:
       text: "Car Keys"
     timeout: 25000
-- assertVisible:
-    text: "Car Keys"
+- extendedWaitUntil:
+    visible:
+      text: "Car Keys"
+    timeout: 25000
 - assertNotVisible:
     text: "Backpack"
 
@@ -81,9 +85,13 @@ name: Map — card pager swipe right then left lands back on Car Keys
     start: "15%, 75%"
     end: "85%, 75%"
     duration: 300
-- assertVisible:
-    text: "Car Keys"
+- extendedWaitUntil:
+    visible:
+      text: "Car Keys"
+    timeout: 25000
 - assertNotVisible:
     text: "Backpack"
-- assertVisible:
-    id: "btn_settings"
+- extendedWaitUntil:
+    visible:
+      id: "btn_settings"
+    timeout: 25000

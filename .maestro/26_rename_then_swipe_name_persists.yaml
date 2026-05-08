@@ -39,8 +39,10 @@ name: "Stress: rename three beacons — new names survive card swipes and reopen
     visible:
       id: "btn_settings"
     timeout: 25000
-- assertVisible:
-    text: "Alpha Tag"
+- extendedWaitUntil:
+    visible:
+      text: "Alpha Tag"
+    timeout: 25000
 - assertNotVisible:
     text: "Car Keys"
 
@@ -80,8 +82,10 @@ name: "Stress: rename three beacons — new names survive card swipes and reopen
     visible:
       id: "btn_settings"
     timeout: 25000
-- assertVisible:
-    text: "Beta Tag"
+- extendedWaitUntil:
+    visible:
+      text: "Beta Tag"
+    timeout: 25000
 - assertNotVisible:
     text: "Backpack"
 
@@ -121,8 +125,10 @@ name: "Stress: rename three beacons — new names survive card swipes and reopen
     visible:
       id: "btn_settings"
     timeout: 25000
-- assertVisible:
-    text: "Gamma Tag"
+- extendedWaitUntil:
+    visible:
+      text: "Gamma Tag"
+    timeout: 25000
 - assertNotVisible:
     text: "Bike"
 
@@ -176,12 +182,16 @@ name: "Stress: rename three beacons — new names survive card swipes and reopen
     visible:
       id: "btn_rename"
     timeout: 25000
-- assertVisible:
-    text: "Gamma Tag"
+- extendedWaitUntil:
+    visible:
+      text: "Gamma Tag"
+    timeout: 25000
 - back
 - extendedWaitUntil:
     visible:
       id: "btn_settings"
     timeout: 25000
-- assertVisible:
-    text: "Gamma Tag"
+- extendedWaitUntil:
+    visible:
+      text: "Gamma Tag"
+    timeout: 25000

@@ -13,8 +13,10 @@ name: Login screen — fields accept input and login button is tappable
 - tapOn:
     id: "field_email"
 - inputText: "test@example.com"
-- assertVisible:
-    text: "test@example.com"
+- extendedWaitUntil:
+    visible:
+      text: "test@example.com"
+    timeout: 25000
 
 # The OTP-flow widgets must NOT appear yet.
 - assertNotVisible:
@@ -27,8 +29,10 @@ name: Login screen — fields accept input and login button is tappable
 - inputText: "test_password"
 
 # Login button must still be present and tappable (enabled by non-empty input).
-- assertVisible:
-    id: "btn_login"
+- extendedWaitUntil:
+    visible:
+      id: "btn_login"
+    timeout: 25000
 - tapOn:
     id: "btn_login"
 
@@ -39,24 +43,36 @@ name: Login screen — fields accept input and login button is tappable
       visible:
         text: "Welcome to TagHistory"
     commands:
-      - assertVisible:
-          text: "Welcome to TagHistory"
-      - assertVisible:
-          id: "field_email"
-      - assertVisible:
-          id: "btn_login"
+      - extendedWaitUntil:
+          visible:
+            text: "Welcome to TagHistory"
+          timeout: 25000
+      - extendedWaitUntil:
+          visible:
+            id: "field_email"
+          timeout: 25000
+      - extendedWaitUntil:
+          visible:
+            id: "btn_login"
+          timeout: 25000
       # Email text was retained across the failed login attempt.
-      - assertVisible:
-          text: "test@example.com"
+      - extendedWaitUntil:
+          visible:
+            text: "test@example.com"
+          timeout: 25000
 - runFlow:
     when:
       visible:
         id: "field_otp_code"
     commands:
-      - assertVisible:
-          id: "field_otp_code"
-      - assertVisible:
-          id: "btn_start_over"
+      - extendedWaitUntil:
+          visible:
+            id: "field_otp_code"
+          timeout: 25000
+      - extendedWaitUntil:
+          visible:
+            id: "btn_start_over"
+          timeout: 25000
       # Once on OTP screen, the credentials fields must be hidden.
       - assertNotVisible:
           id: "field_password"

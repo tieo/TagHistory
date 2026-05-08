@@ -71,22 +71,25 @@ fun seedTestData(context: Context) {
     }
 
     // ── Location reports (Berlin centre, multi-day for history screen) ────
+    // Use small now-relative offsets so the "today" bucket always contains
+    // all 3 of beacon 1's today-points regardless of test runtime / TZ;
+    // big offsets target yesterday and 3 days ago.
     BeaconRepository(db).storeToLocationCache(
         mapOf(
             SEED_BEACON_1 to listOf(
-                fakeReport(now - 30 * 60_000L,               52.5200, 13.4050, 10L),
-                fakeReport(now - 2 * 60 * 60_000L,           52.5210, 13.4060, 15L),
-                fakeReport(now - 4 * 60 * 60_000L,           52.5220, 13.4070, 20L),
+                fakeReport(now - 1 * 60_000L,                52.5200, 13.4050, 10L),
+                fakeReport(now - 3 * 60_000L,                52.5210, 13.4060, 15L),
+                fakeReport(now - 5 * 60_000L,                52.5220, 13.4070, 20L),
                 fakeReport(now - DAY_MS - 60 * 60_000L,      52.5180, 13.4020, 25L),
                 fakeReport(now - DAY_MS - 3 * 60 * 60_000L,  52.5170, 13.4010, 30L),
                 fakeReport(now - 3 * DAY_MS,                 52.5150, 13.3990, 35L),
             ),
             SEED_BEACON_2 to listOf(
-                fakeReport(now - 45 * 60_000L,               52.5110, 13.4150, 12L),
+                fakeReport(now - 2 * 60_000L,                52.5110, 13.4150, 12L),
                 fakeReport(now - DAY_MS - 30 * 60_000L,      52.5120, 13.4140, 18L),
             ),
             SEED_BEACON_3 to listOf(
-                fakeReport(now - 6 * 60 * 60_000L,           52.5090, 13.3950, 8L),
+                fakeReport(now - 4 * 60_000L,                52.5090, 13.3950, 8L),
             ),
         )
     )

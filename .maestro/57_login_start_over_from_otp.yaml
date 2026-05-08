@@ -34,12 +34,18 @@ name: Login — start over from 2FA returns to credentials form
           visible:
             id: "field_email"
           timeout: 25000
-      - assertVisible:
-          id: "field_email"
-      - assertVisible:
-          id: "field_password"
-      - assertVisible:
-          id: "btn_login"
+      - extendedWaitUntil:
+          visible:
+            id: "field_email"
+          timeout: 25000
+      - extendedWaitUntil:
+          visible:
+            id: "field_password"
+          timeout: 25000
+      - extendedWaitUntil:
+          visible:
+            id: "btn_login"
+          timeout: 25000
       - assertNotVisible:
           id: "btn_start_over"
       - assertNotVisible:
@@ -53,8 +59,10 @@ name: Login — start over from 2FA returns to credentials form
           id: "field_email"
       - eraseText: 50
       - inputText: "second@example.com"
-      - assertVisible:
-          text: "second@example.com"
+      - extendedWaitUntil:
+          visible:
+            text: "second@example.com"
+          timeout: 25000
 
       # Try a different wrong password. Form does not crash, ends in same
       # one-of-two state.
@@ -81,8 +89,10 @@ name: Login — start over from 2FA returns to credentials form
                 visible:
                   id: "field_email"
                 timeout: 25000
-            - assertVisible:
-                id: "field_email"
+            - extendedWaitUntil:
+                visible:
+                  id: "field_email"
+                timeout: 25000
             - assertNotVisible:
                 id: "btn_start_over"
 

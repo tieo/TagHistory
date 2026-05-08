@@ -14,8 +14,10 @@ name: Settings — Refresh now shows a non-empty result message
     visible:
       text: "Settings"
     timeout: 25000
-- assertVisible:
-    id: "btn_refresh_now"
+- extendedWaitUntil:
+    visible:
+      id: "btn_refresh_now"
+    timeout: 25000
 
 - tapOn:
     id: "btn_refresh_now"
@@ -28,10 +30,14 @@ name: Settings — Refresh now shows a non-empty result message
       text: ".*Refresh.*"
     timeout: 25000
 
-- assertVisible:
-    text: "Settings"
-- assertVisible:
-    id: "btn_refresh_now"
+- extendedWaitUntil:
+    visible:
+      text: "Settings"
+    timeout: 25000
+- extendedWaitUntil:
+    visible:
+      id: "btn_refresh_now"
+    timeout: 25000
 
 # Press Refresh now a second time — the button stays tappable, message updates.
 - tapOn:
@@ -40,8 +46,10 @@ name: Settings — Refresh now shows a non-empty result message
     visible:
       text: ".*Refresh.*"
     timeout: 25000
-- assertVisible:
-    text: "Settings"
+- extendedWaitUntil:
+    visible:
+      text: "Settings"
+    timeout: 25000
 
 # Open the debug panel to verify the refresh actually fired and produced
 # log events (catches the historical bug where Refresh didn't log).
@@ -51,10 +59,14 @@ name: Settings — Refresh now shows a non-empty result message
     visible:
       id: "sync_log_header"
     timeout: 25000
-- assertVisible:
-    text: ".*Refresh started.*"
-- assertVisible:
-    text: "START"
+- extendedWaitUntil:
+    visible:
+      text: ".*Refresh started.*"
+    timeout: 25000
+- extendedWaitUntil:
+    visible:
+      text: "START"
+    timeout: 25000
 # Hide debug panel.
 - tapOn:
     text: "Show debug data"
@@ -70,5 +82,7 @@ name: Settings — Refresh now shows a non-empty result message
     visible:
       id: "btn_settings"
     timeout: 25000
-- assertVisible:
-    text: "Car Keys"
+- extendedWaitUntil:
+    visible:
+      text: "Car Keys"
+    timeout: 25000

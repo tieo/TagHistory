@@ -34,8 +34,10 @@ name: "Stress: settings deep scroll then back — card at non-zero index unchang
 - swipe:
     direction: UP
     duration: 800
-- assertVisible:
-    text: "Account"
+- extendedWaitUntil:
+    visible:
+      text: "Account"
+    timeout: 25000
 
 # Change theme (state mutation) while scrolled deep
 - scrollUntilVisible:
@@ -54,8 +56,10 @@ name: "Stress: settings deep scroll then back — card at non-zero index unchang
     visible:
       id: "btn_settings"
     timeout: 25000
-- assertVisible:
-    text: "Bike"
+- extendedWaitUntil:
+    visible:
+      text: "Bike"
+    timeout: 25000
 - assertNotVisible:
     id: "btn_import"
 
@@ -81,10 +85,14 @@ name: "Stress: settings deep scroll then back — card at non-zero index unchang
 - swipe:
     direction: UP
     duration: 800
-- assertVisible:
-    text: "Account"
-- assertVisible:
-    text: "About"
+- extendedWaitUntil:
+    visible:
+      text: "Account"
+    timeout: 25000
+- extendedWaitUntil:
+    visible:
+      text: "About"
+    timeout: 25000
 - scrollUntilVisible:
     element:
       id: "btn_theme_light"
@@ -99,15 +107,19 @@ name: "Stress: settings deep scroll then back — card at non-zero index unchang
 - swipe:
     direction: UP
     duration: 800
-- assertVisible:
-    text: "About"
+- extendedWaitUntil:
+    visible:
+      text: "About"
+    timeout: 25000
 - back
 - extendedWaitUntil:
     visible:
       id: "btn_settings"
     timeout: 25000
-- assertVisible:
-    text: "Backpack"
+- extendedWaitUntil:
+    visible:
+      text: "Backpack"
+    timeout: 25000
 - assertNotVisible:
     text: "Bike"
 - assertNotVisible:

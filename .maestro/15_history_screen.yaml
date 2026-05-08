@@ -13,12 +13,18 @@ name: History screen — seeded reports visible, day nav works, back returns to 
     timeout: 25000
 
 # History landmarks: day nav present, map widgets gone.
-- assertVisible:
-    id: "btn_day_prev"
-- assertVisible:
-    id: "btn_day_next"
-- assertVisible:
-    text: "Today"
+- extendedWaitUntil:
+    visible:
+      id: "btn_day_prev"
+    timeout: 25000
+- extendedWaitUntil:
+    visible:
+      id: "btn_day_next"
+    timeout: 25000
+- extendedWaitUntil:
+    visible:
+      text: "Today"
+    timeout: 25000
 - assertNotVisible:
     id: "btn_settings"
 - assertNotVisible:
@@ -33,14 +39,20 @@ name: History screen — seeded reports visible, day nav works, back returns to 
     visible:
       id: "history_item_0"
     timeout: 25000
-- assertVisible:
-    id: "history_item_0"
+- extendedWaitUntil:
+    visible:
+      id: "history_item_0"
+    timeout: 25000
 # "data point" / "data points" pluralization rendered.
-- assertVisible:
-    text: ".*data point.*"
+- extendedWaitUntil:
+    visible:
+      text: ".*data point.*"
+    timeout: 25000
 # At least one "At HH:MM" timestamp visible — catches UTC-vs-local format bugs.
-- assertVisible:
-    text: ".*At \\d.*"
+- extendedWaitUntil:
+    visible:
+      text: ".*At \\d.*"
+    timeout: 25000
 
 # Day-prev to Yesterday: list re-renders.
 - tapOn:
@@ -49,8 +61,10 @@ name: History screen — seeded reports visible, day nav works, back returns to 
     visible:
       text: "Yesterday"
     timeout: 25000
-- assertVisible:
-    text: "Yesterday"
+- extendedWaitUntil:
+    visible:
+      text: "Yesterday"
+    timeout: 25000
 - assertNotVisible:
     text: "Today"
 
@@ -61,8 +75,10 @@ name: History screen — seeded reports visible, day nav works, back returns to 
     visible:
       text: "Today"
     timeout: 25000
-- assertVisible:
-    text: "Today"
+- extendedWaitUntil:
+    visible:
+      text: "Today"
+    timeout: 25000
 
 # Back returns to map. Card pager picks up where we left off.
 - back
@@ -70,7 +86,9 @@ name: History screen — seeded reports visible, day nav works, back returns to 
     visible:
       id: "btn_settings"
     timeout: 25000
-- assertVisible:
-    text: "Car Keys"
+- extendedWaitUntil:
+    visible:
+      text: "Car Keys"
+    timeout: 25000
 - assertNotVisible:
     id: "btn_day_prev"

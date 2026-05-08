@@ -26,8 +26,10 @@ name: "Stress: interleaved settings+details+history with card switches"
     visible:
       id: "btn_settings"
     timeout: 25000
-- assertVisible:
-    text: "Backpack"
+- extendedWaitUntil:
+    visible:
+      text: "Backpack"
+    timeout: 25000
 
 # ── from Backpack: details → back ────────────────────────────────────────────
 - tapOn:
@@ -41,8 +43,10 @@ name: "Stress: interleaved settings+details+history with card switches"
     visible:
       id: "btn_settings"
     timeout: 25000
-- assertVisible:
-    text: "Backpack"
+- extendedWaitUntil:
+    visible:
+      text: "Backpack"
+    timeout: 25000
 
 # ── from Backpack: history → back ────────────────────────────────────────────
 - tapOn:
@@ -56,8 +60,10 @@ name: "Stress: interleaved settings+details+history with card switches"
     visible:
       id: "btn_settings"
     timeout: 25000
-- assertVisible:
-    text: "Backpack"
+- extendedWaitUntil:
+    visible:
+      text: "Backpack"
+    timeout: 25000
 
 # ── switch to Bike, repeat ───────────────────────────────────────────────────
 - swipe:
@@ -80,8 +86,10 @@ name: "Stress: interleaved settings+details+history with card switches"
     visible:
       id: "btn_settings"
     timeout: 25000
-- assertVisible:
-    text: "Bike"
+- extendedWaitUntil:
+    visible:
+      text: "Bike"
+    timeout: 25000
 
 - tapOn:
     id: "btn_card_details"
@@ -94,8 +102,10 @@ name: "Stress: interleaved settings+details+history with card switches"
     visible:
       id: "btn_settings"
     timeout: 25000
-- assertVisible:
-    text: "Bike"
+- extendedWaitUntil:
+    visible:
+      text: "Bike"
+    timeout: 25000
 
 - tapOn:
     id: "btn_card_history"
@@ -108,8 +118,10 @@ name: "Stress: interleaved settings+details+history with card switches"
     visible:
       id: "btn_settings"
     timeout: 25000
-- assertVisible:
-    text: "Bike"
+- extendedWaitUntil:
+    visible:
+      text: "Bike"
+    timeout: 25000
 
 # ── swipe back to Car Keys, one last settings open/close ─────────────────────
 - swipe:
@@ -135,8 +147,10 @@ name: "Stress: interleaved settings+details+history with card switches"
     visible:
       id: "btn_settings"
     timeout: 25000
-- assertVisible:
-    text: "Car Keys"
+- extendedWaitUntil:
+    visible:
+      text: "Car Keys"
+    timeout: 25000
 
 # ── from Car Keys: details, history, then back-back ────────────────────────
 - tapOn:
@@ -150,8 +164,10 @@ name: "Stress: interleaved settings+details+history with card switches"
     visible:
       id: "btn_settings"
     timeout: 25000
-- assertVisible:
-    text: "Car Keys"
+- extendedWaitUntil:
+    visible:
+      text: "Car Keys"
+    timeout: 25000
 
 - tapOn:
     id: "btn_card_history"
@@ -164,8 +180,10 @@ name: "Stress: interleaved settings+details+history with card switches"
     visible:
       id: "btn_settings"
     timeout: 25000
-- assertVisible:
-    text: "Car Keys"
+- extendedWaitUntil:
+    visible:
+      text: "Car Keys"
+    timeout: 25000
 
 # ── one more triplet on Backpack with rapid back-presses to stress the stack ──
 - swipe:
@@ -194,5 +212,7 @@ name: "Stress: interleaved settings+details+history with card switches"
     visible:
       id: "btn_settings"
     timeout: 25000
-- assertVisible:
-    text: "Backpack"
+- extendedWaitUntil:
+    visible:
+      text: "Backpack"
+    timeout: 25000

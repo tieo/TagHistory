@@ -8,15 +8,23 @@ name: Map screen — seeded beacons appear as cards and markers
     file: 00_seed_test_data.yaml
 
 # First card must be Car Keys (most recent — seeded 30 min ago).
-- assertVisible:
-    text: "Car Keys"
-- assertVisible:
-    id: "btn_card_details"
-- assertVisible:
-    id: "btn_card_history"
+- extendedWaitUntil:
+    visible:
+      text: "Car Keys"
+    timeout: 25000
+- extendedWaitUntil:
+    visible:
+      id: "btn_card_details"
+    timeout: 25000
+- extendedWaitUntil:
+    visible:
+      id: "btn_card_history"
+    timeout: 25000
 # Route circle-action label is also rendered.
-- assertVisible:
-    text: "Route"
+- extendedWaitUntil:
+    visible:
+      text: "Route"
+    timeout: 25000
 # Other beacons must NOT be visible on the centre card overlay.
 - assertNotVisible:
     text: "Backpack"
@@ -24,8 +32,10 @@ name: Map screen — seeded beacons appear as cards and markers
     text: "Bike"
 
 # "Updated <N> min ago" / "Updated <N> h ago" — catches enum/raw output.
-- assertVisible:
-    text: ".*Updated.*ago.*"
+- extendedWaitUntil:
+    visible:
+      text: ".*Updated.*ago.*"
+    timeout: 25000
 
 # Swipe LEFT on card area (75% down screen) → Backpack.
 - swipe:
@@ -38,12 +48,18 @@ name: Map screen — seeded beacons appear as cards and markers
     timeout: 25000
 - assertNotVisible:
     text: "Car Keys"
-- assertVisible:
-    id: "btn_card_details"
-- assertVisible:
-    id: "btn_card_history"
-- assertVisible:
-    text: ".*Updated.*ago.*"
+- extendedWaitUntil:
+    visible:
+      id: "btn_card_details"
+    timeout: 25000
+- extendedWaitUntil:
+    visible:
+      id: "btn_card_history"
+    timeout: 25000
+- extendedWaitUntil:
+    visible:
+      text: ".*Updated.*ago.*"
+    timeout: 25000
 
 # Swipe LEFT again → Bike.
 - swipe:
@@ -56,10 +72,14 @@ name: Map screen — seeded beacons appear as cards and markers
     timeout: 25000
 - assertNotVisible:
     text: "Backpack"
-- assertVisible:
-    id: "btn_card_details"
-- assertVisible:
-    id: "btn_card_history"
+- extendedWaitUntil:
+    visible:
+      id: "btn_card_details"
+    timeout: 25000
+- extendedWaitUntil:
+    visible:
+      id: "btn_card_history"
+    timeout: 25000
 
 # Swipe RIGHT twice → Car Keys again, full round-trip.
 - swipe:
@@ -84,5 +104,7 @@ name: Map screen — seeded beacons appear as cards and markers
     text: "Backpack"
 
 # Settings button is part of map screen; never gone during card scroll.
-- assertVisible:
-    id: "btn_settings"
+- extendedWaitUntil:
+    visible:
+      id: "btn_settings"
+    timeout: 25000

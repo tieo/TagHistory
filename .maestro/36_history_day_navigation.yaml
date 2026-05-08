@@ -29,12 +29,16 @@ name: History — day navigation prev/next changes point list
     visible:
       text: "Yesterday"
     timeout: 25000
-- assertVisible:
-    text: "Yesterday"
+- extendedWaitUntil:
+    visible:
+      text: "Yesterday"
+    timeout: 25000
 
 # Yesterday has 2 seeded points
-- assertVisible:
-    text: ".*data point.*"
+- extendedWaitUntil:
+    visible:
+      text: ".*data point.*"
+    timeout: 25000
 
 - tapOn:
     id: "btn_day_prev"
@@ -59,8 +63,10 @@ name: History — day navigation prev/next changes point list
     visible:
       text: "Today"
     timeout: 25000
-- assertVisible:
-    text: "Today"
+- extendedWaitUntil:
+    visible:
+      text: "Today"
+    timeout: 25000
 - assertNotVisible:
     text: "Yesterday"
 # Re-expand the sheet — day transitions may have collapsed it.
@@ -73,16 +79,26 @@ name: History — day navigation prev/next changes point list
       id: "history_item_0"
     timeout: 25000
 # Today has 3 points (Car Keys seeded with 3 today, 2 yesterday, 1 older).
-- assertVisible:
-    id: "history_item_0"
-- assertVisible:
-    id: "history_item_1"
-- assertVisible:
-    id: "history_item_2"
-- assertVisible:
-    text: ".*data point.*"
-- assertVisible:
-    text: ".*At \\d.*"
+- extendedWaitUntil:
+    visible:
+      id: "history_item_0"
+    timeout: 25000
+- extendedWaitUntil:
+    visible:
+      id: "history_item_1"
+    timeout: 25000
+- extendedWaitUntil:
+    visible:
+      id: "history_item_2"
+    timeout: 25000
+- extendedWaitUntil:
+    visible:
+      text: ".*data point.*"
+    timeout: 25000
+- extendedWaitUntil:
+    visible:
+      text: ".*At \\d.*"
+    timeout: 25000
 
 # Walk back two days, then forward two days again — exercises VM caching.
 - tapOn:
@@ -92,10 +108,14 @@ name: History — day navigation prev/next changes point list
     visible:
       text: "Yesterday"
     timeout: 25000
-- assertVisible:
-    id: "history_item_0"
-- assertVisible:
-    id: "history_item_1"
+- extendedWaitUntil:
+    visible:
+      id: "history_item_0"
+    timeout: 25000
+- extendedWaitUntil:
+    visible:
+      id: "history_item_1"
+    timeout: 25000
 - tapOn:
     id: "btn_day_prev"
     optional: true
@@ -103,8 +123,10 @@ name: History — day navigation prev/next changes point list
     visible:
       text: ".*\\d\\d\\d\\d-\\d\\d-\\d\\d.*"
     timeout: 25000
-- assertVisible:
-    id: "history_item_0"
+- extendedWaitUntil:
+    visible:
+      id: "history_item_0"
+    timeout: 25000
 - tapOn:
     id: "btn_day_next"
     optional: true
@@ -128,15 +150,19 @@ name: History — day navigation prev/next changes point list
     visible:
       id: "history_item_0"
     timeout: 25000
-- assertVisible:
-    id: "history_item_2"
+- extendedWaitUntil:
+    visible:
+      id: "history_item_2"
+    timeout: 25000
 
 - back
 - extendedWaitUntil:
     visible:
       id: "btn_settings"
     timeout: 25000
-- assertVisible:
-    text: "Car Keys"
+- extendedWaitUntil:
+    visible:
+      text: "Car Keys"
+    timeout: 25000
 - assertNotVisible:
     id: "btn_day_prev"

@@ -391,18 +391,18 @@ private fun FullScreenMessage(
 }
 
 private fun buildDayBuckets(points: List<HistoryPoint>): List<DayBucket> =
-    points.groupBy { it.timestampMs - (it.timestampMs % DAY_MS) }
+    points.groupBy { localDayStart(it.timestampMs) }
         .entries
         .sortedByDescending { it.key }
         .map { (k, v) -> DayBucket(key = k, points = v) }
 
 @OptIn(ExperimentalTime::class)
 private fun dayLabel(dayStartMs: Long, nowMs: Long): String {
-    val nowStart = nowMs - (nowMs % DAY_MS)
+    val nowStart = localDayStart(nowMs)
     return when {
         dayStartMs == nowStart -> "Today"
         dayStartMs == nowStart - DAY_MS -> "Yesterday"
-        else -> Instant.fromEpochMilliseconds(dayStartMs).toString().substringBefore('T').take(10)
+        else -> formatLocalDate(dayStartMs)
     }
 }
 

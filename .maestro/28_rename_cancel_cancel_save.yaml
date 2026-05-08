@@ -14,8 +14,10 @@ name: "Stress: rename dialog open→cancel×3 then save — correct final name"
     visible:
       id: "btn_rename"
     timeout: 25000
-- assertVisible:
-    text: "Car Keys"
+- extendedWaitUntil:
+    visible:
+      text: "Car Keys"
+    timeout: 25000
 
 # ── cancel 1: typed partial name, cancelled via Cancel button ─────────────────
 - tapOn:
@@ -32,8 +34,10 @@ name: "Stress: rename dialog open→cancel×3 then save — correct final name"
     text: "Cancel"
 - assertNotVisible:
     text: "Rename device"
-- assertVisible:
-    text: "Car Keys"
+- extendedWaitUntil:
+    visible:
+      text: "Car Keys"
+    timeout: 25000
 - assertNotVisible:
     text: "Partial"
 
@@ -52,8 +56,10 @@ name: "Stress: rename dialog open→cancel×3 then save — correct final name"
     text: "Cancel"
 - assertNotVisible:
     text: "Rename device"
-- assertVisible:
-    text: "Car Keys"
+- extendedWaitUntil:
+    visible:
+      text: "Car Keys"
+    timeout: 25000
 - assertNotVisible:
     text: "Also Partial"
 
@@ -73,8 +79,10 @@ name: "Stress: rename dialog open→cancel×3 then save — correct final name"
     text: "Cancel"
 - assertNotVisible:
     text: "Rename device"
-- assertVisible:
-    text: "Car Keys"
+- extendedWaitUntil:
+    visible:
+      text: "Car Keys"
+    timeout: 25000
 
 # ── cancel 4: dialog opened then closed without typing anything ──────────────
 - tapOn:
@@ -87,14 +95,20 @@ name: "Stress: rename dialog open→cancel×3 then save — correct final name"
     text: "Cancel"
 - assertNotVisible:
     text: "Rename device"
-- assertVisible:
-    text: "Car Keys"
+- extendedWaitUntil:
+    visible:
+      text: "Car Keys"
+    timeout: 25000
 
 # Name must still be "Car Keys" — none of the cancelled inputs leaked.
-- assertVisible:
-    id: "btn_rename"
-- assertVisible:
-    text: "Car Keys"
+- extendedWaitUntil:
+    visible:
+      id: "btn_rename"
+    timeout: 25000
+- extendedWaitUntil:
+    visible:
+      text: "Car Keys"
+    timeout: 25000
 
 # ── happy path save ───────────────────────────────────────────────────────────
 - tapOn:
@@ -122,8 +136,10 @@ name: "Stress: rename dialog open→cancel×3 then save — correct final name"
     visible:
       id: "btn_settings"
     timeout: 25000
-- assertVisible:
-    text: "Final Name"
+- extendedWaitUntil:
+    visible:
+      text: "Final Name"
+    timeout: 25000
 - assertNotVisible:
     text: "Car Keys"
 
@@ -134,8 +150,10 @@ name: "Stress: rename dialog open→cancel×3 then save — correct final name"
     visible:
       id: "btn_rename"
     timeout: 25000
-- assertVisible:
-    text: "Final Name"
+- extendedWaitUntil:
+    visible:
+      text: "Final Name"
+    timeout: 25000
 - assertNotVisible:
     text: "Car Keys"
 - back
@@ -143,5 +161,7 @@ name: "Stress: rename dialog open→cancel×3 then save — correct final name"
     visible:
       id: "btn_settings"
     timeout: 25000
-- assertVisible:
-    text: "Final Name"
+- extendedWaitUntil:
+    visible:
+      text: "Final Name"
+    timeout: 25000

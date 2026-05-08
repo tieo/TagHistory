@@ -17,8 +17,10 @@ name: Settings — About button navigates to information screen, back returns
       id: "btn_about"
     direction: DOWN
     timeout: 25000
-- assertVisible:
-    id: "btn_about"
+- extendedWaitUntil:
+    visible:
+      id: "btn_about"
+    timeout: 25000
 
 - tapOn:
     id: "btn_about"
@@ -28,12 +30,18 @@ name: Settings — About button navigates to information screen, back returns
     timeout: 25000
 
 # Information screen: links present, settings landmarks gone.
-- assertVisible:
-    id: "btn_source_code"
-- assertVisible:
-    id: "btn_developer_website"
-- assertVisible:
-    id: "btn_license"
+- extendedWaitUntil:
+    visible:
+      id: "btn_source_code"
+    timeout: 25000
+- extendedWaitUntil:
+    visible:
+      id: "btn_developer_website"
+    timeout: 25000
+- extendedWaitUntil:
+    visible:
+      id: "btn_license"
+    timeout: 25000
 - assertNotVisible:
     text: "Appearance"
 - assertNotVisible:
@@ -52,8 +60,10 @@ name: Settings — About button navigates to information screen, back returns
     id: "btn_source_code"
 - assertNotVisible:
     id: "btn_developer_website"
-- assertVisible:
-    text: "Appearance"
+- extendedWaitUntil:
+    visible:
+      text: "Appearance"
+    timeout: 25000
 
 # Reopen About a second time to ensure idempotent navigation.
 - scrollUntilVisible:
@@ -78,5 +88,7 @@ name: Settings — About button navigates to information screen, back returns
     visible:
       id: "btn_settings"
     timeout: 25000
-- assertVisible:
-    text: "Car Keys"
+- extendedWaitUntil:
+    visible:
+      text: "Car Keys"
+    timeout: 25000

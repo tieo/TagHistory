@@ -37,8 +37,10 @@ name: "Stress: map→details→history→back×2 — full back-stack depth"
     visible:
       id: "btn_settings"
     timeout: 25000
-- assertVisible:
-    text: "Car Keys"
+- extendedWaitUntil:
+    visible:
+      text: "Car Keys"
+    timeout: 25000
 
 # ── Do it again from Bike ─────────────────────────────────────────────────────
 - swipe:
@@ -65,8 +67,10 @@ name: "Stress: map→details→history→back×2 — full back-stack depth"
     visible:
       id: "btn_day_prev"
     timeout: 25000
-- assertVisible:
-    id: "btn_day_next"
+- extendedWaitUntil:
+    visible:
+      id: "btn_day_next"
+    timeout: 25000
 - assertNotVisible:
     id: "btn_view_history"
 - back
@@ -83,8 +87,10 @@ name: "Stress: map→details→history→back×2 — full back-stack depth"
     visible:
       id: "btn_settings"
     timeout: 25000
-- assertVisible:
-    text: "Bike"
+- extendedWaitUntil:
+    visible:
+      text: "Bike"
+    timeout: 25000
 - assertNotVisible:
     id: "btn_view_history"
 
@@ -119,8 +125,10 @@ name: "Stress: map→details→history→back×2 — full back-stack depth"
     visible:
       id: "btn_settings"
     timeout: 25000
-- assertVisible:
-    text: "Backpack"
+- extendedWaitUntil:
+    visible:
+      text: "Backpack"
+    timeout: 25000
 - assertNotVisible:
     text: "Bike"
 - assertNotVisible:

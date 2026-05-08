@@ -18,8 +18,10 @@ name: "Stress: open details ×3 in a row for same beacon — no state corruption
     visible:
       id: "btn_settings"
     timeout: 25000
-- assertVisible:
-    text: "Car Keys"
+- extendedWaitUntil:
+    visible:
+      text: "Car Keys"
+    timeout: 25000
 
 # ── open 2 ───────────────────────────────────────────────────────────────────
 - tapOn:
@@ -33,8 +35,10 @@ name: "Stress: open details ×3 in a row for same beacon — no state corruption
     visible:
       id: "btn_settings"
     timeout: 25000
-- assertVisible:
-    text: "Car Keys"
+- extendedWaitUntil:
+    visible:
+      text: "Car Keys"
+    timeout: 25000
 
 # ── open 3 ───────────────────────────────────────────────────────────────────
 - tapOn:
@@ -48,8 +52,10 @@ name: "Stress: open details ×3 in a row for same beacon — no state corruption
     visible:
       id: "btn_settings"
     timeout: 25000
-- assertVisible:
-    text: "Car Keys"
+- extendedWaitUntil:
+    visible:
+      text: "Car Keys"
+    timeout: 25000
 
 # ── open 4 ───────────────────────────────────────────────────────────────────
 - tapOn:
@@ -63,8 +69,10 @@ name: "Stress: open details ×3 in a row for same beacon — no state corruption
     visible:
       id: "btn_settings"
     timeout: 25000
-- assertVisible:
-    text: "Car Keys"
+- extendedWaitUntil:
+    visible:
+      text: "Car Keys"
+    timeout: 25000
 
 # ── open 5: do actual rename to confirm data integrity after rapid reopens ──
 - tapOn:
@@ -96,8 +104,10 @@ name: "Stress: open details ×3 in a row for same beacon — no state corruption
     visible:
       id: "btn_settings"
     timeout: 25000
-- assertVisible:
-    text: "Triple Check"
+- extendedWaitUntil:
+    visible:
+      text: "Triple Check"
+    timeout: 25000
 - assertNotVisible:
     text: "Car Keys"
 
@@ -108,12 +118,16 @@ name: "Stress: open details ×3 in a row for same beacon — no state corruption
     visible:
       id: "btn_rename"
     timeout: 25000
-- assertVisible:
-    text: "Triple Check"
+- extendedWaitUntil:
+    visible:
+      text: "Triple Check"
+    timeout: 25000
 - back
 - extendedWaitUntil:
     visible:
       id: "btn_settings"
     timeout: 25000
-- assertVisible:
-    text: "Triple Check"
+- extendedWaitUntil:
+    visible:
+      text: "Triple Check"
+    timeout: 25000
