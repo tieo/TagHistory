@@ -52,17 +52,20 @@ name: Settings — debug panel populates with real sync events when Refresh fire
 - tapOn:
     id: "btn_refresh_now"
 
-# After refresh fires, START must always appear (logged unconditionally
-# in MapViewModel.refreshCascade so the user sees the press, even when
-# a previous refresh is still in flight and the new cascade short-circuits).
+# Confirm the empty hint went away first — any SyncLog write replaces it
+# with the events list, so the hint disappearing is the strongest proof
+# the lambda fired regardless of which event kind landed.
+- extendedWaitUntil:
+    notVisible:
+      text: ".*No sync events yet.*"
+    timeout: 45000
+
+# Then START must be present (logged unconditionally in App.kt's
+# refreshNow lambda + in MapViewModel.refreshCascade).
 - extendedWaitUntil:
     visible:
       text: "START"
-    timeout: 45000
-- extendedWaitUntil:
-    visible:
-      text: "START"
-    timeout: 45000
+    timeout: 25000
 
 # Either RUNG_OK / RUNG_FAIL (cascade ran) or INFO (cascade skipped because
 # a previous refresh is still in flight). Both prove the refresh path was
