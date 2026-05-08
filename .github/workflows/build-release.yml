@@ -76,8 +76,15 @@ jobs:
           echo "MAPS_API_KEY=${{ secrets.MAPS_API_KEY }}" > secrets.properties
 
       - name: Recreate release keystore
+        env:
+          SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
         run: |
-          echo "${{ secrets.SIGNING_KEY }}" | base64 --decode > ${{ env.main_project_module }}/${{ env.KEYSTORE_FILE }}
+          # Strip whitespace, then decode. printf avoids the trailing newline
+          # that `echo` adds and that JDK 21's keytool refuses ("Tag number
+          # over 30 is not supported").
+          printf '%s' "$SIGNING_KEY" | tr -d '[:space:]' | base64 -d \
+            > ${{ env.main_project_module }}/${{ env.KEYSTORE_FILE }}
+          ls -la ${{ env.main_project_module }}/${{ env.KEYSTORE_FILE }}
 
       - name: Run gradle tests
         run: ./gradlew test
