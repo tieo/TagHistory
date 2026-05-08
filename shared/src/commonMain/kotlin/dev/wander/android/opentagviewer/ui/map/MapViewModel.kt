@@ -395,6 +395,7 @@ class MapViewModel(
         geocodeCache.clear()
         userHasExplicitlySelected = false
         autoPromoteDone = false
+        cardOrder = emptyList()
         _state.update { MapUiState() }
         runScope.launch {
             boot().join()
@@ -424,12 +425,22 @@ class MapViewModel(
      * Every owned beacon shows up as a card — sorted by last-seen descending
      * so the most recently updated tag is always first. Unlocated tags tail.
      */
+    /**
+     * Card order is locked after the first build. Periodic refreshes refresh
+     * each card's content (location, addressLine) but never reshuffle the
+     * pager — otherwise the user perceives a most-recent-tag change as the
+     * pager scrolling under them, even though selection didn't change.
+     * The order is taken from [cardOrder] (set on first build, sorted by
+     * recency at that moment, unlocated tags last).
+     */
+    private var cardOrder: List<String> = emptyList()
+
     private fun buildCards(): List<TagCardUi> {
         val infos = beaconRepo.getAllBeaconInformation()
-        val cards = beaconsById.values.map { beacon ->
+        val byId = beaconsById.values.associate { beacon ->
             val loc = latestLocationByBeacon[beacon.beaconId]
             val info = infos[beacon.beaconId]
-            TagCardUi(
+            beacon.beaconId to TagCardUi(
                 beaconId = beacon.beaconId,
                 displayName = info?.displayName ?: beacon.beaconId.take(8),
                 emoji = info?.displayEmoji,
@@ -440,9 +451,18 @@ class MapViewModel(
                 addressLine = loc?.let { geocodeCache[geocodeKey(it.latitude, it.longitude)] },
             )
         }
-        val (located, unlocated) = cards.partition { it.latitude != null && it.longitude != null }
-        return located.sortedByDescending { it.lastUpdatedMs ?: Long.MIN_VALUE } +
-            unlocated.sortedByDescending { it.lastUpdatedMs ?: Long.MIN_VALUE }
+        if (cardOrder.isEmpty() || cardOrder.toSet() != byId.keys) {
+            // First build, OR beacon set changed (post-import, sign-in/out).
+            // Re-derive a stable order by recency, located first.
+            val (located, unlocated) = byId.values.partition {
+                it.latitude != null && it.longitude != null
+            }
+            cardOrder = located.sortedByDescending { it.lastUpdatedMs ?: Long.MIN_VALUE }
+                .map { it.beaconId } +
+                unlocated.sortedByDescending { it.lastUpdatedMs ?: Long.MIN_VALUE }
+                    .map { it.beaconId }
+        }
+        return cardOrder.mapNotNull { byId[it] }
     }
 
     private fun kickoffGeocoding() {

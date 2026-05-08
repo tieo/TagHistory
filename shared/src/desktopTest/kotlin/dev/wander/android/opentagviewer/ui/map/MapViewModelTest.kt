@@ -290,6 +290,150 @@ class MapViewModelTest {
     }
 
     @Test
+    fun `five consecutive refreshes do not reorder selection`() = runTest {
+        // Periodic-tick storm: every refresh brings the same located beacons
+        // back in different orderings. Selection must stay where the user
+        // (or first auto-promote) put it.
+        seedBeacon("a", "Auto", null)
+        seedBeacon("b", "Bike", null)
+        seedBeacon("c", "Cat", null)
+        var tick = 0
+        val vm = buildVm(fetchReports = { _, _ ->
+            tick++
+            // Each tick the freshest changes. b on tick 1, c on 2, a on 3, b on 4, c on 5.
+            val freshIds = listOf("b", "c", "a", "b", "c")
+            mapOf(
+                freshIds[(tick - 1) % freshIds.size] to listOf(BeaconLocationReport(
+                    publishedAt = (1000L * tick), description = "", timestamp = (1000L * tick),
+                    confidence = 1, latitude = 1.0, longitude = 1.0,
+                    horizontalAccuracy = 5, status = 0,
+                )),
+            )
+        })
+        vm.boot(); advanceUntilIdle()
+        vm.refresh(); advanceUntilIdle()
+        val firstSelection = vm.state.value.selectedBeaconId
+        assertNotNull(firstSelection)
+
+        repeat(4) { vm.refresh(); advanceUntilIdle() }
+
+        assertEquals(firstSelection, vm.state.value.selectedBeaconId,
+            "Selection must not drift across periodic refreshes")
+    }
+
+    @Test
+    fun `refresh while a previous refresh is in flight does not double-mutate selection`() = runTest {
+        // A real Settings "Refresh now" tap can land mid-cycle. The second
+        // refresh's pickSelection must NOT promote selection a second time
+        // even though there's a running cascade and a freshest-located
+        // candidate in the latest reports.
+        seedBeacon("a", "Auto", null)
+        seedBeacon("b", "Bike", null)
+        var call = 0
+        val vm = buildVm(fetchReports = { _, _ ->
+            call++
+            when (call) {
+                1 -> mapOf("a" to listOf(BeaconLocationReport(
+                    publishedAt = 100L, description = "", timestamp = 100L,
+                    confidence = 1, latitude = 1.0, longitude = 1.0,
+                    horizontalAccuracy = 5, status = 0,
+                )))
+                else -> mapOf("b" to listOf(BeaconLocationReport(
+                    publishedAt = 9999L, description = "", timestamp = 9999L,
+                    confidence = 1, latitude = 2.0, longitude = 2.0,
+                    horizontalAccuracy = 5, status = 0,
+                )))
+            }
+        })
+        vm.boot(); advanceUntilIdle()
+        vm.refresh(); advanceUntilIdle()
+        assertEquals("a", vm.state.value.selectedBeaconId)
+
+        // Two more triggered close together.
+        vm.refresh()
+        vm.refresh()
+        advanceUntilIdle()
+
+        assertEquals("a", vm.state.value.selectedBeaconId,
+            "Subsequent refreshes (even back-to-back) must not switch selection")
+    }
+
+    @Test
+    fun `reboot resets one-shot guard so post-import refresh auto-promotes again`() = runTest {
+        // Import flow: user imports a fresh beacon set, mapVm.reboot() is
+        // called. The auto-promote flag must be cleared so the first refresh
+        // after reboot can pick the freshest located beacon (otherwise the
+        // map sits on whatever default boot picked, possibly unlocated).
+        seedBeacon("a", "Auto", null)
+        var call = 0
+        val vm = buildVm(fetchReports = { _, _ ->
+            call++
+            mapOf("a" to listOf(BeaconLocationReport(
+                publishedAt = 100L * call, description = "", timestamp = 100L * call,
+                confidence = 1, latitude = 1.0, longitude = 1.0,
+                horizontalAccuracy = 5, status = 0,
+            )))
+        })
+        vm.boot(); advanceUntilIdle()
+        vm.refresh(); advanceUntilIdle()
+        assertEquals("a", vm.state.value.selectedBeaconId)
+
+        // Simulate an import: new beacons land, reboot wipes the VM caches.
+        seedBeacon("z", "Zebra", null)
+        vm.reboot()
+        advanceUntilIdle()
+
+        assertEquals("a", vm.state.value.selectedBeaconId,
+            "Post-reboot first refresh must still promote to a located beacon")
+    }
+
+    @Test
+    fun `card order does not reshuffle when a different beacon becomes most recent`() = runTest {
+        // The actual "card switching" the user reported. buildCards used to
+        // sort by lastUpdatedMs every time, so when a tag's fresh report
+        // pushed it to the front, every other card shifted and the pager
+        // animated to follow the selected card's new index — the user saw
+        // the cards visually rearrange under their finger.
+        seedBeacon("a", "Auto", null)
+        seedBeacon("b", "Bike", null)
+        seedBeacon("c", "Cat", null)
+
+        var call = 0
+        val vm = buildVm(fetchReports = { _, _ ->
+            call++
+            // First call (init's cascade): only 'a' has a report.
+            // Later calls (explicit refresh): 'b' suddenly has a way newer ts.
+            // v1.0.6 buildCards would resort to put 'b' first; the fix locks
+            // order at first build.
+            if (call == 1) mapOf("a" to listOf(BeaconLocationReport(
+                publishedAt = 100L, description = "", timestamp = 100L,
+                confidence = 1, latitude = 1.0, longitude = 1.0,
+                horizontalAccuracy = 5, status = 0,
+            )))
+            else mapOf(
+                "a" to listOf(BeaconLocationReport(
+                    publishedAt = 100L, description = "", timestamp = 100L,
+                    confidence = 1, latitude = 1.0, longitude = 1.0,
+                    horizontalAccuracy = 5, status = 0,
+                )),
+                "b" to listOf(BeaconLocationReport(
+                    publishedAt = 99999L, description = "", timestamp = 99999L,
+                    confidence = 1, latitude = 2.0, longitude = 2.0,
+                    horizontalAccuracy = 5, status = 0,
+                )),
+            )
+        })
+        advanceUntilIdle()
+        val orderBefore = vm.state.value.cards.map { it.beaconId }
+
+        vm.refresh(); advanceUntilIdle()
+        val orderAfter = vm.state.value.cards.map { it.beaconId }
+
+        assertEquals(orderBefore, orderAfter,
+            "Card order must remain stable across periodic refreshes")
+    }
+
+    @Test
     fun `auto-promote is one-shot — second refresh must not switch to a newer beacon`() = runTest {
         // Periodic refresh case: boot promoted us to beacon 'a' on the first
         // refresh because its report came back. On the next periodic tick,
