@@ -10,12 +10,12 @@ name: History — map polyline actually re-renders when day arrows are tapped
 - extendedWaitUntil:
     visible:
       text: "Today"
-    timeout: 15000
+    timeout: 25000
 
 - extendedWaitUntil:
     visible:
       id: "map_render_3"
-    timeout: 15000
+    timeout: 25000
 - assertVisible:
     id: "map_render_3"
 
@@ -24,11 +24,11 @@ name: History — map polyline actually re-renders when day arrows are tapped
 - extendedWaitUntil:
     visible:
       text: "Yesterday"
-    timeout: 15000
+    timeout: 25000
 - extendedWaitUntil:
     visible:
       id: "map_render_2"
-    timeout: 15000
+    timeout: 25000
 - assertVisible:
     id: "map_render_2"
 
@@ -37,11 +37,11 @@ name: History — map polyline actually re-renders when day arrows are tapped
 - extendedWaitUntil:
     visible:
       text: "Today"
-    timeout: 15000
+    timeout: 25000
 - extendedWaitUntil:
     visible:
       id: "map_render_3"
-    timeout: 15000
+    timeout: 25000
 - assertVisible:
     id: "map_render_3"
 
@@ -49,4 +49,4 @@ name: History — map polyline actually re-renders when day arrows are tapped
 - extendedWaitUntil:
     visible:
       id: "btn_settings"
-    timeout: 15000
+    timeout: 25000

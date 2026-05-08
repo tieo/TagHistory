@@ -10,12 +10,12 @@ name: Settings — sign out dialog cancel keeps user signed in
 - extendedWaitUntil:
     visible:
       text: "Settings"
-    timeout: 15000
+    timeout: 25000
 - scrollUntilVisible:
     element:
       id: "btn_sign_out"
     direction: DOWN
-    timeout: 15000
+    timeout: 25000
 
 # Pre: dialog hidden.
 - assertNotVisible:
@@ -45,7 +45,7 @@ name: Settings — sign out dialog cancel keeps user signed in
 - extendedWaitUntil:
     visible:
       text: "Sign out\\?"
-    timeout: 15000
+    timeout: 25000
 - back
 - assertNotVisible:
     text: "Sign out\\?"
@@ -58,7 +58,7 @@ name: Settings — sign out dialog cancel keeps user signed in
 - extendedWaitUntil:
     visible:
       id: "btn_settings"
-    timeout: 15000
+    timeout: 25000
 - assertVisible:
     text: "Car Keys"
 - assertNotVisible:

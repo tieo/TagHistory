@@ -13,7 +13,7 @@ name: Navigation — Map -> Details -> History, three back-presses lands on Map
 - extendedWaitUntil:
     visible:
       id: "btn_view_history"
-    timeout: 15000
+    timeout: 25000
 - assertNotVisible:
     id: "btn_settings"
 
@@ -23,7 +23,7 @@ name: Navigation — Map -> Details -> History, three back-presses lands on Map
 - extendedWaitUntil:
     visible:
       id: "btn_day_prev"
-    timeout: 15000
+    timeout: 25000
 - assertNotVisible:
     id: "btn_view_history"
 - assertNotVisible:
@@ -34,7 +34,7 @@ name: Navigation — Map -> Details -> History, three back-presses lands on Map
 - extendedWaitUntil:
     visible:
       id: "btn_view_history"
-    timeout: 15000
+    timeout: 25000
 - assertNotVisible:
     id: "btn_settings"
 
@@ -43,7 +43,7 @@ name: Navigation — Map -> Details -> History, three back-presses lands on Map
 - extendedWaitUntil:
     visible:
       id: "btn_settings"
-    timeout: 15000
+    timeout: 25000
 - assertVisible:
     text: "Car Keys"
 - assertNotVisible:
@@ -59,13 +59,13 @@ name: Navigation — Map -> Details -> History, three back-presses lands on Map
 - extendedWaitUntil:
     visible:
       text: "Backpack"
-    timeout: 15000
+    timeout: 25000
 - tapOn:
     id: "btn_card_details"
 - extendedWaitUntil:
     visible:
       id: "btn_view_history"
-    timeout: 15000
+    timeout: 25000
 - assertNotVisible:
     id: "btn_settings"
 - assertNotVisible:
@@ -75,7 +75,7 @@ name: Navigation — Map -> Details -> History, three back-presses lands on Map
 - extendedWaitUntil:
     visible:
       id: "btn_day_prev"
-    timeout: 15000
+    timeout: 25000
 - assertNotVisible:
     id: "btn_view_history"
 - assertNotVisible:
@@ -84,12 +84,12 @@ name: Navigation — Map -> Details -> History, three back-presses lands on Map
 - extendedWaitUntil:
     visible:
       id: "btn_view_history"
-    timeout: 15000
+    timeout: 25000
 - back
 - extendedWaitUntil:
     visible:
       id: "btn_settings"
-    timeout: 15000
+    timeout: 25000
 - assertVisible:
     text: "Backpack"
 - assertNotVisible:

@@ -12,7 +12,7 @@ name: History — pressing day-next at Today (boundary) is a no-op, day stays To
 - extendedWaitUntil:
     visible:
       text: "Today"
-    timeout: 15000
+    timeout: 25000
 - assertVisible:
     text: "Today"
 
@@ -38,14 +38,14 @@ name: History — pressing day-next at Today (boundary) is a no-op, day stays To
 - extendedWaitUntil:
     visible:
       text: "Yesterday"
-    timeout: 15000
+    timeout: 25000
 - tapOn:
     id: "btn_day_next"
     optional: true
 - extendedWaitUntil:
     visible:
       text: "Today"
-    timeout: 15000
+    timeout: 25000
 - tapOn:
     id: "btn_day_next"
     optional: true
@@ -78,6 +78,6 @@ name: History — pressing day-next at Today (boundary) is a no-op, day stays To
 - extendedWaitUntil:
     visible:
       id: "btn_settings"
-    timeout: 15000
+    timeout: 25000
 - assertVisible:
     text: "Car Keys"

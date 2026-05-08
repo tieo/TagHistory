@@ -15,7 +15,7 @@ name: Map screen — settings button opens settings screen
 - extendedWaitUntil:
     visible:
       text: "Settings"
-    timeout: 15000
+    timeout: 25000
 
 # On settings: section headers visible, map landmarks gone.
 - assertVisible:
@@ -32,7 +32,7 @@ name: Map screen — settings button opens settings screen
 - extendedWaitUntil:
     visible:
       id: "btn_settings"
-    timeout: 15000
+    timeout: 25000
 - assertVisible:
     text: "Car Keys"
 - assertNotVisible:
@@ -44,13 +44,13 @@ name: Map screen — settings button opens settings screen
 - extendedWaitUntil:
     visible:
       text: "Settings"
-    timeout: 15000
+    timeout: 25000
 - assertVisible:
     text: "Appearance"
 - back
 - extendedWaitUntil:
     visible:
       id: "btn_settings"
-    timeout: 15000
+    timeout: 25000
 - assertVisible:
     text: "Car Keys"

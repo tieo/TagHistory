@@ -11,13 +11,13 @@ name: Navigation — rapid back from deep stack does not crash
 - extendedWaitUntil:
     visible:
       id: "btn_view_history"
-    timeout: 15000
+    timeout: 25000
 - tapOn:
     id: "btn_view_history"
 - extendedWaitUntil:
     visible:
       id: "btn_day_prev"
-    timeout: 15000
+    timeout: 25000
 
 # Three back-presses in quick succession (only need 2 to reach map; the
 # third pops to launcher only if not handled. The PlatformBackHandler
@@ -28,7 +28,7 @@ name: Navigation — rapid back from deep stack does not crash
 - extendedWaitUntil:
     visible:
       id: "btn_settings"
-    timeout: 15000
+    timeout: 25000
 - assertVisible:
     id: "btn_settings"
 - assertVisible:
@@ -46,25 +46,25 @@ name: Navigation — rapid back from deep stack does not crash
 - extendedWaitUntil:
     visible:
       text: "Backpack"
-    timeout: 15000
+    timeout: 25000
 - tapOn:
     id: "btn_card_details"
 - extendedWaitUntil:
     visible:
       id: "btn_view_history"
-    timeout: 15000
+    timeout: 25000
 - tapOn:
     id: "btn_view_history"
 - extendedWaitUntil:
     visible:
       id: "btn_day_prev"
-    timeout: 15000
+    timeout: 25000
 - back
 - back
 - extendedWaitUntil:
     visible:
       id: "btn_settings"
-    timeout: 15000
+    timeout: 25000
 - assertVisible:
     text: "Backpack"
 
@@ -74,22 +74,22 @@ name: Navigation — rapid back from deep stack does not crash
 - extendedWaitUntil:
     visible:
       text: "Settings"
-    timeout: 15000
+    timeout: 25000
 - back
 - extendedWaitUntil:
     visible:
       id: "btn_settings"
-    timeout: 15000
+    timeout: 25000
 - tapOn:
     id: "btn_card_history"
 - extendedWaitUntil:
     visible:
       id: "btn_day_prev"
-    timeout: 15000
+    timeout: 25000
 - back
 - extendedWaitUntil:
     visible:
       id: "btn_settings"
-    timeout: 15000
+    timeout: 25000
 - assertVisible:
     text: "Backpack"

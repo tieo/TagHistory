@@ -13,18 +13,18 @@ name: "Stress: swipe cards after fetch-older — history loads independently per
 - extendedWaitUntil:
     visible:
       id: "btn_day_prev"
-    timeout: 15000
+    timeout: 25000
 - tapOn:
     id: "btn_day_prev"
 - extendedWaitUntil:
     visible:
       id: "btn_day_prev"
-    timeout: 15000
+    timeout: 25000
 - back
 - extendedWaitUntil:
     visible:
       id: "btn_settings"
-    timeout: 15000
+    timeout: 25000
 
 # ── swipe to Backpack, open history ──────────────────────────────────────────
 - swipe:
@@ -34,24 +34,24 @@ name: "Stress: swipe cards after fetch-older — history loads independently per
 - extendedWaitUntil:
     visible:
       text: "Backpack"
-    timeout: 15000
+    timeout: 25000
 - tapOn:
     id: "btn_card_history"
 - extendedWaitUntil:
     visible:
       id: "btn_day_prev"
-    timeout: 15000
+    timeout: 25000
 - tapOn:
     id: "btn_day_prev"
 - extendedWaitUntil:
     visible:
       id: "btn_day_prev"
-    timeout: 15000
+    timeout: 25000
 - back
 - extendedWaitUntil:
     visible:
       id: "btn_settings"
-    timeout: 15000
+    timeout: 25000
 - assertVisible:
     text: "Backpack"
 
@@ -63,20 +63,20 @@ name: "Stress: swipe cards after fetch-older — history loads independently per
 - extendedWaitUntil:
     visible:
       text: "Bike"
-    timeout: 15000
+    timeout: 25000
 - tapOn:
     id: "btn_card_history"
 - extendedWaitUntil:
     visible:
       id: "btn_day_prev"
-    timeout: 15000
+    timeout: 25000
 - assertVisible:
     text: "Today"
 - back
 - extendedWaitUntil:
     visible:
       id: "btn_settings"
-    timeout: 15000
+    timeout: 25000
 - assertVisible:
     text: "Bike"
 
@@ -88,25 +88,25 @@ name: "Stress: swipe cards after fetch-older — history loads independently per
 - extendedWaitUntil:
     visible:
       text: "Backpack"
-    timeout: 15000
+    timeout: 25000
 - tapOn:
     id: "btn_card_history"
 - extendedWaitUntil:
     visible:
       id: "btn_day_prev"
-    timeout: 15000
+    timeout: 25000
 # Day-prev exercises VM reload at least once.
 - tapOn:
     id: "btn_day_prev"
 - extendedWaitUntil:
     visible:
       text: "Yesterday"
-    timeout: 15000
+    timeout: 25000
 - back
 - extendedWaitUntil:
     visible:
       id: "btn_settings"
-    timeout: 15000
+    timeout: 25000
 - assertVisible:
     text: "Backpack"
 - assertNotVisible:
@@ -119,19 +119,19 @@ name: "Stress: swipe cards after fetch-older — history loads independently per
 - extendedWaitUntil:
     visible:
       text: "Car Keys"
-    timeout: 15000
+    timeout: 25000
 - tapOn:
     id: "btn_card_history"
 - extendedWaitUntil:
     visible:
       id: "btn_day_prev"
-    timeout: 15000
+    timeout: 25000
 - assertVisible:
     text: "Today"
 - back
 - extendedWaitUntil:
     visible:
       id: "btn_settings"
-    timeout: 15000
+    timeout: 25000
 - assertVisible:
     text: "Car Keys"

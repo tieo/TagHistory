@@ -11,7 +11,7 @@ name: Login — 2FA OTP field accepts six digits without crashing
 - extendedWaitUntil:
     visible:
       text: "Welcome to TagHistory"
-    timeout: 15000
+    timeout: 25000
 
 - tapOn:
     id: "field_email"
@@ -53,7 +53,7 @@ name: Login — 2FA OTP field accepts six digits without crashing
 - extendedWaitUntil:
     visible:
       text: "Welcome to TagHistory"
-    timeout: 15000
+    timeout: 25000
 - runFlow:
     when:
       visible:

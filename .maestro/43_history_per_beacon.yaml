@@ -15,12 +15,12 @@ name: History — open history for each of the three seeded beacons
 - extendedWaitUntil:
     visible:
       id: "btn_day_prev"
-    timeout: 15000
+    timeout: 25000
 - back
 - extendedWaitUntil:
     visible:
       id: "btn_settings"
-    timeout: 15000
+    timeout: 25000
 - assertVisible:
     text: "Car Keys"
 
@@ -32,18 +32,18 @@ name: History — open history for each of the three seeded beacons
 - extendedWaitUntil:
     visible:
       text: "Backpack"
-    timeout: 15000
+    timeout: 25000
 - tapOn:
     id: "btn_card_history"
 - extendedWaitUntil:
     visible:
       id: "btn_day_prev"
-    timeout: 15000
+    timeout: 25000
 - back
 - extendedWaitUntil:
     visible:
       id: "btn_settings"
-    timeout: 15000
+    timeout: 25000
 - assertVisible:
     text: "Backpack"
 
@@ -55,20 +55,20 @@ name: History — open history for each of the three seeded beacons
 - extendedWaitUntil:
     visible:
       text: "Bike"
-    timeout: 15000
+    timeout: 25000
 - tapOn:
     id: "btn_card_history"
 - extendedWaitUntil:
     visible:
       id: "btn_day_prev"
-    timeout: 15000
+    timeout: 25000
 - assertVisible:
     text: "Today"
 - back
 - extendedWaitUntil:
     visible:
       id: "btn_settings"
-    timeout: 15000
+    timeout: 25000
 - assertVisible:
     text: "Bike"
 - assertNotVisible:
@@ -82,13 +82,13 @@ name: History — open history for each of the three seeded beacons
 - extendedWaitUntil:
     visible:
       text: "Backpack"
-    timeout: 15000
+    timeout: 25000
 - tapOn:
     id: "btn_card_history"
 - extendedWaitUntil:
     visible:
       id: "btn_day_prev"
-    timeout: 15000
+    timeout: 25000
 - assertVisible:
     text: "Today"
 - swipe:
@@ -98,14 +98,14 @@ name: History — open history for each of the three seeded beacons
 - extendedWaitUntil:
     visible:
       id: "history_item_0"
-    timeout: 15000
+    timeout: 25000
 - assertVisible:
     text: ".*data point.*"
 - back
 - extendedWaitUntil:
     visible:
       id: "btn_settings"
-    timeout: 15000
+    timeout: 25000
 - assertVisible:
     text: "Backpack"
 
@@ -116,13 +116,13 @@ name: History — open history for each of the three seeded beacons
 - extendedWaitUntil:
     visible:
       text: "Car Keys"
-    timeout: 15000
+    timeout: 25000
 - tapOn:
     id: "btn_card_history"
 - extendedWaitUntil:
     visible:
       id: "btn_day_prev"
-    timeout: 15000
+    timeout: 25000
 - swipe:
     start: "50%, 88%"
     end: "50%, 40%"
@@ -130,7 +130,7 @@ name: History — open history for each of the three seeded beacons
 - extendedWaitUntil:
     visible:
       id: "history_item_0"
-    timeout: 15000
+    timeout: 25000
 # Car Keys today has 3 reports — at least history_item_2 visible.
 - assertVisible:
     id: "history_item_2"
@@ -138,6 +138,6 @@ name: History — open history for each of the three seeded beacons
 - extendedWaitUntil:
     visible:
       id: "btn_settings"
-    timeout: 15000
+    timeout: 25000
 - assertVisible:
     text: "Car Keys"

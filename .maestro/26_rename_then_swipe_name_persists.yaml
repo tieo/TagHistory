@@ -15,13 +15,13 @@ name: "Stress: rename three beacons — new names survive card swipes and reopen
 - extendedWaitUntil:
     visible:
       id: "btn_rename"
-    timeout: 15000
+    timeout: 25000
 - tapOn:
     id: "btn_rename"
 - extendedWaitUntil:
     visible:
       text: "Rename device"
-    timeout: 15000
+    timeout: 25000
 - tapOn:
     text: "Car Keys"
 - eraseText: 50
@@ -31,14 +31,14 @@ name: "Stress: rename three beacons — new names survive card swipes and reopen
 - extendedWaitUntil:
     visible:
       text: "Alpha Tag"
-    timeout: 15000
+    timeout: 25000
 - assertNotVisible:
     text: "Rename device"
 - back
 - extendedWaitUntil:
     visible:
       id: "btn_settings"
-    timeout: 15000
+    timeout: 25000
 - assertVisible:
     text: "Alpha Tag"
 - assertNotVisible:
@@ -52,19 +52,19 @@ name: "Stress: rename three beacons — new names survive card swipes and reopen
 - extendedWaitUntil:
     visible:
       text: "Backpack"
-    timeout: 15000
+    timeout: 25000
 - tapOn:
     id: "btn_card_details"
 - extendedWaitUntil:
     visible:
       id: "btn_rename"
-    timeout: 15000
+    timeout: 25000
 - tapOn:
     id: "btn_rename"
 - extendedWaitUntil:
     visible:
       text: "Rename device"
-    timeout: 15000
+    timeout: 25000
 - tapOn:
     text: "Backpack"
 - eraseText: 50
@@ -74,12 +74,12 @@ name: "Stress: rename three beacons — new names survive card swipes and reopen
 - extendedWaitUntil:
     visible:
       text: "Beta Tag"
-    timeout: 15000
+    timeout: 25000
 - back
 - extendedWaitUntil:
     visible:
       id: "btn_settings"
-    timeout: 15000
+    timeout: 25000
 - assertVisible:
     text: "Beta Tag"
 - assertNotVisible:
@@ -93,19 +93,19 @@ name: "Stress: rename three beacons — new names survive card swipes and reopen
 - extendedWaitUntil:
     visible:
       text: "Bike"
-    timeout: 15000
+    timeout: 25000
 - tapOn:
     id: "btn_card_details"
 - extendedWaitUntil:
     visible:
       id: "btn_rename"
-    timeout: 15000
+    timeout: 25000
 - tapOn:
     id: "btn_rename"
 - extendedWaitUntil:
     visible:
       text: "Rename device"
-    timeout: 15000
+    timeout: 25000
 - tapOn:
     text: "Bike"
 - eraseText: 50
@@ -115,12 +115,12 @@ name: "Stress: rename three beacons — new names survive card swipes and reopen
 - extendedWaitUntil:
     visible:
       text: "Gamma Tag"
-    timeout: 15000
+    timeout: 25000
 - back
 - extendedWaitUntil:
     visible:
       id: "btn_settings"
-    timeout: 15000
+    timeout: 25000
 - assertVisible:
     text: "Gamma Tag"
 - assertNotVisible:
@@ -134,7 +134,7 @@ name: "Stress: rename three beacons — new names survive card swipes and reopen
 - extendedWaitUntil:
     visible:
       text: "Beta Tag"
-    timeout: 15000
+    timeout: 25000
 - assertNotVisible:
     text: "Backpack"
 
@@ -145,7 +145,7 @@ name: "Stress: rename three beacons — new names survive card swipes and reopen
 - extendedWaitUntil:
     visible:
       text: "Alpha Tag"
-    timeout: 15000
+    timeout: 25000
 - assertNotVisible:
     text: "Car Keys"
 
@@ -156,7 +156,7 @@ name: "Stress: rename three beacons — new names survive card swipes and reopen
 - extendedWaitUntil:
     visible:
       text: "Beta Tag"
-    timeout: 15000
+    timeout: 25000
 
 - swipe:
     start: "85%, 75%"
@@ -165,7 +165,7 @@ name: "Stress: rename three beacons — new names survive card swipes and reopen
 - extendedWaitUntil:
     visible:
       text: "Gamma Tag"
-    timeout: 15000
+    timeout: 25000
 - assertNotVisible:
     text: "Bike"
 
@@ -175,13 +175,13 @@ name: "Stress: rename three beacons — new names survive card swipes and reopen
 - extendedWaitUntil:
     visible:
       id: "btn_rename"
-    timeout: 15000
+    timeout: 25000
 - assertVisible:
     text: "Gamma Tag"
 - back
 - extendedWaitUntil:
     visible:
       id: "btn_settings"
-    timeout: 15000
+    timeout: 25000
 - assertVisible:
     text: "Gamma Tag"

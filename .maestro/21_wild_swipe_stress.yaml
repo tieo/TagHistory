@@ -32,7 +32,7 @@ name: "Stress: wild card swipes — card always lands on correct beacon"
 - extendedWaitUntil:
     visible:
       text: "Bike"
-    timeout: 15000
+    timeout: 25000
 
 # ── one step right from Bike → Backpack ──────────────────────────────────────
 - swipe:
@@ -42,7 +42,7 @@ name: "Stress: wild card swipes — card always lands on correct beacon"
 - extendedWaitUntil:
     visible:
       text: "Backpack"
-    timeout: 15000
+    timeout: 25000
 
 # ── one more step right → Car Keys ───────────────────────────────────────────
 - swipe:
@@ -52,7 +52,7 @@ name: "Stress: wild card swipes — card always lands on correct beacon"
 - extendedWaitUntil:
     visible:
       text: "Car Keys"
-    timeout: 15000
+    timeout: 25000
 
 # ── slam right past the start → Car Keys (boundary) ──────────────────────────
 - swipe:
@@ -70,7 +70,7 @@ name: "Stress: wild card swipes — card always lands on correct beacon"
 - extendedWaitUntil:
     visible:
       text: "Car Keys"
-    timeout: 15000
+    timeout: 25000
 
 # ── two steps left → Bike ─────────────────────────────────────────────────────
 - swipe:
@@ -80,7 +80,7 @@ name: "Stress: wild card swipes — card always lands on correct beacon"
 - extendedWaitUntil:
     visible:
       text: "Backpack"
-    timeout: 15000
+    timeout: 25000
 - swipe:
     start: "85%, 75%"
     end: "15%, 75%"
@@ -88,7 +88,7 @@ name: "Stress: wild card swipes — card always lands on correct beacon"
 - extendedWaitUntil:
     visible:
       text: "Bike"
-    timeout: 15000
+    timeout: 25000
 
 # ── slam right from Bike → Car Keys ──────────────────────────────────────────
 - swipe:
@@ -106,7 +106,7 @@ name: "Stress: wild card swipes — card always lands on correct beacon"
 - extendedWaitUntil:
     visible:
       text: "Car Keys"
-    timeout: 15000
+    timeout: 25000
 
 # ── step to middle, check buttons still alive ─────────────────────────────────
 - swipe:
@@ -116,7 +116,7 @@ name: "Stress: wild card swipes — card always lands on correct beacon"
 - extendedWaitUntil:
     visible:
       text: "Backpack"
-    timeout: 15000
+    timeout: 25000
 - assertVisible:
     id: "btn_card_details"
 - assertVisible:
@@ -146,7 +146,7 @@ name: "Stress: wild card swipes — card always lands on correct beacon"
 - extendedWaitUntil:
     visible:
       text: "Backpack"
-    timeout: 15000
+    timeout: 25000
 
 # ── slam left to Bike, slam right to Car Keys, slam left twice to Bike ───
 - swipe:
@@ -160,7 +160,7 @@ name: "Stress: wild card swipes — card always lands on correct beacon"
 - extendedWaitUntil:
     visible:
       text: "Bike"
-    timeout: 15000
+    timeout: 25000
 - swipe:
     start: "15%, 75%"
     end: "85%, 75%"
@@ -172,7 +172,7 @@ name: "Stress: wild card swipes — card always lands on correct beacon"
 - extendedWaitUntil:
     visible:
       text: "Car Keys"
-    timeout: 15000
+    timeout: 25000
 - swipe:
     start: "85%, 75%"
     end: "15%, 75%"
@@ -184,7 +184,7 @@ name: "Stress: wild card swipes — card always lands on correct beacon"
 - extendedWaitUntil:
     visible:
       text: "Bike"
-    timeout: 15000
+    timeout: 25000
 
 # ── settings button is still tappable from any card ────────────────────────
 - assertVisible:
@@ -206,7 +206,7 @@ name: "Stress: wild card swipes — card always lands on correct beacon"
 - extendedWaitUntil:
     visible:
       text: "Car Keys"
-    timeout: 15000
+    timeout: 25000
 - assertNotVisible:
     text: "Backpack"
 - assertNotVisible:

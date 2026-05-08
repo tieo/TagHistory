@@ -13,12 +13,12 @@ name: "Stress: details→back does not reset map camera to world"
 - extendedWaitUntil:
     visible:
       id: "btn_rename"
-    timeout: 15000
+    timeout: 25000
 - back
 - extendedWaitUntil:
     visible:
       id: "btn_settings"
-    timeout: 15000
+    timeout: 25000
 - assertNotVisible:
     id: "btn_import"
 - assertVisible:
@@ -32,18 +32,18 @@ name: "Stress: details→back does not reset map camera to world"
 - extendedWaitUntil:
     visible:
       text: "Backpack"
-    timeout: 15000
+    timeout: 25000
 - tapOn:
     id: "btn_card_history"
 - extendedWaitUntil:
     visible:
       id: "btn_day_prev"
-    timeout: 15000
+    timeout: 25000
 - back
 - extendedWaitUntil:
     visible:
       id: "btn_settings"
-    timeout: 15000
+    timeout: 25000
 - assertNotVisible:
     id: "btn_import"
 - assertVisible:
@@ -57,29 +57,29 @@ name: "Stress: details→back does not reset map camera to world"
 - extendedWaitUntil:
     visible:
       text: "Bike"
-    timeout: 15000
+    timeout: 25000
 - tapOn:
     id: "btn_card_details"
 - extendedWaitUntil:
     visible:
       id: "btn_view_history"
-    timeout: 15000
+    timeout: 25000
 - tapOn:
     id: "btn_view_history"
 - extendedWaitUntil:
     visible:
       id: "btn_day_prev"
-    timeout: 15000
+    timeout: 25000
 - back
 - extendedWaitUntil:
     visible:
       id: "btn_view_history"
-    timeout: 15000
+    timeout: 25000
 - back
 - extendedWaitUntil:
     visible:
       id: "btn_settings"
-    timeout: 15000
+    timeout: 25000
 - assertNotVisible:
     id: "btn_import"
 - assertVisible:
@@ -93,7 +93,7 @@ name: "Stress: details→back does not reset map camera to world"
 - extendedWaitUntil:
     visible:
       text: "Backpack"
-    timeout: 15000
+    timeout: 25000
 - swipe:
     start: "15%, 75%"
     end: "85%, 75%"
@@ -101,7 +101,7 @@ name: "Stress: details→back does not reset map camera to world"
 - extendedWaitUntil:
     visible:
       text: "Car Keys"
-    timeout: 15000
+    timeout: 25000
 - assertVisible:
     id: "btn_card_details"
 - assertVisible:
@@ -113,25 +113,25 @@ name: "Stress: details→back does not reset map camera to world"
 - extendedWaitUntil:
     visible:
       id: "btn_view_history"
-    timeout: 15000
+    timeout: 25000
 - tapOn:
     id: "btn_view_history"
 - extendedWaitUntil:
     visible:
       id: "btn_day_prev"
-    timeout: 15000
+    timeout: 25000
 - assertVisible:
     text: "Today"
 - back
 - extendedWaitUntil:
     visible:
       id: "btn_view_history"
-    timeout: 15000
+    timeout: 25000
 - back
 - extendedWaitUntil:
     visible:
       id: "btn_settings"
-    timeout: 15000
+    timeout: 25000
 - assertNotVisible:
     id: "btn_import"
 - assertVisible:

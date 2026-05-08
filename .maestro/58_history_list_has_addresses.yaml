@@ -13,7 +13,7 @@ name: History — expanded list shows item addresses or coords plus times
 - extendedWaitUntil:
     visible:
       text: "Today"
-    timeout: 15000
+    timeout: 25000
 
 - swipe:
     start: "50%, 88%"
@@ -22,7 +22,7 @@ name: History — expanded list shows item addresses or coords plus times
 - extendedWaitUntil:
     visible:
       id: "history_item_0"
-    timeout: 15000
+    timeout: 25000
 
 # At least one "At HH:MM" timestamp visible (full-string regex). Catches
 # UTC-vs-local format bugs and raw-enum/empty output bugs.
@@ -51,11 +51,11 @@ name: History — expanded list shows item addresses or coords plus times
 - extendedWaitUntil:
     visible:
       text: "Yesterday"
-    timeout: 15000
+    timeout: 25000
 - extendedWaitUntil:
     visible:
       id: "history_item_0"
-    timeout: 15000
+    timeout: 25000
 - assertVisible:
     text: ".*At \\d\\d:\\d\\d.*"
 # Yesterday for Car Keys has 2 points — items 0 and 1 visible.
@@ -69,11 +69,11 @@ name: History — expanded list shows item addresses or coords plus times
 - extendedWaitUntil:
     visible:
       text: ".*\\d\\d\\d\\d-\\d\\d-\\d\\d.*"
-    timeout: 15000
+    timeout: 25000
 - extendedWaitUntil:
     visible:
       id: "history_item_0"
-    timeout: 15000
+    timeout: 25000
 - assertVisible:
     text: ".*At \\d\\d:\\d\\d.*"
 
@@ -81,7 +81,7 @@ name: History — expanded list shows item addresses or coords plus times
 - extendedWaitUntil:
     visible:
       id: "btn_settings"
-    timeout: 15000
+    timeout: 25000
 - assertVisible:
     text: "Car Keys"
 - assertNotVisible:

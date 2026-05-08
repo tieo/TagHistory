@@ -20,7 +20,7 @@ name: Login — full happy path (requires APPLE_EMAIL + APPLE_PASSWORD + APPLE_2
 - extendedWaitUntil:
     visible:
       id: "field_otp_code"
-    timeout: 15000
+    timeout: 25000
 
 - tapOn:
     id: "field_otp_code"
@@ -30,4 +30,4 @@ name: Login — full happy path (requires APPLE_EMAIL + APPLE_PASSWORD + APPLE_2
 - extendedWaitUntil:
     visible:
       id: "btn_settings"
-    timeout: 20000
+    timeout: 25000

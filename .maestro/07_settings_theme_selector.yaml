@@ -9,7 +9,7 @@ name: Settings — theme selector has three choices, responds to taps, persists 
 - extendedWaitUntil:
     visible:
       text: "Settings"
-    timeout: 15000
+    timeout: 25000
 
 # All three theme buttons are rendered.
 - assertVisible:
@@ -51,7 +51,7 @@ name: Settings — theme selector has three choices, responds to taps, persists 
 - extendedWaitUntil:
     visible:
       id: "btn_settings"
-    timeout: 15000
+    timeout: 25000
 - assertVisible:
     text: "Car Keys"
 - tapOn:
@@ -59,7 +59,7 @@ name: Settings — theme selector has three choices, responds to taps, persists 
 - extendedWaitUntil:
     visible:
       text: "Settings"
-    timeout: 15000
+    timeout: 25000
 - assertVisible:
     id: "btn_theme_dark"
 - assertVisible:

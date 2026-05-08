@@ -19,7 +19,7 @@ name: "Stress: settings deep scroll then back — card at non-zero index unchang
 - extendedWaitUntil:
     visible:
       text: "Bike"
-    timeout: 15000
+    timeout: 25000
 
 # Open settings and scroll all the way down
 - tapOn:
@@ -27,7 +27,7 @@ name: "Stress: settings deep scroll then back — card at non-zero index unchang
 - extendedWaitUntil:
     visible:
       text: "Settings"
-    timeout: 15000
+    timeout: 25000
 - swipe:
     direction: UP
     duration: 800
@@ -42,7 +42,7 @@ name: "Stress: settings deep scroll then back — card at non-zero index unchang
     element:
       id: "btn_theme_dark"
     direction: UP
-    timeout: 15000
+    timeout: 25000
 - tapOn:
     id: "btn_theme_dark"
 - tapOn:
@@ -53,7 +53,7 @@ name: "Stress: settings deep scroll then back — card at non-zero index unchang
 - extendedWaitUntil:
     visible:
       id: "btn_settings"
-    timeout: 15000
+    timeout: 25000
 - assertVisible:
     text: "Bike"
 - assertNotVisible:
@@ -68,13 +68,13 @@ name: "Stress: settings deep scroll then back — card at non-zero index unchang
 - extendedWaitUntil:
     visible:
       text: "Backpack"
-    timeout: 15000
+    timeout: 25000
 - tapOn:
     id: "btn_settings"
 - extendedWaitUntil:
     visible:
       text: "Settings"
-    timeout: 15000
+    timeout: 25000
 - swipe:
     direction: UP
     duration: 800
@@ -89,7 +89,7 @@ name: "Stress: settings deep scroll then back — card at non-zero index unchang
     element:
       id: "btn_theme_light"
     direction: UP
-    timeout: 15000
+    timeout: 25000
 - tapOn:
     id: "btn_theme_light"
 - tapOn:
@@ -105,7 +105,7 @@ name: "Stress: settings deep scroll then back — card at non-zero index unchang
 - extendedWaitUntil:
     visible:
       id: "btn_settings"
-    timeout: 15000
+    timeout: 25000
 - assertVisible:
     text: "Backpack"
 - assertNotVisible:

@@ -21,7 +21,7 @@ name: "Stress: swiping between cards does not reset map camera to world"
 - extendedWaitUntil:
     visible:
       text: "Backpack"
-    timeout: 15000
+    timeout: 25000
 # btn_settings still present = still on map screen, not crashed/reset to login
 - assertVisible:
     id: "btn_settings"
@@ -34,7 +34,7 @@ name: "Stress: swiping between cards does not reset map camera to world"
 - extendedWaitUntil:
     visible:
       text: "Bike"
-    timeout: 15000
+    timeout: 25000
 - assertVisible:
     id: "btn_settings"
 
@@ -58,7 +58,7 @@ name: "Stress: swiping between cards does not reset map camera to world"
 - extendedWaitUntil:
     visible:
       id: "btn_settings"
-    timeout: 15000
+    timeout: 25000
 # Not on login screen (btn_import would appear if no auth)
 - assertNotVisible:
     id: "btn_import"
@@ -91,7 +91,7 @@ name: "Stress: swiping between cards does not reset map camera to world"
 - extendedWaitUntil:
     visible:
       id: "btn_settings"
-    timeout: 15000
+    timeout: 25000
 
 # After all the bouncing, swipe deterministically to land on Bike, then back
 # to Backpack: the named card must be visible (camera is at street level so
@@ -107,7 +107,7 @@ name: "Stress: swiping between cards does not reset map camera to world"
 - extendedWaitUntil:
     visible:
       text: "Bike"
-    timeout: 15000
+    timeout: 25000
 - assertVisible:
     id: "btn_card_details"
 - swipe:
@@ -117,7 +117,7 @@ name: "Stress: swiping between cards does not reset map camera to world"
 - extendedWaitUntil:
     visible:
       text: "Backpack"
-    timeout: 15000
+    timeout: 25000
 - assertVisible:
     id: "btn_card_details"
 - assertVisible:

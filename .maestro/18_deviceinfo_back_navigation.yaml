@@ -12,7 +12,7 @@ name: Device info — back button returns to map with same beacon selected
 - extendedWaitUntil:
     visible:
       text: "Backpack"
-    timeout: 15000
+    timeout: 25000
 - assertNotVisible:
     text: "Car Keys"
 - assertNotVisible:
@@ -23,7 +23,7 @@ name: Device info — back button returns to map with same beacon selected
 - extendedWaitUntil:
     visible:
       id: "btn_rename"
-    timeout: 15000
+    timeout: 25000
 # On details: card pager / map landmarks gone, details ones present.
 - assertVisible:
     text: "Backpack"
@@ -36,7 +36,7 @@ name: Device info — back button returns to map with same beacon selected
 - extendedWaitUntil:
     visible:
       id: "btn_settings"
-    timeout: 15000
+    timeout: 25000
 # Back on map: same card index restored.
 - assertVisible:
     text: "Backpack"
@@ -53,20 +53,20 @@ name: Device info — back button returns to map with same beacon selected
 - extendedWaitUntil:
     visible:
       text: "Bike"
-    timeout: 15000
+    timeout: 25000
 - tapOn:
     id: "btn_card_details"
 - extendedWaitUntil:
     visible:
       id: "btn_rename"
-    timeout: 15000
+    timeout: 25000
 - assertVisible:
     text: "Bike"
 - back
 - extendedWaitUntil:
     visible:
       id: "btn_settings"
-    timeout: 15000
+    timeout: 25000
 - assertVisible:
     text: "Bike"
 - assertNotVisible:

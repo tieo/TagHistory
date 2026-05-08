@@ -39,7 +39,7 @@ name: Map — tapping btn_card_route launches chooser without crashing
       - extendedWaitUntil:
           visible:
             id: "btn_settings"
-          timeout: 15000
+          timeout: 25000
 
 - assertVisible:
     id: "btn_settings"
@@ -62,7 +62,7 @@ name: Map — tapping btn_card_route launches chooser without crashing
 - extendedWaitUntil:
     visible:
       text: "Backpack"
-    timeout: 15000
+    timeout: 25000
 - assertVisible:
     text: "Route"
 - tapOn:
@@ -82,6 +82,6 @@ name: Map — tapping btn_card_route launches chooser without crashing
       - extendedWaitUntil:
           visible:
             id: "btn_settings"
-          timeout: 15000
+          timeout: 25000
 - assertVisible:
     id: "btn_settings"

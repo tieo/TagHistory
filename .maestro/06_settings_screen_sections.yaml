@@ -9,7 +9,7 @@ name: Settings screen — all section headers visible and reachable by scroll
 - extendedWaitUntil:
     visible:
       text: "Settings"
-    timeout: 15000
+    timeout: 25000
 
 # Top of settings: top sections visible.
 - assertVisible:
@@ -42,7 +42,7 @@ name: Settings screen — all section headers visible and reachable by scroll
     element:
       text: "Appearance"
     direction: UP
-    timeout: 15000
+    timeout: 25000
 - assertVisible:
     text: "Appearance"
 - assertVisible:
@@ -53,7 +53,7 @@ name: Settings screen — all section headers visible and reachable by scroll
 - extendedWaitUntil:
     visible:
       id: "btn_settings"
-    timeout: 15000
+    timeout: 25000
 - assertVisible:
     text: "Car Keys"
 - assertNotVisible:

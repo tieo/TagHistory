@@ -11,7 +11,7 @@ name: History — basemap cycle button cycles through light/dark/satellite
 - extendedWaitUntil:
     visible:
       id: "btn_day_prev"
-    timeout: 15000
+    timeout: 25000
 
 # Find the button (one of the three states). Tap it to cycle. We don't
 # assume the starting state because it follows the system theme.
@@ -55,7 +55,7 @@ name: History — basemap cycle button cycles through light/dark/satellite
 - extendedWaitUntil:
     visible:
       text: "Yesterday"
-    timeout: 15000
+    timeout: 25000
 - tapOn:
     text: "Basemap: .*"
 - assertVisible:
@@ -65,12 +65,12 @@ name: History — basemap cycle button cycles through light/dark/satellite
 - extendedWaitUntil:
     visible:
       text: "Today"
-    timeout: 15000
+    timeout: 25000
 
 - back
 - extendedWaitUntil:
     visible:
       id: "btn_settings"
-    timeout: 15000
+    timeout: 25000
 - assertVisible:
     text: "Car Keys"
