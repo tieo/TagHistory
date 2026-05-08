@@ -43,6 +43,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.runtime.collectAsState
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -383,8 +384,7 @@ private fun ThemeChoice(
 
 @Composable
 private fun SyncLogPanel() {
-    val events by io.github.tieo.taghistory.sync.SyncLog.events
-        .collectAsStateWithLifecycle()
+    val events by io.github.tieo.taghistory.sync.SyncLog.events.collectAsState()
     Column(
         modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
         verticalArrangement = Arrangement.spacedBy(4.dp),

@@ -190,6 +190,10 @@ private fun AuthedNav(
                         when {
                             mapVm != null -> {
                                 {
+                                    io.github.tieo.taghistory.sync.SyncLog.record(
+                                        io.github.tieo.taghistory.sync.SyncEvent.Kind.START,
+                                        "Refresh-now tapped",
+                                    )
                                     mapVm.refresh()
                                     "Refresh started"
                                 }
