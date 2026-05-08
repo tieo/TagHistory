@@ -285,9 +285,22 @@ internal fun TagCardPager(
             if (selectedBeaconId == null) -1
             else cards.indexOfFirst { it.beaconId == selectedBeaconId }
         }
-        LaunchedEffect(selectedBeaconPage) {
-            if (selectedBeaconPage >= 0 && selectedBeaconPage != pagerState.currentPage) {
+        // Track which beaconId triggered the last scroll so we can tell a
+        // user-initiated selection change (animate) apart from a card list
+        // reshuffle that moved the same beacon to a different index (snap).
+        val lastScrolledBeaconId = remember { mutableStateOf<String?>(null) }
+        LaunchedEffect(selectedBeaconPage, selectedBeaconId) {
+            if (selectedBeaconPage < 0 || selectedBeaconPage == pagerState.currentPage) {
+                return@LaunchedEffect
+            }
+            if (lastScrolledBeaconId.value == selectedBeaconId) {
+                // Same beacon, different index → cards reordered. Snap, no animation,
+                // so the user keeps seeing their selected card without the visual
+                // shuffle of cards sliding past.
+                pagerState.scrollToPage(selectedBeaconPage)
+            } else {
                 pagerState.animateScrollToPage(selectedBeaconPage)
+                lastScrolledBeaconId.value = selectedBeaconId
             }
         }
 

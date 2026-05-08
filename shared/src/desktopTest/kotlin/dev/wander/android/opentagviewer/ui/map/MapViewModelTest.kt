@@ -388,12 +388,7 @@ class MapViewModelTest {
     }
 
     @Test
-    fun `card order does not reshuffle when a different beacon becomes most recent`() = runTest {
-        // The actual "card switching" the user reported. buildCards used to
-        // sort by lastUpdatedMs every time, so when a tag's fresh report
-        // pushed it to the front, every other card shifted and the pager
-        // animated to follow the selected card's new index — the user saw
-        // the cards visually rearrange under their finger.
+    fun `cards always sort by lastUpdatedMs descending`() = runTest {
         seedBeacon("a", "Auto", null)
         seedBeacon("b", "Bike", null)
         seedBeacon("c", "Cat", null)
@@ -401,10 +396,6 @@ class MapViewModelTest {
         var call = 0
         val vm = buildVm(fetchReports = { _, _ ->
             call++
-            // First call (init's cascade): only 'a' has a report.
-            // Later calls (explicit refresh): 'b' suddenly has a way newer ts.
-            // v1.0.6 buildCards would resort to put 'b' first; the fix locks
-            // order at first build.
             if (call == 1) mapOf("a" to listOf(BeaconLocationReport(
                 publishedAt = 100L, description = "", timestamp = 100L,
                 confidence = 1, latitude = 1.0, longitude = 1.0,
@@ -424,13 +415,12 @@ class MapViewModelTest {
             )
         })
         advanceUntilIdle()
-        val orderBefore = vm.state.value.cards.map { it.beaconId }
+        assertEquals(listOf("a", "b", "c"), vm.state.value.cards.map { it.beaconId },
+            "After init's first refresh: only 'a' located, so 'a' first then unlocated tail")
 
         vm.refresh(); advanceUntilIdle()
-        val orderAfter = vm.state.value.cards.map { it.beaconId }
-
-        assertEquals(orderBefore, orderAfter,
-            "Card order must remain stable across periodic refreshes")
+        assertEquals(listOf("b", "a", "c"), vm.state.value.cards.map { it.beaconId },
+            "After 'b' gets a newer report: 'b' moves to the front")
     }
 
     @Test
