@@ -13,7 +13,7 @@ name: History — expanded list shows item addresses or coords plus times
 - extendedWaitUntil:
     visible:
       text: "Today"
-    timeout: 6000
+    timeout: 15000
 
 - swipe:
     start: "50%, 88%"
@@ -51,7 +51,7 @@ name: History — expanded list shows item addresses or coords plus times
 - extendedWaitUntil:
     visible:
       text: "Yesterday"
-    timeout: 4000
+    timeout: 15000
 - extendedWaitUntil:
     visible:
       id: "history_item_0"

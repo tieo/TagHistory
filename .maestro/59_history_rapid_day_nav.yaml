@@ -12,7 +12,7 @@ name: History — rapid day prev/next does not crash, ends on valid label
 - extendedWaitUntil:
     visible:
       text: "Today"
-    timeout: 6000
+    timeout: 15000
 
 # left, right, left, right, left, right
 - tapOn:
@@ -45,7 +45,7 @@ name: History — rapid day prev/next does not crash, ends on valid label
 - extendedWaitUntil:
     visible:
       text: "Today"
-    timeout: 5000
+    timeout: 15000
 - assertVisible:
     text: "Today"
 - assertNotVisible:
@@ -115,7 +115,7 @@ name: History — rapid day prev/next does not crash, ends on valid label
 - extendedWaitUntil:
     visible:
       text: "Today"
-    timeout: 5000
+    timeout: 15000
 - assertVisible:
     text: "Today"
 

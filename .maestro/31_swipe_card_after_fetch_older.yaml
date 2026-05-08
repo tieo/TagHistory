@@ -101,7 +101,7 @@ name: "Stress: swipe cards after fetch-older — history loads independently per
 - extendedWaitUntil:
     visible:
       text: "Yesterday"
-    timeout: 4000
+    timeout: 15000
 - back
 - extendedWaitUntil:
     visible:

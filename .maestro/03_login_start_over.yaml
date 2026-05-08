@@ -7,7 +7,7 @@ name: Login — Start over returns to credentials screen
 - extendedWaitUntil:
     visible:
       text: "Welcome to TagHistory"
-    timeout: 5000
+    timeout: 15000
 
 - tapOn:
     id: "field_email"

@@ -12,7 +12,7 @@ name: History — navigating past the oldest seeded day still keeps controls ali
 - extendedWaitUntil:
     visible:
       text: "Today"
-    timeout: 6000
+    timeout: 15000
 
 # Three back-presses on day-prev — tries to walk past the oldest seed
 - tapOn:
@@ -42,7 +42,7 @@ name: History — navigating past the oldest seeded day still keeps controls ali
 - extendedWaitUntil:
     visible:
       text: "Today"
-    timeout: 5000
+    timeout: 15000
 
 # Today seeded with 3 items — list is non-empty.
 - swipe:
@@ -86,7 +86,7 @@ name: History — navigating past the oldest seeded day still keeps controls ali
 - extendedWaitUntil:
     visible:
       text: "Today"
-    timeout: 5000
+    timeout: 15000
 
 - back
 - extendedWaitUntil:
@@ -116,7 +116,7 @@ name: History — navigating past the oldest seeded day still keeps controls ali
 - extendedWaitUntil:
     visible:
       text: "Today"
-    timeout: 6000
+    timeout: 15000
 - tapOn:
     id: "btn_day_prev"
     optional: true

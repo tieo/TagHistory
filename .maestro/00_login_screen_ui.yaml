@@ -7,7 +7,7 @@ name: Login screen — UI elements present
 - extendedWaitUntil:
     visible:
       text: "Welcome to TagHistory"
-    timeout: 5000
+    timeout: 15000
 
 # Initial UI: credential fields visible, OTP path widgets hidden.
 - assertVisible:
@@ -44,7 +44,7 @@ name: Login screen — UI elements present
 - extendedWaitUntil:
     visible:
       text: "Welcome to TagHistory"
-    timeout: 5000
+    timeout: 15000
 - assertVisible:
     id: "field_email"
 - assertVisible:

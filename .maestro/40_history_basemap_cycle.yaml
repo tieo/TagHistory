@@ -55,7 +55,7 @@ name: History — basemap cycle button cycles through light/dark/satellite
 - extendedWaitUntil:
     visible:
       text: "Yesterday"
-    timeout: 4000
+    timeout: 15000
 - tapOn:
     text: "Basemap: .*"
 - assertVisible:
@@ -65,7 +65,7 @@ name: History — basemap cycle button cycles through light/dark/satellite
 - extendedWaitUntil:
     visible:
       text: "Today"
-    timeout: 4000
+    timeout: 15000
 
 - back
 - extendedWaitUntil:

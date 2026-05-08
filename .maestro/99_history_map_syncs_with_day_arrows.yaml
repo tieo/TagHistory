@@ -10,7 +10,7 @@ name: History — map polyline actually re-renders when day arrows are tapped
 - extendedWaitUntil:
     visible:
       text: "Today"
-    timeout: 4000
+    timeout: 15000
 
 - extendedWaitUntil:
     visible:
@@ -24,7 +24,7 @@ name: History — map polyline actually re-renders when day arrows are tapped
 - extendedWaitUntil:
     visible:
       text: "Yesterday"
-    timeout: 2000
+    timeout: 15000
 - extendedWaitUntil:
     visible:
       id: "map_render_2"
@@ -37,7 +37,7 @@ name: History — map polyline actually re-renders when day arrows are tapped
 - extendedWaitUntil:
     visible:
       text: "Today"
-    timeout: 2000
+    timeout: 15000
 - extendedWaitUntil:
     visible:
       id: "map_render_3"

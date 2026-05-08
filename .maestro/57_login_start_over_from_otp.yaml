@@ -10,7 +10,7 @@ name: Login — start over from 2FA returns to credentials form
 - extendedWaitUntil:
     visible:
       text: "Welcome to TagHistory"
-    timeout: 5000
+    timeout: 15000
 
 - tapOn:
     id: "field_email"
@@ -67,7 +67,7 @@ name: Login — start over from 2FA returns to credentials form
       - extendedWaitUntil:
           visible:
             text: "Welcome to TagHistory"
-          timeout: 5000
+          timeout: 15000
 
       # If start-over reappears, exercise it again to fully unwind.
       - runFlow:

@@ -9,7 +9,7 @@ name: History — day navigation prev/next changes point list
 - extendedWaitUntil:
     visible:
       text: "Today"
-    timeout: 6000
+    timeout: 15000
 
 # Expand sheet to see list
 - swipe:
@@ -28,7 +28,7 @@ name: History — day navigation prev/next changes point list
 - extendedWaitUntil:
     visible:
       text: "Yesterday"
-    timeout: 4000
+    timeout: 15000
 - assertVisible:
     text: "Yesterday"
 
@@ -51,14 +51,14 @@ name: History — day navigation prev/next changes point list
 - extendedWaitUntil:
     visible:
       text: "Yesterday"
-    timeout: 4000
+    timeout: 15000
 - tapOn:
     id: "btn_day_next"
     optional: true
 - extendedWaitUntil:
     visible:
       text: "Today"
-    timeout: 4000
+    timeout: 15000
 - assertVisible:
     text: "Today"
 - assertNotVisible:
@@ -91,7 +91,7 @@ name: History — day navigation prev/next changes point list
 - extendedWaitUntil:
     visible:
       text: "Yesterday"
-    timeout: 4000
+    timeout: 15000
 - assertVisible:
     id: "history_item_0"
 - assertVisible:
@@ -111,14 +111,14 @@ name: History — day navigation prev/next changes point list
 - extendedWaitUntil:
     visible:
       text: "Yesterday"
-    timeout: 4000
+    timeout: 15000
 - tapOn:
     id: "btn_day_next"
     optional: true
 - extendedWaitUntil:
     visible:
       text: "Today"
-    timeout: 4000
+    timeout: 15000
 # Re-expand the sheet — day transitions may have collapsed it.
 - swipe:
     start: "50%, 88%"

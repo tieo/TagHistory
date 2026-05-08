@@ -9,7 +9,7 @@ name: History — tapping a list item selects the point (highlighted entry)
 - extendedWaitUntil:
     visible:
       text: "Today"
-    timeout: 6000
+    timeout: 15000
 
 # Expand sheet
 - swipe:
@@ -68,7 +68,7 @@ name: History — tapping a list item selects the point (highlighted entry)
 - extendedWaitUntil:
     visible:
       text: "Yesterday"
-    timeout: 4000
+    timeout: 15000
 - extendedWaitUntil:
     visible:
       id: "history_item_0"

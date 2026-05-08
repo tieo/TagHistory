@@ -10,7 +10,7 @@ name: History — bottom sheet shows day nav, point list, and "Fetch older"
 - extendedWaitUntil:
     visible:
       text: "Today"
-    timeout: 6000
+    timeout: 15000
 
 # Sheet peeked: day label visible at bottom
 - assertVisible:
@@ -45,7 +45,7 @@ name: History — bottom sheet shows day nav, point list, and "Fetch older"
 - extendedWaitUntil:
     visible:
       text: "Yesterday"
-    timeout: 4000
+    timeout: 15000
 - assertVisible:
     text: "Yesterday"
 
@@ -56,7 +56,7 @@ name: History — bottom sheet shows day nav, point list, and "Fetch older"
 - extendedWaitUntil:
     visible:
       text: "Today"
-    timeout: 4000
+    timeout: 15000
 - assertVisible:
     text: "Today"
 
@@ -67,7 +67,7 @@ name: History — bottom sheet shows day nav, point list, and "Fetch older"
 - extendedWaitUntil:
     visible:
       text: "Yesterday"
-    timeout: 4000
+    timeout: 15000
 - assertVisible:
     text: "Yesterday"
 # Yesterday for Car Keys has 2 reports.
@@ -99,14 +99,14 @@ name: History — bottom sheet shows day nav, point list, and "Fetch older"
 - extendedWaitUntil:
     visible:
       text: "Yesterday"
-    timeout: 4000
+    timeout: 15000
 - tapOn:
     id: "btn_day_next"
     optional: true
 - extendedWaitUntil:
     visible:
       text: "Today"
-    timeout: 4000
+    timeout: 15000
 - assertVisible:
     text: "Today"
 

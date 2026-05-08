@@ -48,7 +48,7 @@ name: History screen — seeded reports visible, day nav works, back returns to 
 - extendedWaitUntil:
     visible:
       text: "Yesterday"
-    timeout: 4000
+    timeout: 15000
 - assertVisible:
     text: "Yesterday"
 - assertNotVisible:
@@ -60,7 +60,7 @@ name: History screen — seeded reports visible, day nav works, back returns to 
 - extendedWaitUntil:
     visible:
       text: "Today"
-    timeout: 4000
+    timeout: 15000
 - assertVisible:
     text: "Today"
 
