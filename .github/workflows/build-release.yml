@@ -13,6 +13,8 @@ jobs:
   build:
     environment: 'Android Build Release'
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
 
     if: |
       github.event_name == 'release'
@@ -132,4 +134,4 @@ jobs:
           files: ${{ env.main_project_module }}/build/outputs/apk/release/${{ env.app_name }}-${{ steps.extract_version.outputs.APP_VERSION }}.apk
           name: ${{ env.app_name }} Android App ${{ steps.extract_version.outputs.APP_VERSION }}
         env:
-          GITHUB_TOKEN: ${{ secrets.ANDROID_BUILD_RELEASE_GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
