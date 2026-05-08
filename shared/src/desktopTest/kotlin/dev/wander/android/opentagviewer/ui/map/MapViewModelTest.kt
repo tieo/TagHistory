@@ -289,4 +289,50 @@ class MapViewModelTest {
             "Explicit user selection on a located beacon must not be overridden")
     }
 
+    @Test
+    fun `auto-promote is one-shot — second refresh must not switch to a newer beacon`() = runTest {
+        // Periodic refresh case: boot promoted us to beacon 'a' on the first
+        // refresh because its report came back. On the next periodic tick,
+        // beacon 'b' replies with an even newer report. That MUST NOT yank
+        // the selection over to 'b' — that's the "card switching by itself"
+        // bug the user kept seeing on their phone.
+        seedBeacon("a", "Auto", null)
+        seedBeacon("b", "Bike", null)
+
+        var call = 0
+        val vm = buildVm(fetchReports = { _, _ ->
+            call++
+            when (call) {
+                1 -> mapOf("a" to listOf(BeaconLocationReport(
+                    publishedAt = 100L, description = "", timestamp = 100L,
+                    confidence = 1, latitude = 1.0, longitude = 1.0,
+                    horizontalAccuracy = 5, status = 0,
+                )))
+                else -> mapOf(
+                    "a" to listOf(BeaconLocationReport(
+                        publishedAt = 100L, description = "", timestamp = 100L,
+                        confidence = 1, latitude = 1.0, longitude = 1.0,
+                        horizontalAccuracy = 5, status = 0,
+                    )),
+                    "b" to listOf(BeaconLocationReport(
+                        publishedAt = 9999L, description = "", timestamp = 9999L,
+                        confidence = 1, latitude = 2.0, longitude = 2.0,
+                        horizontalAccuracy = 5, status = 0,
+                    )),
+                )
+            }
+        })
+        vm.boot()
+        advanceUntilIdle()
+        vm.refresh()
+        advanceUntilIdle()
+        assertEquals("a", vm.state.value.selectedBeaconId,
+            "First refresh auto-promotes to 'a' since it's the only located one")
+
+        vm.refresh()
+        advanceUntilIdle()
+        assertEquals("a", vm.state.value.selectedBeaconId,
+            "Second refresh must NOT auto-promote to 'b' — auto-promote is one-shot")
+    }
+
 }

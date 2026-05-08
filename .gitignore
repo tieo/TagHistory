@@ -37,3 +37,8 @@ secrets/*.txt
 secrets/*.json
 secrets/*.yaml
 !secrets/*.enc.*
+
+# Ide / agent / cache scratch dirs that should not ship
+.claude/
+local-maven/
+memory/

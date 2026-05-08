@@ -39,6 +39,8 @@ import io.github.tieo.taghistory.ui.map.MapViewModel
 import io.github.tieo.taghistory.ui.nav.NavState
 import io.github.tieo.taghistory.ui.nav.PlatformBackHandler
 import io.github.tieo.taghistory.ui.nav.Screen
+import io.github.tieo.taghistory.sync.SyncEvent
+import io.github.tieo.taghistory.sync.SyncLog
 import io.github.tieo.taghistory.ui.settings.SettingsScreen
 import io.github.tieo.taghistory.ui.settings.SettingsViewModel
 import io.github.tieo.taghistory.ui.theme.TagHistoryTheme
@@ -190,8 +192,8 @@ private fun AuthedNav(
                         when {
                             mapVm != null -> {
                                 {
-                                    io.github.tieo.taghistory.sync.SyncLog.record(
-                                        io.github.tieo.taghistory.sync.SyncEvent.Kind.START,
+                                    SyncLog.record(
+                                        SyncEvent.Kind.START,
                                         "Refresh-now tapped",
                                     )
                                     mapVm.refresh()

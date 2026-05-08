@@ -8,6 +8,8 @@ import io.github.tieo.taghistory.data.model.UserMapCameraPosition
 import io.github.tieo.taghistory.data.repo.BeaconRepository
 import io.github.tieo.taghistory.data.repo.UserAuthRepository
 import io.github.tieo.taghistory.data.repo.UserDataRepository
+import io.github.tieo.taghistory.sync.SyncEvent
+import io.github.tieo.taghistory.sync.SyncLog
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -76,6 +78,13 @@ class MapViewModel(
     // refresh stops auto-promoting selection to the most-recently-located beacon.
     // Reset by `reboot()` (post-import) so a fresh import gets the auto-pick again.
     private var userHasExplicitlySelected: Boolean = false
+
+    // Auto-promote of selection to the freshest located beacon is a ONE-SHOT
+    // on the first refresh that surfaces any marker. Subsequent refreshes
+    // never override the live selection — otherwise periodic ticks that
+    // bring different beacons back at different latencies make the pager
+    // jump around between cards on its own.
+    private var autoPromoteDone: Boolean = false
 
     /** Cached [BeaconData] so we can reconstruct markers without a re-query. */
     private val beaconsById = mutableMapOf<String, BeaconData>()
@@ -179,14 +188,23 @@ class MapViewModel(
         // Always log the user/caller intent so the Settings sync-log UI shows
         // every Refresh-now press, even when an earlier refresh is still in
         // flight and the cascade itself short-circuits.
-        io.github.tieo.taghistory.sync.SyncLog.record(
-            io.github.tieo.taghistory.sync.SyncEvent.Kind.START,
+        SyncLog.record(
+            SyncEvent.Kind.START,
             "Refresh started (${beaconsById.size} beacons known)",
+            mapOf(
+                "beacon_count" to beaconsById.size.toString(),
+                "beacon_ids" to beaconsById.keys.joinToString(","),
+                "windows" to windows.joinToString(","),
+                "skip_cascade_if_initial_done" to skipCascadeIfInitialDone.toString(),
+                "is_initial_fetch_complete" to _state.value.isInitialFetchComplete.toString(),
+                "user_has_explicit_selection" to userHasExplicitlySelected.toString(),
+            ),
         )
         if (_state.value.isRefreshing) {
-            io.github.tieo.taghistory.sync.SyncLog.record(
-                io.github.tieo.taghistory.sync.SyncEvent.Kind.INFO,
+            SyncLog.record(
+                SyncEvent.Kind.INFO,
                 "Skipped: previous refresh still in flight",
+                mapOf("reason" to "isRefreshing=true"),
             )
             return
         }
@@ -217,14 +235,31 @@ class MapViewModel(
                 }
 
                 _state.update { it.copy(fetchingBeaconIds = toFetch.keys.toSet()) }
+                SyncLog.record(
+                    SyncEvent.Kind.INFO,
+                    "Decrypting last ${window}h for ${toFetch.size} beacon(s)",
+                    mapOf(
+                        "window_h" to window.toString(),
+                        "beacons" to toFetch.keys.joinToString(","),
+                    ),
+                )
+                val rungStartMs = kotlin.time.Clock.System.now().toEpochMilliseconds()
                 val reports = try {
                     withContext(ioDispatcher) { fetchReports(toFetch, window) }
                 } catch (e: Exception) {
+                    val rungMs = kotlin.time.Clock.System.now().toEpochMilliseconds() - rungStartMs
                     lastError = e.message
-                    println("[MapViewModel] refresh rung=${window}h failed: ${e::class.simpleName}: ${e.message}")
-                    io.github.tieo.taghistory.sync.SyncLog.record(
-                        io.github.tieo.taghistory.sync.SyncEvent.Kind.RUNG_FAIL,
+                    SyncLog.record(
+                        SyncEvent.Kind.RUNG_FAIL,
                         "${window}h rung failed: ${e::class.simpleName}: ${e.message}",
+                        mapOf(
+                            "window_h" to window.toString(),
+                            "is_periodic" to isPeriodic.toString(),
+                            "beacons_attempted" to toFetch.size.toString(),
+                            "duration_ms" to rungMs.toString(),
+                            "error_class" to (e::class.simpleName ?: "?"),
+                            "error_msg" to (e.message ?: "?"),
+                        ),
                     )
                     _state.update { it.copy(fetchingBeaconIds = emptySet()) }
                     continue
@@ -239,31 +274,28 @@ class MapViewModel(
                     buildMarkers() to buildCards()
                 }
                 val got = reports.values.sumOf { it.size }
-                println("[MapViewModel] rung=${window}h got=$got markers=${markers.size}")
-                io.github.tieo.taghistory.sync.SyncLog.record(
-                    io.github.tieo.taghistory.sync.SyncEvent.Kind.RUNG_OK,
+                val rungMs = kotlin.time.Clock.System.now().toEpochMilliseconds() - rungStartMs
+                SyncLog.record(
+                    SyncEvent.Kind.RUNG_OK,
                     "${window}h rung: ${reports.size}/${toFetch.size} beacons replied, $got reports total",
+                    mapOf(
+                        "window_h" to window.toString(),
+                        "is_periodic" to isPeriodic.toString(),
+                        "beacons_attempted" to toFetch.size.toString(),
+                        "beacons_replied" to reports.size.toString(),
+                        "reports_total" to got.toString(),
+                        "duration_ms" to rungMs.toString(),
+                        "located_after" to markers.size.toString(),
+                        "responding_beacons" to reports.keys.joinToString(","),
+                        "non_responding_beacons" to toFetch.keys.minus(reports.keys).joinToString(","),
+                    ),
                 )
                 _state.update { current ->
-                    // Auto-pick the freshest located beacon if the current
-                    // selection (set by boot's default) has no marker yet —
-                    // so the map can actually pan somewhere. Stops once the
-                    // user has picked a card explicitly.
-                    val selected = current.selectedBeaconId
-                    val selectedHasMarker = selected != null &&
-                        markers.any { m -> m.beaconId == selected }
-                    val newSelected = if (
-                        userHasExplicitlySelected || selectedHasMarker || markers.isEmpty()
-                    ) {
-                        selected
-                    } else {
-                        markers.maxByOrNull { m -> m.lastUpdatedMs }?.beaconId ?: selected
-                    }
                     current.copy(
                         isInitialFetchComplete = true,
                         markers = markers,
                         cards = cards,
-                        selectedBeaconId = newSelected,
+                        selectedBeaconId = pickSelection(current.selectedBeaconId, markers),
                     )
                 }
                 kickoffGeocoding()
@@ -280,10 +312,20 @@ class MapViewModel(
                     fetchingBeaconIds = emptySet(),
                 )
             }
-            io.github.tieo.taghistory.sync.SyncLog.record(
-                io.github.tieo.taghistory.sync.SyncEvent.Kind.REFRESH_DONE,
+            val locatedCount = _state.value.markers.size
+            SyncLog.record(
+                SyncEvent.Kind.REFRESH_DONE,
                 if (lastError != null) "Refresh finished with error: $lastError"
-                else "Refresh finished (${_state.value.markers.size} located)",
+                else "Refresh finished ($locatedCount located)",
+                mapOf(
+                    "located" to locatedCount.toString(),
+                    "total_beacons" to beaconsById.size.toString(),
+                    "error" to (lastError ?: ""),
+                ),
+            )
+            SyncLog.record(
+                SyncEvent.Kind.INFO,
+                "Idle — next periodic refresh in 60s",
             )
         }
     }
@@ -291,6 +333,25 @@ class MapViewModel(
     fun selectBeacon(beaconId: String?) {
         userHasExplicitlySelected = true
         _state.update { it.copy(selectedBeaconId = beaconId) }
+    }
+
+    /**
+     * One-shot selection auto-promote. Returns the live selection unless this
+     * is the first refresh that surfaced any marker AND the user hasn't picked
+     * a card AND the current selection has no location yet — in which case
+     * the freshest located beacon wins. Subsequent refreshes leave selection
+     * alone, so periodic ticks don't yank the pager between cards.
+     */
+    private fun pickSelection(
+        current: String?,
+        markers: List<BeaconMarkerUi>,
+    ): String? {
+        val hasMarker = current != null && markers.any { it.beaconId == current }
+        if (userHasExplicitlySelected || hasMarker || markers.isEmpty() || autoPromoteDone) {
+            return current
+        }
+        autoPromoteDone = true
+        return markers.maxByOrNull { it.lastUpdatedMs }?.beaconId ?: current
     }
 
     /** Persist the camera position after the user pans/zooms. Fire-and-forget. */
@@ -333,6 +394,7 @@ class MapViewModel(
         latestLocationByBeacon.clear()
         geocodeCache.clear()
         userHasExplicitlySelected = false
+        autoPromoteDone = false
         _state.update { MapUiState() }
         runScope.launch {
             boot().join()

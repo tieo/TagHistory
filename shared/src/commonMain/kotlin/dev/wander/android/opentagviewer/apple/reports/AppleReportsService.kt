@@ -87,8 +87,8 @@ class AppleReportsService(
         keys: List<KeyPair>,
         from: Instant,
         to: Instant,
-    ): List<LocationReport> {
-        if (keys.isEmpty()) return emptyList()
+    ): List<LocationReport> = coroutineScope {
+        if (keys.isEmpty()) return@coroutineScope emptyList()
 
         // Apple's backend ignores the date filter, so we send the widest
         // supported range (last 7 days ± 12h) and re-filter client-side.
@@ -100,14 +100,26 @@ class AppleReportsService(
             keys.forEach { put(it.hashedAdvKeyB64(), it) }
         }
 
-        val out = mutableListOf<LocationReport>()
-        var offset = 0
-        while (offset < keys.size) {
-            val end = minOf(offset + CHUNK_SIZE, keys.size)
-            val chunk = keys.subList(offset, end)
-            val ids = chunk.map { it.hashedAdvKeyB64() }
+        // Slice into 256-key chunks and fan them out concurrently — each
+        // chunk is one HTTPS round-trip to Apple, so wall time was
+        // dominated by serial latency. Decrypt happens after the gather.
+        val chunks = buildList {
+            var offset = 0
+            while (offset < keys.size) {
+                val end = minOf(offset + CHUNK_SIZE, keys.size)
+                add(keys.subList(offset, end))
+                offset = end
+            }
+        }
+        val rawResults = chunks.map { chunk ->
+            async {
+                val ids = chunk.map { it.hashedAdvKeyB64() }
+                client.fetchRaw(account, startMs, endMs, ids)
+            }
+        }.awaitAll()
 
-            val raw = client.fetchRaw(account, startMs, endMs, ids)
+        val out = mutableListOf<LocationReport>()
+        for (raw in rawResults) {
             for (rep in LocationReportsClient.parseReports(raw)) {
                 val match = hashedToKey[rep.hashedAdvKeyB64()] ?: continue
                 rep.decrypt(match)
@@ -115,9 +127,8 @@ class AppleReportsService(
                 if (ts < from || ts > to) continue
                 out += rep
             }
-            offset = end
         }
-        return out
+        out
     }
 
     companion object {

@@ -34,6 +34,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -45,6 +46,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.runtime.collectAsState
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import io.github.tieo.taghistory.sync.SyncEvent
+import io.github.tieo.taghistory.sync.SyncLog
+import io.github.tieo.taghistory.ui.history.formatLocalTimeWithSeconds
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -384,7 +388,12 @@ private fun ThemeChoice(
 
 @Composable
 private fun SyncLogPanel() {
-    val events by io.github.tieo.taghistory.sync.SyncLog.events.collectAsState()
+    val events by SyncLog.events.collectAsState()
+    val env by SyncLog.environment.collectAsState()
+    val clipboard = androidx.compose.ui.platform.LocalClipboardManager.current
+    var copyAck by remember { mutableStateOf(false) }
+    val expanded = remember { mutableStateMapOf<Long, Boolean>() }
+
     Column(
         modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
         verticalArrangement = Arrangement.spacedBy(4.dp),
@@ -399,13 +408,43 @@ private fun SyncLogPanel() {
                 style = MaterialTheme.typography.titleSmall,
                 modifier = Modifier.testTag("sync_log_header"),
             )
-            TextButton(
-                onClick = { io.github.tieo.taghistory.sync.SyncLog.clear() },
-                modifier = Modifier.testTag("btn_clear_sync_log"),
-            ) {
-                Text("Clear")
+            Row {
+                TextButton(
+                    onClick = {
+                        clipboard.setText(
+                            androidx.compose.ui.text.AnnotatedString(
+                                buildSyncLogExport(env, events),
+                            ),
+                        )
+                        copyAck = true
+                    },
+                    modifier = Modifier.testTag("btn_copy_sync_log"),
+                ) {
+                    Text(if (copyAck) "Copied" else "Copy")
+                }
+                LaunchedEffect(copyAck) {
+                    if (copyAck) {
+                        delay(2500)
+                        copyAck = false
+                    }
+                }
+                TextButton(
+                    onClick = { SyncLog.clear() },
+                    modifier = Modifier.testTag("btn_clear_sync_log"),
+                ) {
+                    Text("Clear")
+                }
             }
         }
+
+        if (env.isNotEmpty()) {
+            Text(
+                env.entries.joinToString("  •  ") { "${it.key}=${it.value}" },
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.outline,
+            )
+        }
+
         if (events.isEmpty()) {
             Text(
                 "No sync events yet — open the map to trigger a refresh.",
@@ -413,37 +452,84 @@ private fun SyncLogPanel() {
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         } else {
-            for (event in events.asReversed().take(40)) {
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+            for (event in events.asReversed().take(60)) {
+                val isOpen = expanded[event.timestampMs] == true
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable(enabled = event.details.isNotEmpty()) {
+                            expanded[event.timestampMs] = !isOpen
+                        }
+                        .padding(vertical = 2.dp),
                 ) {
-                    Text(
-                        io.github.tieo.taghistory.ui.history
-                            .formatLocalTimeWithSeconds(event.timestampMs),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.outline,
-                        modifier = Modifier.padding(top = 2.dp),
-                    )
-                    Text(
-                        event.kind.name,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = when (event.kind) {
-                            io.github.tieo.taghistory.sync.SyncEvent.Kind.RUNG_FAIL ->
-                                MaterialTheme.colorScheme.error
-                            io.github.tieo.taghistory.sync.SyncEvent.Kind.REFRESH_DONE ->
-                                MaterialTheme.colorScheme.primary
-                            else -> MaterialTheme.colorScheme.outline
-                        },
-                        modifier = Modifier.padding(top = 2.dp),
-                    )
-                    Text(
-                        event.message,
-                        style = MaterialTheme.typography.bodySmall,
-                        modifier = Modifier.weight(1f),
-                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        Text(
+                            io.github.tieo.taghistory.ui.history
+                                .formatLocalTimeWithSeconds(event.timestampMs),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.outline,
+                        )
+                        Text(
+                            event.kind.name,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = when (event.kind) {
+                                SyncEvent.Kind.RUNG_FAIL ->
+                                    MaterialTheme.colorScheme.error
+                                SyncEvent.Kind.REFRESH_DONE ->
+                                    MaterialTheme.colorScheme.primary
+                                else -> MaterialTheme.colorScheme.outline
+                            },
+                        )
+                        Text(
+                            event.message,
+                            style = MaterialTheme.typography.bodySmall,
+                            modifier = Modifier.weight(1f),
+                        )
+                        if (event.details.isNotEmpty()) {
+                            Text(
+                                if (isOpen) "▾" else "▸",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.outline,
+                            )
+                        }
+                    }
+                    if (isOpen) {
+                        for ((k, v) in event.details) {
+                            Text(
+                                "  $k = $v",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
                 }
             }
+        }
+    }
+}
+
+@OptIn(kotlin.time.ExperimentalTime::class)
+private fun buildSyncLogExport(
+    env: Map<String, String>,
+    events: List<SyncEvent>,
+): String = buildString {
+    appendLine("# TagHistory sync log export")
+    appendLine("# generated " + formatLocalTimeWithSeconds(kotlin.time.Clock.System.now().toEpochMilliseconds()))
+    appendLine()
+    if (env.isNotEmpty()) {
+        appendLine("## environment")
+        for ((k, v) in env) appendLine("$k = $v")
+        appendLine()
+    }
+    appendLine("## events (most recent first)")
+    for (event in events.asReversed()) {
+        val ts = formatLocalTimeWithSeconds(event.timestampMs)
+        appendLine("[$ts] ${event.kind.name}: ${event.message}")
+        for ((k, v) in event.details) {
+            appendLine("    $k = $v")
         }
     }
 }
