@@ -32,7 +32,7 @@ import androidx.compose.material.icons.filled.Sms
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
+import io.github.tieo.taghistory.ui.util.AlwaysSpinningIndicator
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -150,7 +150,7 @@ private fun LoginForm(
             contentPadding = PaddingValues(vertical = 14.dp),
         ) {
             if (state.isLoggingIn) {
-                CircularProgressIndicator(
+                AlwaysSpinningIndicator(
                     modifier = Modifier.size(20.dp),
                     strokeWidth = 2.dp,
                     color = MaterialTheme.colorScheme.onPrimary,
@@ -310,7 +310,7 @@ private fun TwoFactorCodeEntry(
                 )
             }
             if (state.isSubmittingTwoFactor) {
-                CircularProgressIndicator(
+                AlwaysSpinningIndicator(
                     modifier = Modifier.size(24.dp).testTag("twofactor_submitting"),
                     strokeWidth = 2.dp,
                 )

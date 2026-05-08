@@ -22,7 +22,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Place
 import androidx.compose.material.icons.filled.Timeline
 import androidx.compose.material3.BottomSheetScaffold
-import androidx.compose.material3.CircularProgressIndicator
+import io.github.tieo.taghistory.ui.util.AlwaysSpinningIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.HorizontalDivider
@@ -378,7 +378,7 @@ private fun FullScreenMessage(
 ) {
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         if (loading) {
-            CircularProgressIndicator()
+            AlwaysSpinningIndicator(modifier = Modifier.size(48.dp))
         } else {
             Text(
                 message,

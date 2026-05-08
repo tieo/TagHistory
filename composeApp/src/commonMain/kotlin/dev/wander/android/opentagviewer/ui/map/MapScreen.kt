@@ -35,7 +35,7 @@ import androidx.compose.material.icons.filled.Place
 import androidx.compose.material.icons.filled.Satellite
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
+import io.github.tieo.taghistory.ui.util.AlwaysSpinningIndicator
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
@@ -228,7 +228,7 @@ private fun EmptyDevicesCard(
                     modifier = Modifier.fillMaxWidth().testTag("btn_import"),
                 ) {
                     if (importing) {
-                        CircularProgressIndicator(
+                        AlwaysSpinningIndicator(
                             modifier = Modifier.size(18.dp),
                             strokeWidth = 2.dp,
                         )
@@ -380,13 +380,13 @@ private fun TagCard(
     ) {
       Box(modifier = Modifier.fillMaxSize()) {
         if (isFetching) {
-            CircularProgressIndicator(
+            AlwaysSpinningIndicator(
                 modifier = Modifier
                     .align(Alignment.TopEnd)
-                    .padding(top = 10.dp, end = 12.dp)
-                    .size(16.dp)
+                    .padding(top = 16.dp, end = 18.dp)
+                    .size(22.dp)
                     .testTag("card_fetching_${card.beaconId}"),
-                strokeWidth = 2.dp,
+                strokeWidth = 2.5.dp,
                 color = MaterialTheme.colorScheme.primary,
             )
         }

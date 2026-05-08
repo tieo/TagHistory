@@ -21,7 +21,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
-import androidx.compose.material3.CircularProgressIndicator
+import io.github.tieo.taghistory.ui.util.AlwaysSpinningIndicator
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -148,7 +148,7 @@ fun SettingsScreen(
                     modifier = Modifier.fillMaxWidth().testTag("btn_refresh_now"),
                 ) {
                     if (refreshInFlight) {
-                        CircularProgressIndicator(
+                        AlwaysSpinningIndicator(
                             modifier = Modifier.padding(end = 8.dp).size(18.dp),
                             strokeWidth = 2.dp,
                         )
