@@ -176,12 +176,21 @@ class MapViewModel(
     }
 
     private fun refreshCascade(windows: List<Int>, skipCascadeIfInitialDone: Boolean) {
-        if (_state.value.isRefreshing) return
-        _state.update { it.copy(isRefreshing = true, refreshError = null) }
+        // Always log the user/caller intent so the Settings sync-log UI shows
+        // every Refresh-now press, even when an earlier refresh is still in
+        // flight and the cascade itself short-circuits.
         io.github.tieo.taghistory.sync.SyncLog.record(
             io.github.tieo.taghistory.sync.SyncEvent.Kind.START,
             "Refresh started (${beaconsById.size} beacons known)",
         )
+        if (_state.value.isRefreshing) {
+            io.github.tieo.taghistory.sync.SyncLog.record(
+                io.github.tieo.taghistory.sync.SyncEvent.Kind.INFO,
+                "Skipped: previous refresh still in flight",
+            )
+            return
+        }
+        _state.update { it.copy(isRefreshing = true, refreshError = null) }
         // Periodic refresh (after initial fetch done): always re-fetch every
         // beacon with a full window. The cascade's "skip already-located tags"
         // filter only applies during the first-run ladder so stale cached

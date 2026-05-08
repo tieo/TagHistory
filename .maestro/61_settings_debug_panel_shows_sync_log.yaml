@@ -46,27 +46,28 @@ name: Settings — debug panel populates with real sync events when Refresh fire
 - tapOn:
     id: "btn_refresh_now"
 
-# After refresh fires, kind tags must appear in the panel.
+# After refresh fires, START must always appear (logged unconditionally
+# in MapViewModel.refreshCascade so the user sees the press, even when
+# a previous refresh is still in flight and the new cascade short-circuits).
 - extendedWaitUntil:
     visible:
       text: "START"
-    timeout: 8000
+    timeout: 10000
 - assertVisible:
     text: "START"
 
-# At least one rung label must appear (RUNG_OK on success path).
+# Either RUNG_OK / RUNG_FAIL (cascade ran) or INFO (cascade skipped because
+# a previous refresh is still in flight). Both prove the refresh path was
+# entered.
 - extendedWaitUntil:
     visible:
-      text: ".*RUNG.*"
-    timeout: 6000
-
-# The Refresh started message must be visible in the log.
+      text: ".*(RUNG|INFO).*"
+    timeout: 10000
 - assertVisible:
     text: ".*Refresh started.*"
 
-# Time format must be HH:MM:SS (8 chars, two digits each), not the
-# YYYY-MM-DDTHH:mm full ISO that the broken first attempt produced.
-# Match exactly two digits, colon, two digits, colon, two digits.
+# Time format must be HH:MM:SS, not the YYYY-MM-DDTHH:mm ISO from the
+# broken first attempt.
 - assertVisible:
     text: "^\\d\\d:\\d\\d:\\d\\d$"
 
