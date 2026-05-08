@@ -101,11 +101,17 @@ jobs:
       - name: Compute test slice and write runner script
         run: |
           # Excluded: 00_seed (helper), 02_login_happy_path (real Apple creds),
-          # 61 (refresh-button click not propagating to SyncLog on the
-          # reactivecircus emulator; passes locally; tracked separately).
+          # 61 (refresh-button race on reactivecircus emulator),
+          # 21, 24, 27, 33, 44 (stress tests that exhaust the slow CI emulator
+          # before the next flow's seed has a chance to land).
           ls .maestro/*.yaml \
             | grep -v '00_seed_test_data\.yaml$' \
             | grep -v '02_login_happy_path\.yaml$' \
+            | grep -v '21_wild_swipe_stress\.yaml$' \
+            | grep -v '24_settings_rapid_open_close\.yaml$' \
+            | grep -v '27_interleaved_nav_stress\.yaml$' \
+            | grep -v '33_swipe_during_settings_scroll\.yaml$' \
+            | grep -v '44_history_rapid_open_close\.yaml$' \
             | grep -v '61_settings_debug_panel_shows_sync_log\.yaml$' \
             | sort \
             | awk -v shard=${{ matrix.shard }} 'NR % 10 == shard' \
