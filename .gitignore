@@ -29,4 +29,11 @@ composeApp/src/androidMain/jniLibs/
 androidApp/src/main/assets/apple-libs/
 
 # Rust cargo target
-rust/target/
+rust/target
+
+# secrets/: only the sops-encrypted blobs land in git, never plaintext.
+secrets/*.jks
+secrets/*.txt
+secrets/*.json
+secrets/*.yaml
+!secrets/*.enc.*
