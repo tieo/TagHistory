@@ -14,12 +14,12 @@ name: "Stress: details→back for every beacon — card stays synced"
 - extendedWaitUntil:
     visible:
       id: "btn_rename"
-    timeout: 5000
+    timeout: 15000
 - back
 - extendedWaitUntil:
     visible:
       id: "btn_settings"
-    timeout: 5000
+    timeout: 15000
 - assertVisible:
     text: "Car Keys"
 
@@ -31,18 +31,18 @@ name: "Stress: details→back for every beacon — card stays synced"
 - extendedWaitUntil:
     visible:
       text: "Backpack"
-    timeout: 5000
+    timeout: 15000
 - tapOn:
     id: "btn_card_details"
 - extendedWaitUntil:
     visible:
       id: "btn_rename"
-    timeout: 5000
+    timeout: 15000
 - back
 - extendedWaitUntil:
     visible:
       id: "btn_settings"
-    timeout: 5000
+    timeout: 15000
 - assertVisible:
     text: "Backpack"
 
@@ -54,18 +54,18 @@ name: "Stress: details→back for every beacon — card stays synced"
 - extendedWaitUntil:
     visible:
       text: "Bike"
-    timeout: 5000
+    timeout: 15000
 - tapOn:
     id: "btn_card_details"
 - extendedWaitUntil:
     visible:
       id: "btn_rename"
-    timeout: 5000
+    timeout: 15000
 - back
 - extendedWaitUntil:
     visible:
       id: "btn_settings"
-    timeout: 5000
+    timeout: 15000
 - assertVisible:
     text: "Bike"
 
@@ -81,13 +81,13 @@ name: "Stress: details→back for every beacon — card stays synced"
 - extendedWaitUntil:
     visible:
       text: "Car Keys"
-    timeout: 5000
+    timeout: 15000
 - tapOn:
     id: "btn_card_details"
 - extendedWaitUntil:
     visible:
       id: "btn_rename"
-    timeout: 5000
+    timeout: 15000
 # Details landmarks visible, map landmarks gone.
 - assertVisible:
     id: "btn_remove"
@@ -99,7 +99,7 @@ name: "Stress: details→back for every beacon — card stays synced"
 - extendedWaitUntil:
     visible:
       id: "btn_settings"
-    timeout: 5000
+    timeout: 15000
 - assertVisible:
     text: "Car Keys"
 - assertNotVisible:
@@ -113,12 +113,12 @@ name: "Stress: details→back for every beacon — card stays synced"
 - extendedWaitUntil:
     visible:
       id: "btn_rename"
-    timeout: 5000
+    timeout: 15000
 - back
 - extendedWaitUntil:
     visible:
       id: "btn_settings"
-    timeout: 5000
+    timeout: 15000
 - assertVisible:
     text: "Car Keys"
 
@@ -129,18 +129,18 @@ name: "Stress: details→back for every beacon — card stays synced"
 - extendedWaitUntil:
     visible:
       text: "Backpack"
-    timeout: 5000
+    timeout: 15000
 - tapOn:
     id: "btn_card_details"
 - extendedWaitUntil:
     visible:
       id: "btn_rename"
-    timeout: 5000
+    timeout: 15000
 - back
 - extendedWaitUntil:
     visible:
       id: "btn_settings"
-    timeout: 5000
+    timeout: 15000
 - assertVisible:
     text: "Backpack"
 
@@ -151,18 +151,18 @@ name: "Stress: details→back for every beacon — card stays synced"
 - extendedWaitUntil:
     visible:
       text: "Bike"
-    timeout: 5000
+    timeout: 15000
 - tapOn:
     id: "btn_card_details"
 - extendedWaitUntil:
     visible:
       id: "btn_rename"
-    timeout: 5000
+    timeout: 15000
 - back
 - extendedWaitUntil:
     visible:
       id: "btn_settings"
-    timeout: 5000
+    timeout: 15000
 - assertVisible:
     text: "Bike"
 

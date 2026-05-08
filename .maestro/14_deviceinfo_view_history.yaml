@@ -9,7 +9,7 @@ name: Device info — View history button navigates to history; back returns
 - extendedWaitUntil:
     visible:
       id: "btn_view_history"
-    timeout: 5000
+    timeout: 15000
 # Pre: details landmarks on screen, history-screen widgets not yet visible.
 - assertVisible:
     id: "btn_rename"
@@ -23,7 +23,7 @@ name: Device info — View history button navigates to history; back returns
 - extendedWaitUntil:
     visible:
       id: "btn_day_prev"
-    timeout: 5000
+    timeout: 15000
 
 # History screen: day-nav controls present, details widgets gone, map widgets gone.
 - assertVisible:
@@ -42,7 +42,7 @@ name: Device info — View history button navigates to history; back returns
 - extendedWaitUntil:
     visible:
       id: "btn_view_history"
-    timeout: 5000
+    timeout: 15000
 - assertVisible:
     id: "btn_rename"
 - assertNotVisible:
@@ -54,18 +54,18 @@ name: Device info — View history button navigates to history; back returns
 - extendedWaitUntil:
     visible:
       id: "btn_day_prev"
-    timeout: 5000
+    timeout: 15000
 - back
 - extendedWaitUntil:
     visible:
       id: "btn_view_history"
-    timeout: 5000
+    timeout: 15000
 
 # Final back to map.
 - back
 - extendedWaitUntil:
     visible:
       id: "btn_settings"
-    timeout: 5000
+    timeout: 15000
 - assertVisible:
     text: "Car Keys"

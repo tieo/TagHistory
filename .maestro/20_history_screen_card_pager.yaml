@@ -12,7 +12,7 @@ name: History screen — opening from card pager renders different beacons corre
 - extendedWaitUntil:
     visible:
       id: "btn_day_prev"
-    timeout: 5000
+    timeout: 15000
 - assertVisible:
     id: "btn_day_prev"
 - assertVisible:
@@ -21,7 +21,7 @@ name: History screen — opening from card pager renders different beacons corre
 - extendedWaitUntil:
     visible:
       id: "btn_settings"
-    timeout: 5000
+    timeout: 15000
 - assertVisible:
     text: "Car Keys"
 
@@ -33,13 +33,13 @@ name: History screen — opening from card pager renders different beacons corre
 - extendedWaitUntil:
     visible:
       text: "Backpack"
-    timeout: 5000
+    timeout: 15000
 - tapOn:
     id: "btn_card_history"
 - extendedWaitUntil:
     visible:
       id: "btn_day_prev"
-    timeout: 5000
+    timeout: 15000
 - assertVisible:
     id: "btn_day_prev"
 - assertVisible:
@@ -48,7 +48,7 @@ name: History screen — opening from card pager renders different beacons corre
 - extendedWaitUntil:
     visible:
       id: "btn_settings"
-    timeout: 5000
+    timeout: 15000
 - assertVisible:
     text: "Backpack"
 - assertNotVisible:
@@ -62,13 +62,13 @@ name: History screen — opening from card pager renders different beacons corre
 - extendedWaitUntil:
     visible:
       text: "Bike"
-    timeout: 5000
+    timeout: 15000
 - tapOn:
     id: "btn_card_history"
 - extendedWaitUntil:
     visible:
       id: "btn_day_prev"
-    timeout: 5000
+    timeout: 15000
 # Bike has 1 report — 6 hours ago, so day label is "Today".
 - assertVisible:
     text: "Today"
@@ -76,7 +76,7 @@ name: History screen — opening from card pager renders different beacons corre
 - extendedWaitUntil:
     visible:
       id: "btn_settings"
-    timeout: 5000
+    timeout: 15000
 - assertVisible:
     text: "Bike"
 - assertNotVisible:

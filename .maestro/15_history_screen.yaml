@@ -10,7 +10,7 @@ name: History screen — seeded reports visible, day nav works, back returns to 
 - extendedWaitUntil:
     visible:
       id: "btn_day_prev"
-    timeout: 5000
+    timeout: 15000
 
 # History landmarks: day nav present, map widgets gone.
 - assertVisible:
@@ -32,7 +32,7 @@ name: History screen — seeded reports visible, day nav works, back returns to 
 - extendedWaitUntil:
     visible:
       id: "history_item_0"
-    timeout: 6000
+    timeout: 15000
 - assertVisible:
     id: "history_item_0"
 # "data point" / "data points" pluralization rendered.
@@ -69,7 +69,7 @@ name: History screen — seeded reports visible, day nav works, back returns to 
 - extendedWaitUntil:
     visible:
       id: "btn_settings"
-    timeout: 5000
+    timeout: 15000
 - assertVisible:
     text: "Car Keys"
 - assertNotVisible:

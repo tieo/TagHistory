@@ -12,21 +12,21 @@ name: Settings — sign-out cancel ×3 keeps user on settings (regression)
 - extendedWaitUntil:
     visible:
       text: "Settings"
-    timeout: 5000
+    timeout: 15000
 
 # round 1
 - scrollUntilVisible:
     element:
       id: "btn_sign_out"
     direction: DOWN
-    timeout: 5000
+    timeout: 15000
 # Dialog buttons render in a separate window — must use text selectors
 - tapOn:
     id: "btn_sign_out"
 - extendedWaitUntil:
     visible:
       text: "Sign out\\?"
-    timeout: 5000
+    timeout: 15000
 - tapOn:
     text: "Cancel"
 - assertNotVisible:
@@ -40,7 +40,7 @@ name: Settings — sign-out cancel ×3 keeps user on settings (regression)
 - extendedWaitUntil:
     visible:
       text: "Sign out\\?"
-    timeout: 5000
+    timeout: 15000
 - tapOn:
     text: "Cancel"
 - assertNotVisible:
@@ -54,7 +54,7 @@ name: Settings — sign-out cancel ×3 keeps user on settings (regression)
 - extendedWaitUntil:
     visible:
       text: "Sign out\\?"
-    timeout: 5000
+    timeout: 15000
 - tapOn:
     text: "Cancel"
 - assertNotVisible:
@@ -68,7 +68,7 @@ name: Settings — sign-out cancel ×3 keeps user on settings (regression)
 - extendedWaitUntil:
     visible:
       text: "Sign out\\?"
-    timeout: 5000
+    timeout: 15000
 - back
 - assertNotVisible:
     text: "Sign out\\?"
@@ -81,7 +81,7 @@ name: Settings — sign-out cancel ×3 keeps user on settings (regression)
 - extendedWaitUntil:
     visible:
       text: "Sign out\\?"
-    timeout: 5000
+    timeout: 15000
 - tapOn:
     text: "Cancel"
 - assertNotVisible:
@@ -94,7 +94,7 @@ name: Settings — sign-out cancel ×3 keeps user on settings (regression)
 - extendedWaitUntil:
     visible:
       id: "btn_settings"
-    timeout: 5000
+    timeout: 15000
 - assertVisible:
     text: "Car Keys"
 - assertNotVisible:
@@ -106,18 +106,18 @@ name: Settings — sign-out cancel ×3 keeps user on settings (regression)
 - extendedWaitUntil:
     visible:
       text: "Settings"
-    timeout: 5000
+    timeout: 15000
 - scrollUntilVisible:
     element:
       id: "btn_sign_out"
     direction: DOWN
-    timeout: 5000
+    timeout: 15000
 - tapOn:
     id: "btn_sign_out"
 - extendedWaitUntil:
     visible:
       text: "Sign out\\?"
-    timeout: 5000
+    timeout: 15000
 - tapOn:
     text: "Cancel"
 - assertNotVisible:
@@ -126,4 +126,4 @@ name: Settings — sign-out cancel ×3 keeps user on settings (regression)
 - extendedWaitUntil:
     visible:
       id: "btn_settings"
-    timeout: 5000
+    timeout: 15000

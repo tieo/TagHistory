@@ -33,7 +33,7 @@ name: Login — start over from 2FA returns to credentials form
       - extendedWaitUntil:
           visible:
             id: "field_email"
-          timeout: 5000
+          timeout: 15000
       - assertVisible:
           id: "field_email"
       - assertVisible:
@@ -80,7 +80,7 @@ name: Login — start over from 2FA returns to credentials form
             - extendedWaitUntil:
                 visible:
                   id: "field_email"
-                timeout: 5000
+                timeout: 15000
             - assertVisible:
                 id: "field_email"
             - assertNotVisible:

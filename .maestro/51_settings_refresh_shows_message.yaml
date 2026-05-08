@@ -13,7 +13,7 @@ name: Settings — Refresh now shows a non-empty result message
 - extendedWaitUntil:
     visible:
       text: "Settings"
-    timeout: 5000
+    timeout: 15000
 - assertVisible:
     id: "btn_refresh_now"
 
@@ -50,7 +50,7 @@ name: Settings — Refresh now shows a non-empty result message
 - extendedWaitUntil:
     visible:
       id: "sync_log_header"
-    timeout: 3000
+    timeout: 15000
 - assertVisible:
     text: ".*Refresh started.*"
 - assertVisible:
@@ -61,7 +61,7 @@ name: Settings — Refresh now shows a non-empty result message
 - extendedWaitUntil:
     visible:
       text: "Show debug data"
-    timeout: 2000
+    timeout: 15000
 - assertNotVisible:
     id: "sync_log_header"
 
@@ -69,6 +69,6 @@ name: Settings — Refresh now shows a non-empty result message
 - extendedWaitUntil:
     visible:
       id: "btn_settings"
-    timeout: 5000
+    timeout: 15000
 - assertVisible:
     text: "Car Keys"

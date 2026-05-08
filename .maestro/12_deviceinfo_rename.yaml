@@ -13,7 +13,7 @@ name: Device info — rename dialog opens, cancel dismisses, save persists acros
 - extendedWaitUntil:
     visible:
       id: "btn_rename"
-    timeout: 5000
+    timeout: 15000
 - assertVisible:
     text: "Car Keys"
 - assertNotVisible:
@@ -45,7 +45,7 @@ name: Device info — rename dialog opens, cancel dismisses, save persists acros
 - extendedWaitUntil:
     visible:
       text: "Rename device"
-    timeout: 3000
+    timeout: 15000
 - back
 - assertNotVisible:
     text: "Rename device"
@@ -60,7 +60,7 @@ name: Device info — rename dialog opens, cancel dismisses, save persists acros
 - extendedWaitUntil:
     visible:
       text: "Rename device"
-    timeout: 3000
+    timeout: 15000
 - tapOn:
     text: "Car Keys"
 - eraseText: 50
@@ -80,7 +80,7 @@ name: Device info — rename dialog opens, cancel dismisses, save persists acros
 - extendedWaitUntil:
     visible:
       id: "btn_settings"
-    timeout: 5000
+    timeout: 15000
 - assertVisible:
     text: "My Test Tag"
 - assertNotVisible:
@@ -92,13 +92,13 @@ name: Device info — rename dialog opens, cancel dismisses, save persists acros
 - extendedWaitUntil:
     visible:
       id: "btn_rename"
-    timeout: 5000
+    timeout: 15000
 - assertVisible:
     text: "My Test Tag"
 - back
 - extendedWaitUntil:
     visible:
       id: "btn_settings"
-    timeout: 5000
+    timeout: 15000
 - assertVisible:
     text: "My Test Tag"

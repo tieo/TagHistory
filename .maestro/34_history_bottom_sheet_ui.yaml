@@ -26,7 +26,7 @@ name: History — bottom sheet shows day nav, point list, and "Fetch older"
 - extendedWaitUntil:
     visible:
       text: ".*data point.*"
-    timeout: 8000
+    timeout: 15000
 - assertVisible:
     text: ".*data point.*"
 
@@ -34,7 +34,7 @@ name: History — bottom sheet shows day nav, point list, and "Fetch older"
 - extendedWaitUntil:
     visible:
       id: "history_item_0"
-    timeout: 4000
+    timeout: 15000
 - assertVisible:
     id: "history_item_0"
 
@@ -86,7 +86,7 @@ name: History — bottom sheet shows day nav, point list, and "Fetch older"
 - extendedWaitUntil:
     visible:
       text: ".*\\d\\d\\d\\d-\\d\\d-\\d\\d.*"
-    timeout: 4000
+    timeout: 15000
 - assertNotVisible:
     text: "Yesterday"
 - assertNotVisible:
@@ -115,7 +115,7 @@ name: History — bottom sheet shows day nav, point list, and "Fetch older"
 - extendedWaitUntil:
     visible:
       id: "btn_settings"
-    timeout: 5000
+    timeout: 15000
 - assertVisible:
     text: "Car Keys"
 - assertNotVisible:

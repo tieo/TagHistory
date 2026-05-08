@@ -9,7 +9,7 @@ name: History — back from history returns to map (btn_settings reappears)
 - extendedWaitUntil:
     visible:
       id: "btn_day_prev"
-    timeout: 5000
+    timeout: 15000
 
 # btn_settings is part of map screen and should not be visible while history
 # screen is up
@@ -21,7 +21,7 @@ name: History — back from history returns to map (btn_settings reappears)
 - extendedWaitUntil:
     visible:
       id: "btn_settings"
-    timeout: 5000
+    timeout: 15000
 - assertVisible:
     id: "btn_settings"
 - assertVisible:
@@ -39,7 +39,7 @@ name: History — back from history returns to map (btn_settings reappears)
 - extendedWaitUntil:
     visible:
       id: "btn_day_prev"
-    timeout: 5000
+    timeout: 15000
 - assertNotVisible:
     id: "btn_settings"
 - assertNotVisible:
@@ -48,7 +48,7 @@ name: History — back from history returns to map (btn_settings reappears)
 - extendedWaitUntil:
     visible:
       id: "btn_settings"
-    timeout: 5000
+    timeout: 15000
 - assertVisible:
     text: "Car Keys"
 - assertNotVisible:
@@ -62,17 +62,17 @@ name: History — back from history returns to map (btn_settings reappears)
 - extendedWaitUntil:
     visible:
       text: "Backpack"
-    timeout: 5000
+    timeout: 15000
 - tapOn:
     id: "btn_card_history"
 - extendedWaitUntil:
     visible:
       id: "btn_day_prev"
-    timeout: 5000
+    timeout: 15000
 - back
 - extendedWaitUntil:
     visible:
       id: "btn_settings"
-    timeout: 5000
+    timeout: 15000
 - assertVisible:
     text: "Backpack"

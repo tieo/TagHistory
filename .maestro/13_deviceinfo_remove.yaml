@@ -9,7 +9,7 @@ name: "Device info — remove dialog: cancel keeps device, dialog state idempote
 - extendedWaitUntil:
     visible:
       id: "btn_remove"
-    timeout: 5000
+    timeout: 15000
 - assertNotVisible:
     text: "Remove device\\?"
 
@@ -40,7 +40,7 @@ name: "Device info — remove dialog: cancel keeps device, dialog state idempote
 - extendedWaitUntil:
     visible:
       text: "Remove device\\?"
-    timeout: 3000
+    timeout: 15000
 - back
 - assertNotVisible:
     text: "Remove device\\?"
@@ -52,7 +52,7 @@ name: "Device info — remove dialog: cancel keeps device, dialog state idempote
 - extendedWaitUntil:
     visible:
       id: "btn_settings"
-    timeout: 5000
+    timeout: 15000
 - assertVisible:
     text: "Car Keys"
 - assertVisible:

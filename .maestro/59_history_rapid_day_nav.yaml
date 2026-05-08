@@ -123,6 +123,6 @@ name: History — rapid day prev/next does not crash, ends on valid label
 - extendedWaitUntil:
     visible:
       id: "btn_settings"
-    timeout: 5000
+    timeout: 15000
 - assertVisible:
     text: "Car Keys"

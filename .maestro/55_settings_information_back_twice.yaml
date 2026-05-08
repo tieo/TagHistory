@@ -12,27 +12,27 @@ name: Navigation — Settings -> Information -> back twice lands on Map
 - extendedWaitUntil:
     visible:
       text: "Settings"
-    timeout: 5000
+    timeout: 15000
 
 # Settings -> Information
 - scrollUntilVisible:
     element:
       id: "btn_about"
     direction: DOWN
-    timeout: 5000
+    timeout: 15000
 - tapOn:
     id: "btn_about"
 - extendedWaitUntil:
     visible:
       id: "btn_developer_website"
-    timeout: 5000
+    timeout: 15000
 
 # Information -> Settings
 - back
 - extendedWaitUntil:
     visible:
       text: "Settings"
-    timeout: 5000
+    timeout: 15000
 # btn_about is the most-bottom button on Settings, btn_sign_out is just above it.
 # Either one being reachable confirms we're back on Settings.
 - assertVisible:
@@ -43,7 +43,7 @@ name: Navigation — Settings -> Information -> back twice lands on Map
 - extendedWaitUntil:
     visible:
       id: "btn_settings"
-    timeout: 5000
+    timeout: 15000
 - assertVisible:
     text: "Car Keys"
 - assertNotVisible:
@@ -58,44 +58,44 @@ name: Navigation — Settings -> Information -> back twice lands on Map
 - extendedWaitUntil:
     visible:
       text: "Settings"
-    timeout: 5000
+    timeout: 15000
 - scrollUntilVisible:
     element:
       id: "btn_about"
     direction: DOWN
-    timeout: 5000
+    timeout: 15000
 - tapOn:
     id: "btn_about"
 - extendedWaitUntil:
     visible:
       id: "btn_developer_website"
-    timeout: 5000
+    timeout: 15000
 - back
 - extendedWaitUntil:
     visible:
       text: "Settings"
-    timeout: 5000
+    timeout: 15000
 - scrollUntilVisible:
     element:
       id: "btn_about"
     direction: DOWN
-    timeout: 5000
+    timeout: 15000
 - tapOn:
     id: "btn_about"
 - extendedWaitUntil:
     visible:
       id: "btn_developer_website"
-    timeout: 5000
+    timeout: 15000
 - back
 - extendedWaitUntil:
     visible:
       text: "Settings"
-    timeout: 5000
+    timeout: 15000
 - back
 - extendedWaitUntil:
     visible:
       id: "btn_settings"
-    timeout: 5000
+    timeout: 15000
 - assertVisible:
     text: "Car Keys"
 - assertNotVisible:

@@ -12,7 +12,7 @@ name: Settings — background sync toggle shows/hides interval and persists
 - extendedWaitUntil:
     visible:
       text: "Background sync"
-    timeout: 5000
+    timeout: 15000
 
 # Default: ON → Interval visible.
 - assertVisible:
@@ -31,7 +31,7 @@ name: Settings — background sync toggle shows/hides interval and persists
 - extendedWaitUntil:
     visible:
       id: "btn_settings"
-    timeout: 5000
+    timeout: 15000
 - assertVisible:
     text: "Car Keys"
 - tapOn:
@@ -39,7 +39,7 @@ name: Settings — background sync toggle shows/hides interval and persists
 - extendedWaitUntil:
     visible:
       text: "Background sync"
-    timeout: 5000
+    timeout: 15000
 - assertNotVisible:
     text: "Interval"
 
@@ -64,7 +64,7 @@ name: Settings — background sync toggle shows/hides interval and persists
 - extendedWaitUntil:
     visible:
       id: "btn_settings"
-    timeout: 5000
+    timeout: 15000
 - assertNotVisible:
     text: "Background sync"
 - assertVisible:

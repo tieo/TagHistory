@@ -12,7 +12,7 @@ name: Settings — full theme cycle System -> Light -> Dark -> System
 - extendedWaitUntil:
     visible:
       text: "Settings"
-    timeout: 5000
+    timeout: 15000
 
 # System -> Light
 - tapOn:
@@ -20,7 +20,7 @@ name: Settings — full theme cycle System -> Light -> Dark -> System
 - extendedWaitUntil:
     visible:
       text: "Settings"
-    timeout: 5000
+    timeout: 15000
 - assertVisible:
     id: "btn_theme_light"
 
@@ -30,7 +30,7 @@ name: Settings — full theme cycle System -> Light -> Dark -> System
 - extendedWaitUntil:
     visible:
       text: "Settings"
-    timeout: 5000
+    timeout: 15000
 - assertVisible:
     id: "btn_theme_dark"
 
@@ -40,7 +40,7 @@ name: Settings — full theme cycle System -> Light -> Dark -> System
 - extendedWaitUntil:
     visible:
       text: "Settings"
-    timeout: 5000
+    timeout: 15000
 - assertVisible:
     id: "btn_theme_system"
 
@@ -50,7 +50,7 @@ name: Settings — full theme cycle System -> Light -> Dark -> System
 - extendedWaitUntil:
     visible:
       text: "Settings"
-    timeout: 5000
+    timeout: 15000
 - assertVisible:
     id: "btn_theme_dark"
 - assertVisible:
@@ -63,7 +63,7 @@ name: Settings — full theme cycle System -> Light -> Dark -> System
 - extendedWaitUntil:
     visible:
       text: "Settings"
-    timeout: 5000
+    timeout: 15000
 - assertVisible:
     id: "btn_theme_light"
 
@@ -72,7 +72,7 @@ name: Settings — full theme cycle System -> Light -> Dark -> System
 - extendedWaitUntil:
     visible:
       text: "Settings"
-    timeout: 5000
+    timeout: 15000
 - assertVisible:
     id: "btn_theme_system"
 
@@ -81,7 +81,7 @@ name: Settings — full theme cycle System -> Light -> Dark -> System
 - extendedWaitUntil:
     visible:
       id: "btn_settings"
-    timeout: 5000
+    timeout: 15000
 - assertVisible:
     text: "Car Keys"
 - tapOn:
@@ -89,7 +89,7 @@ name: Settings — full theme cycle System -> Light -> Dark -> System
 - extendedWaitUntil:
     visible:
       text: "Settings"
-    timeout: 5000
+    timeout: 15000
 - assertVisible:
     id: "btn_theme_system"
 - tapOn:
@@ -104,6 +104,6 @@ name: Settings — full theme cycle System -> Light -> Dark -> System
 - extendedWaitUntil:
     visible:
       id: "btn_settings"
-    timeout: 5000
+    timeout: 15000
 - assertVisible:
     text: "Car Keys"

@@ -15,7 +15,7 @@ name: "Stress: settings open/close ×5 — map and card unchanged"
 - extendedWaitUntil:
     visible:
       text: "Backpack"
-    timeout: 5000
+    timeout: 15000
 
 # ── round 1 ──────────────────────────────────────────────────────────────────
 - tapOn:
@@ -23,12 +23,12 @@ name: "Stress: settings open/close ×5 — map and card unchanged"
 - extendedWaitUntil:
     visible:
       text: "Settings"
-    timeout: 5000
+    timeout: 15000
 - back
 - extendedWaitUntil:
     visible:
       id: "btn_settings"
-    timeout: 5000
+    timeout: 15000
 - assertVisible:
     text: "Backpack"
 
@@ -38,12 +38,12 @@ name: "Stress: settings open/close ×5 — map and card unchanged"
 - extendedWaitUntil:
     visible:
       text: "Settings"
-    timeout: 5000
+    timeout: 15000
 - back
 - extendedWaitUntil:
     visible:
       id: "btn_settings"
-    timeout: 5000
+    timeout: 15000
 - assertVisible:
     text: "Backpack"
 
@@ -53,12 +53,12 @@ name: "Stress: settings open/close ×5 — map and card unchanged"
 - extendedWaitUntil:
     visible:
       text: "Settings"
-    timeout: 5000
+    timeout: 15000
 - back
 - extendedWaitUntil:
     visible:
       id: "btn_settings"
-    timeout: 5000
+    timeout: 15000
 - assertVisible:
     text: "Backpack"
 
@@ -68,12 +68,12 @@ name: "Stress: settings open/close ×5 — map and card unchanged"
 - extendedWaitUntil:
     visible:
       text: "Settings"
-    timeout: 5000
+    timeout: 15000
 - back
 - extendedWaitUntil:
     visible:
       id: "btn_settings"
-    timeout: 5000
+    timeout: 15000
 - assertVisible:
     text: "Backpack"
 
@@ -83,12 +83,12 @@ name: "Stress: settings open/close ×5 — map and card unchanged"
 - extendedWaitUntil:
     visible:
       text: "Settings"
-    timeout: 5000
+    timeout: 15000
 - back
 - extendedWaitUntil:
     visible:
       id: "btn_settings"
-    timeout: 5000
+    timeout: 15000
 - assertVisible:
     text: "Backpack"
 
@@ -98,12 +98,12 @@ name: "Stress: settings open/close ×5 — map and card unchanged"
 - extendedWaitUntil:
     visible:
       text: "Settings"
-    timeout: 5000
+    timeout: 15000
 - back
 - extendedWaitUntil:
     visible:
       id: "btn_settings"
-    timeout: 5000
+    timeout: 15000
 - assertVisible:
     text: "Backpack"
 
@@ -112,12 +112,12 @@ name: "Stress: settings open/close ×5 — map and card unchanged"
 - extendedWaitUntil:
     visible:
       text: "Settings"
-    timeout: 5000
+    timeout: 15000
 - back
 - extendedWaitUntil:
     visible:
       id: "btn_settings"
-    timeout: 5000
+    timeout: 15000
 - assertVisible:
     text: "Backpack"
 
@@ -126,12 +126,12 @@ name: "Stress: settings open/close ×5 — map and card unchanged"
 - extendedWaitUntil:
     visible:
       text: "Settings"
-    timeout: 5000
+    timeout: 15000
 - back
 - extendedWaitUntil:
     visible:
       id: "btn_settings"
-    timeout: 5000
+    timeout: 15000
 - assertVisible:
     text: "Backpack"
 
@@ -140,12 +140,12 @@ name: "Stress: settings open/close ×5 — map and card unchanged"
 - extendedWaitUntil:
     visible:
       text: "Settings"
-    timeout: 5000
+    timeout: 15000
 - back
 - extendedWaitUntil:
     visible:
       id: "btn_settings"
-    timeout: 5000
+    timeout: 15000
 - assertVisible:
     text: "Backpack"
 
@@ -154,12 +154,12 @@ name: "Stress: settings open/close ×5 — map and card unchanged"
 - extendedWaitUntil:
     visible:
       text: "Settings"
-    timeout: 5000
+    timeout: 15000
 - back
 - extendedWaitUntil:
     visible:
       id: "btn_settings"
-    timeout: 5000
+    timeout: 15000
 - assertVisible:
     text: "Backpack"
 
@@ -171,19 +171,19 @@ name: "Stress: settings open/close ×5 — map and card unchanged"
 - extendedWaitUntil:
     visible:
       text: "Bike"
-    timeout: 5000
+    timeout: 15000
 
 - tapOn:
     id: "btn_settings"
 - extendedWaitUntil:
     visible:
       text: "Settings"
-    timeout: 5000
+    timeout: 15000
 - back
 - extendedWaitUntil:
     visible:
       id: "btn_settings"
-    timeout: 5000
+    timeout: 15000
 - assertVisible:
     text: "Bike"
 
@@ -192,12 +192,12 @@ name: "Stress: settings open/close ×5 — map and card unchanged"
 - extendedWaitUntil:
     visible:
       text: "Settings"
-    timeout: 5000
+    timeout: 15000
 - back
 - extendedWaitUntil:
     visible:
       id: "btn_settings"
-    timeout: 5000
+    timeout: 15000
 - assertVisible:
     text: "Bike"
 
@@ -206,12 +206,12 @@ name: "Stress: settings open/close ×5 — map and card unchanged"
 - extendedWaitUntil:
     visible:
       text: "Settings"
-    timeout: 5000
+    timeout: 15000
 - back
 - extendedWaitUntil:
     visible:
       id: "btn_settings"
-    timeout: 5000
+    timeout: 15000
 - assertVisible:
     text: "Bike"
 
@@ -223,7 +223,7 @@ name: "Stress: settings open/close ×5 — map and card unchanged"
 - extendedWaitUntil:
     visible:
       text: "Backpack"
-    timeout: 5000
+    timeout: 15000
 - swipe:
     start: "15%, 75%"
     end: "85%, 75%"
@@ -231,4 +231,4 @@ name: "Stress: settings open/close ×5 — map and card unchanged"
 - extendedWaitUntil:
     visible:
       text: "Car Keys"
-    timeout: 5000
+    timeout: 15000

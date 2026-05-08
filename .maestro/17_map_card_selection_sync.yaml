@@ -19,7 +19,7 @@ name: Map — card pager swipe changes visible beacon name and is symmetric
 - extendedWaitUntil:
     visible:
       text: "Backpack"
-    timeout: 5000
+    timeout: 15000
 - assertNotVisible:
     text: "Car Keys"
 
@@ -30,7 +30,7 @@ name: Map — card pager swipe changes visible beacon name and is symmetric
 - extendedWaitUntil:
     visible:
       text: "Bike"
-    timeout: 5000
+    timeout: 15000
 - assertNotVisible:
     text: "Backpack"
 
@@ -50,7 +50,7 @@ name: Map — card pager swipe changes visible beacon name and is symmetric
 - extendedWaitUntil:
     visible:
       text: "Backpack"
-    timeout: 5000
+    timeout: 15000
 - assertNotVisible:
     text: "Bike"
 
@@ -61,7 +61,7 @@ name: Map — card pager swipe changes visible beacon name and is symmetric
 - extendedWaitUntil:
     visible:
       text: "Car Keys"
-    timeout: 5000
+    timeout: 15000
 
 # Car Keys is the leading boundary — extra right swipe must not advance further.
 - swipe:

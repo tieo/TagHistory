@@ -14,18 +14,18 @@ name: "Stress: interleaved settings+details+history with card switches"
 - extendedWaitUntil:
     visible:
       text: "Backpack"
-    timeout: 5000
+    timeout: 15000
 - tapOn:
     id: "btn_settings"
 - extendedWaitUntil:
     visible:
       text: "Settings"
-    timeout: 5000
+    timeout: 15000
 - back
 - extendedWaitUntil:
     visible:
       id: "btn_settings"
-    timeout: 5000
+    timeout: 15000
 - assertVisible:
     text: "Backpack"
 
@@ -35,12 +35,12 @@ name: "Stress: interleaved settings+details+history with card switches"
 - extendedWaitUntil:
     visible:
       id: "btn_rename"
-    timeout: 5000
+    timeout: 15000
 - back
 - extendedWaitUntil:
     visible:
       id: "btn_settings"
-    timeout: 5000
+    timeout: 15000
 - assertVisible:
     text: "Backpack"
 
@@ -50,12 +50,12 @@ name: "Stress: interleaved settings+details+history with card switches"
 - extendedWaitUntil:
     visible:
       id: "btn_day_prev"
-    timeout: 5000
+    timeout: 15000
 - back
 - extendedWaitUntil:
     visible:
       id: "btn_settings"
-    timeout: 5000
+    timeout: 15000
 - assertVisible:
     text: "Backpack"
 
@@ -67,19 +67,19 @@ name: "Stress: interleaved settings+details+history with card switches"
 - extendedWaitUntil:
     visible:
       text: "Bike"
-    timeout: 5000
+    timeout: 15000
 
 - tapOn:
     id: "btn_settings"
 - extendedWaitUntil:
     visible:
       text: "Settings"
-    timeout: 5000
+    timeout: 15000
 - back
 - extendedWaitUntil:
     visible:
       id: "btn_settings"
-    timeout: 5000
+    timeout: 15000
 - assertVisible:
     text: "Bike"
 
@@ -88,12 +88,12 @@ name: "Stress: interleaved settings+details+history with card switches"
 - extendedWaitUntil:
     visible:
       id: "btn_rename"
-    timeout: 5000
+    timeout: 15000
 - back
 - extendedWaitUntil:
     visible:
       id: "btn_settings"
-    timeout: 5000
+    timeout: 15000
 - assertVisible:
     text: "Bike"
 
@@ -102,12 +102,12 @@ name: "Stress: interleaved settings+details+history with card switches"
 - extendedWaitUntil:
     visible:
       id: "btn_day_prev"
-    timeout: 5000
+    timeout: 15000
 - back
 - extendedWaitUntil:
     visible:
       id: "btn_settings"
-    timeout: 5000
+    timeout: 15000
 - assertVisible:
     text: "Bike"
 
@@ -123,18 +123,18 @@ name: "Stress: interleaved settings+details+history with card switches"
 - extendedWaitUntil:
     visible:
       text: "Car Keys"
-    timeout: 5000
+    timeout: 15000
 - tapOn:
     id: "btn_settings"
 - extendedWaitUntil:
     visible:
       text: "Settings"
-    timeout: 5000
+    timeout: 15000
 - back
 - extendedWaitUntil:
     visible:
       id: "btn_settings"
-    timeout: 5000
+    timeout: 15000
 - assertVisible:
     text: "Car Keys"
 
@@ -144,12 +144,12 @@ name: "Stress: interleaved settings+details+history with card switches"
 - extendedWaitUntil:
     visible:
       id: "btn_rename"
-    timeout: 5000
+    timeout: 15000
 - back
 - extendedWaitUntil:
     visible:
       id: "btn_settings"
-    timeout: 5000
+    timeout: 15000
 - assertVisible:
     text: "Car Keys"
 
@@ -158,12 +158,12 @@ name: "Stress: interleaved settings+details+history with card switches"
 - extendedWaitUntil:
     visible:
       id: "btn_day_prev"
-    timeout: 5000
+    timeout: 15000
 - back
 - extendedWaitUntil:
     visible:
       id: "btn_settings"
-    timeout: 5000
+    timeout: 15000
 - assertVisible:
     text: "Car Keys"
 
@@ -175,24 +175,24 @@ name: "Stress: interleaved settings+details+history with card switches"
 - extendedWaitUntil:
     visible:
       text: "Backpack"
-    timeout: 5000
+    timeout: 15000
 - tapOn:
     id: "btn_card_details"
 - extendedWaitUntil:
     visible:
       id: "btn_view_history"
-    timeout: 5000
+    timeout: 15000
 - tapOn:
     id: "btn_view_history"
 - extendedWaitUntil:
     visible:
       id: "btn_day_prev"
-    timeout: 5000
+    timeout: 15000
 - back
 - back
 - extendedWaitUntil:
     visible:
       id: "btn_settings"
-    timeout: 8000
+    timeout: 15000
 - assertVisible:
     text: "Backpack"

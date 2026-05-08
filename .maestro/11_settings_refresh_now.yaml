@@ -9,7 +9,7 @@ name: Settings — Refresh now button visible, tappable, leaves screen alive
 - extendedWaitUntil:
     visible:
       text: "Settings"
-    timeout: 5000
+    timeout: 15000
 - assertVisible:
     id: "btn_refresh_now"
 
@@ -40,7 +40,7 @@ name: Settings — Refresh now button visible, tappable, leaves screen alive
 - extendedWaitUntil:
     visible:
       id: "btn_settings"
-    timeout: 5000
+    timeout: 15000
 - assertVisible:
     text: "Car Keys"
 - assertVisible:

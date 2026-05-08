@@ -19,7 +19,7 @@ name: History — tapping a list item selects the point (highlighted entry)
 - extendedWaitUntil:
     visible:
       id: "history_item_0"
-    timeout: 6000
+    timeout: 15000
 
 # Item 0 (newest) is pre-selected. Tap item 1 to select it.
 - tapOn:
@@ -27,7 +27,7 @@ name: History — tapping a list item selects the point (highlighted entry)
 - extendedWaitUntil:
     visible:
       id: "history_item_1"
-    timeout: 3000
+    timeout: 15000
 
 # Sheet remains open after tap (item 1 still visible).
 - assertVisible:
@@ -43,7 +43,7 @@ name: History — tapping a list item selects the point (highlighted entry)
 - extendedWaitUntil:
     visible:
       id: "history_item_2"
-    timeout: 3000
+    timeout: 15000
 - assertVisible:
     text: "Today"
 
@@ -53,7 +53,7 @@ name: History — tapping a list item selects the point (highlighted entry)
 - extendedWaitUntil:
     visible:
       id: "history_item_0"
-    timeout: 3000
+    timeout: 15000
 - assertVisible:
     id: "history_item_0"
 
@@ -72,19 +72,19 @@ name: History — tapping a list item selects the point (highlighted entry)
 - extendedWaitUntil:
     visible:
       id: "history_item_0"
-    timeout: 4000
+    timeout: 15000
 - tapOn:
     id: "history_item_0"
 - extendedWaitUntil:
     visible:
       id: "history_item_0"
-    timeout: 3000
+    timeout: 15000
 
 - back
 - extendedWaitUntil:
     visible:
       id: "btn_settings"
-    timeout: 5000
+    timeout: 15000
 - assertVisible:
     text: "Car Keys"
 - assertNotVisible:

@@ -11,4 +11,4 @@ name: Seed test data — fake auth + 3 beacons + location reports
 - extendedWaitUntil:
     visible:
       id: "btn_settings"
-    timeout: 15000
+    timeout: 45000

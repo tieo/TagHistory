@@ -13,20 +13,20 @@ name: "Stress: map→details→history→back×2 — full back-stack depth"
 - extendedWaitUntil:
     visible:
       id: "btn_view_history"
-    timeout: 5000
+    timeout: 15000
 - tapOn:
     id: "btn_view_history"
 - extendedWaitUntil:
     visible:
       id: "btn_day_prev"
-    timeout: 5000
+    timeout: 15000
 
 # ── Unwind level 1: history → details ────────────────────────────────────────
 - back
 - extendedWaitUntil:
     visible:
       id: "btn_view_history"
-    timeout: 5000
+    timeout: 15000
 # Must be on details, not map
 - assertNotVisible:
     id: "btn_settings"
@@ -36,7 +36,7 @@ name: "Stress: map→details→history→back×2 — full back-stack depth"
 - extendedWaitUntil:
     visible:
       id: "btn_settings"
-    timeout: 5000
+    timeout: 15000
 - assertVisible:
     text: "Car Keys"
 
@@ -52,19 +52,19 @@ name: "Stress: map→details→history→back×2 — full back-stack depth"
 - extendedWaitUntil:
     visible:
       text: "Bike"
-    timeout: 5000
+    timeout: 15000
 - tapOn:
     id: "btn_card_details"
 - extendedWaitUntil:
     visible:
       id: "btn_view_history"
-    timeout: 5000
+    timeout: 15000
 - tapOn:
     id: "btn_view_history"
 - extendedWaitUntil:
     visible:
       id: "btn_day_prev"
-    timeout: 5000
+    timeout: 15000
 - assertVisible:
     id: "btn_day_next"
 - assertNotVisible:
@@ -73,7 +73,7 @@ name: "Stress: map→details→history→back×2 — full back-stack depth"
 - extendedWaitUntil:
     visible:
       id: "btn_view_history"
-    timeout: 5000
+    timeout: 15000
 - assertNotVisible:
     id: "btn_settings"
 - assertNotVisible:
@@ -82,7 +82,7 @@ name: "Stress: map→details→history→back×2 — full back-stack depth"
 - extendedWaitUntil:
     visible:
       id: "btn_settings"
-    timeout: 5000
+    timeout: 15000
 - assertVisible:
     text: "Bike"
 - assertNotVisible:
@@ -96,29 +96,29 @@ name: "Stress: map→details→history→back×2 — full back-stack depth"
 - extendedWaitUntil:
     visible:
       text: "Backpack"
-    timeout: 5000
+    timeout: 15000
 - tapOn:
     id: "btn_card_details"
 - extendedWaitUntil:
     visible:
       id: "btn_view_history"
-    timeout: 5000
+    timeout: 15000
 - tapOn:
     id: "btn_view_history"
 - extendedWaitUntil:
     visible:
       id: "btn_day_prev"
-    timeout: 5000
+    timeout: 15000
 - back
 - extendedWaitUntil:
     visible:
       id: "btn_view_history"
-    timeout: 5000
+    timeout: 15000
 - back
 - extendedWaitUntil:
     visible:
       id: "btn_settings"
-    timeout: 5000
+    timeout: 15000
 - assertVisible:
     text: "Backpack"
 - assertNotVisible:

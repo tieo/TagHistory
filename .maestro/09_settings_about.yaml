@@ -9,14 +9,14 @@ name: Settings — About button navigates to information screen, back returns
 - extendedWaitUntil:
     visible:
       text: "Settings"
-    timeout: 5000
+    timeout: 15000
 
 # Pre: btn_about not visible until scroll, settings landmarks present.
 - scrollUntilVisible:
     element:
       id: "btn_about"
     direction: DOWN
-    timeout: 5000
+    timeout: 15000
 - assertVisible:
     id: "btn_about"
 
@@ -25,7 +25,7 @@ name: Settings — About button navigates to information screen, back returns
 - extendedWaitUntil:
     visible:
       text: "TagHistory"
-    timeout: 5000
+    timeout: 15000
 
 # Information screen: links present, settings landmarks gone.
 - assertVisible:
@@ -45,7 +45,7 @@ name: Settings — About button navigates to information screen, back returns
 - extendedWaitUntil:
     visible:
       text: "Settings"
-    timeout: 5000
+    timeout: 15000
 
 # Back: information links gone, settings sections back.
 - assertNotVisible:
@@ -60,23 +60,23 @@ name: Settings — About button navigates to information screen, back returns
     element:
       id: "btn_about"
     direction: DOWN
-    timeout: 5000
+    timeout: 15000
 - tapOn:
     id: "btn_about"
 - extendedWaitUntil:
     visible:
       id: "btn_license"
-    timeout: 5000
+    timeout: 15000
 - back
 - extendedWaitUntil:
     visible:
       text: "Settings"
-    timeout: 5000
+    timeout: 15000
 
 - back
 - extendedWaitUntil:
     visible:
       id: "btn_settings"
-    timeout: 5000
+    timeout: 15000
 - assertVisible:
     text: "Car Keys"

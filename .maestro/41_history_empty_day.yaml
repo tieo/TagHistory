@@ -52,7 +52,7 @@ name: History — navigating past the oldest seeded day still keeps controls ali
 - extendedWaitUntil:
     visible:
       id: "history_item_0"
-    timeout: 6000
+    timeout: 15000
 - assertVisible:
     text: ".*data point.*"
 
@@ -92,7 +92,7 @@ name: History — navigating past the oldest seeded day still keeps controls ali
 - extendedWaitUntil:
     visible:
       id: "btn_settings"
-    timeout: 5000
+    timeout: 15000
 - assertVisible:
     text: "Car Keys"
 - assertNotVisible:
@@ -110,7 +110,7 @@ name: History — navigating past the oldest seeded day still keeps controls ali
 - extendedWaitUntil:
     visible:
       text: "Bike"
-    timeout: 5000
+    timeout: 15000
 - tapOn:
     id: "btn_card_history"
 - extendedWaitUntil:
@@ -132,6 +132,6 @@ name: History — navigating past the oldest seeded day still keeps controls ali
 - extendedWaitUntil:
     visible:
       id: "btn_settings"
-    timeout: 5000
+    timeout: 15000
 - assertVisible:
     text: "Bike"

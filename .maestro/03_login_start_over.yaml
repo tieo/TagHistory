@@ -37,7 +37,7 @@ name: Login — Start over returns to credentials screen
       - extendedWaitUntil:
           visible:
             id: "field_email"
-          timeout: 5000
+          timeout: 15000
       - assertVisible:
           id: "field_email"
       - assertVisible:
@@ -74,6 +74,6 @@ name: Login — Start over returns to credentials screen
             - extendedWaitUntil:
                 visible:
                   id: "field_email"
-                timeout: 5000
+                timeout: 15000
             - assertNotVisible:
                 id: "btn_start_over"

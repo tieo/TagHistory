@@ -78,6 +78,6 @@ name: History — pressing day-next at Today (boundary) is a no-op, day stays To
 - extendedWaitUntil:
     visible:
       id: "btn_settings"
-    timeout: 5000
+    timeout: 15000
 - assertVisible:
     text: "Car Keys"

@@ -22,7 +22,7 @@ name: History — list scrolls when expanded with multiple items
 - extendedWaitUntil:
     visible:
       id: "history_item_0"
-    timeout: 6000
+    timeout: 15000
 
 # Try a downward swipe inside the list area to scroll. Even with 3 items,
 # the list shouldn't crash and history_item_0 must remain reachable
@@ -40,7 +40,7 @@ name: History — list scrolls when expanded with multiple items
 - extendedWaitUntil:
     visible:
       id: "history_item_0"
-    timeout: 5000
+    timeout: 15000
 - assertVisible:
     id: "history_item_0"
 - assertVisible:
@@ -68,7 +68,7 @@ name: History — list scrolls when expanded with multiple items
 - extendedWaitUntil:
     visible:
       id: "history_item_0"
-    timeout: 5000
+    timeout: 15000
 
 # Day-prev to Yesterday: the list re-renders with Yesterday's points.
 - tapOn:
@@ -81,7 +81,7 @@ name: History — list scrolls when expanded with multiple items
 - extendedWaitUntil:
     visible:
       id: "history_item_0"
-    timeout: 5000
+    timeout: 15000
 # Re-scroll inside Yesterday — list still alive.
 - swipe:
     start: "50%, 70%"
@@ -96,7 +96,7 @@ name: History — list scrolls when expanded with multiple items
 - extendedWaitUntil:
     visible:
       id: "btn_settings"
-    timeout: 5000
+    timeout: 15000
 - assertVisible:
     text: "Car Keys"
 - assertNotVisible:

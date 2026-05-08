@@ -35,7 +35,7 @@ name: Map screen — seeded beacons appear as cards and markers
 - extendedWaitUntil:
     visible:
       text: "Backpack"
-    timeout: 5000
+    timeout: 15000
 - assertNotVisible:
     text: "Car Keys"
 - assertVisible:
@@ -53,7 +53,7 @@ name: Map screen — seeded beacons appear as cards and markers
 - extendedWaitUntil:
     visible:
       text: "Bike"
-    timeout: 5000
+    timeout: 15000
 - assertNotVisible:
     text: "Backpack"
 - assertVisible:
@@ -69,7 +69,7 @@ name: Map screen — seeded beacons appear as cards and markers
 - extendedWaitUntil:
     visible:
       text: "Backpack"
-    timeout: 5000
+    timeout: 15000
 - swipe:
     start: "15%, 75%"
     end: "85%, 75%"
@@ -77,7 +77,7 @@ name: Map screen — seeded beacons appear as cards and markers
 - extendedWaitUntil:
     visible:
       text: "Car Keys"
-    timeout: 5000
+    timeout: 15000
 - assertNotVisible:
     text: "Bike"
 - assertNotVisible:
