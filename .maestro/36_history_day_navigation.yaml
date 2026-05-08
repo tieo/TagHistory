@@ -16,6 +16,10 @@ name: History — day navigation prev/next changes point list
     start: "50%, 88%"
     end: "50%, 40%"
     duration: 400
+- swipe:
+    start: "50%, 70%"
+    end: "50%, 20%"
+    duration: 400
 - extendedWaitUntil:
     visible:
       text: ".*data point.*"
@@ -73,6 +77,10 @@ name: History — day navigation prev/next changes point list
 - swipe:
     start: "50%, 88%"
     end: "50%, 40%"
+    duration: 400
+- swipe:
+    start: "50%, 70%"
+    end: "50%, 20%"
     duration: 400
 - extendedWaitUntil:
     visible:
@@ -145,6 +153,10 @@ name: History — day navigation prev/next changes point list
 - swipe:
     start: "50%, 88%"
     end: "50%, 40%"
+    duration: 400
+- swipe:
+    start: "50%, 70%"
+    end: "50%, 20%"
     duration: 400
 - extendedWaitUntil:
     visible:

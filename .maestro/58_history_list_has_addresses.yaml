@@ -19,6 +19,10 @@ name: History — expanded list shows item addresses or coords plus times
     start: "50%, 88%"
     end: "50%, 40%"
     duration: 400
+- swipe:
+    start: "50%, 70%"
+    end: "50%, 20%"
+    duration: 400
 - extendedWaitUntil:
     visible:
       id: "history_item_0"
