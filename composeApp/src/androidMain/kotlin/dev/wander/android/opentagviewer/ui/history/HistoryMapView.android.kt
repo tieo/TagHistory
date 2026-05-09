@@ -74,20 +74,32 @@ actual fun HistoryMapView(
     val lastRenderedPointsKey = remember { arrayOf<List<Long>>(emptyList()) }
 
     DisposableEffect(lifecycleOwner, mapView) {
+        // Track whether onDestroy already ran so the lifecycle observer and
+        // the onDispose block don't both call it. MapLibre's MapView crashes
+        // (NPE or "Map has been destroyed") on a second onDestroy when the
+        // user back-navigates: ON_DESTROY fires first, then onDispose tries
+        // to destroy it again as the composable leaves composition.
+        var destroyed = false
+        val safeDestroy = {
+            if (!destroyed) {
+                destroyed = true
+                runCatching { mapView.onDestroy() }
+            }
+        }
         val observer = LifecycleEventObserver { _, event ->
             when (event) {
                 Lifecycle.Event.ON_START -> mapView.onStart()
                 Lifecycle.Event.ON_RESUME -> mapView.onResume()
                 Lifecycle.Event.ON_PAUSE -> mapView.onPause()
                 Lifecycle.Event.ON_STOP -> mapView.onStop()
-                Lifecycle.Event.ON_DESTROY -> mapView.onDestroy()
+                Lifecycle.Event.ON_DESTROY -> safeDestroy()
                 else -> Unit
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose {
             lifecycleOwner.lifecycle.removeObserver(observer)
-            mapView.onDestroy()
+            safeDestroy()
         }
     }
 
@@ -210,10 +222,16 @@ private fun renderPath(
     endpointsSource.setGeoJson(FeatureCollection.fromFeatures(endpointFeatures))
 
     if (fitCamera) {
-        if (latLngs.size == 1) {
-            map.animateCamera(CameraUpdateFactory.newLatLngZoom(latLngs.first(), 14.0))
+        // Center on the first point if we have only one OR if every point
+        // shares the exact same coordinate. LatLngBounds.build() throws on
+        // a degenerate (zero-area) box on some MapLibre Android versions.
+        val distinct = latLngs.distinct()
+        if (distinct.size == 1) {
+            map.animateCamera(CameraUpdateFactory.newLatLngZoom(distinct.first(), 14.0))
         } else {
-            val bounds = LatLngBounds.Builder().apply { latLngs.forEach { include(it) } }.build()
+            val bounds = runCatching {
+                LatLngBounds.Builder().apply { distinct.forEach { include(it) } }.build()
+            }.getOrNull() ?: return
             map.animateCamera(
                 CameraUpdateFactory.newLatLngBounds(bounds, BOUNDS_PADDING_PX),
                 400,
