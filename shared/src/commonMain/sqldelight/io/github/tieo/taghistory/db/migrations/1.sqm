@@ -1,0 +1,9 @@
+-- v1 -> v2: add GeocodeCache. New table only; no data movement. Fresh
+-- installs get the table from GeocodeCache.sq via Schema.create; existing
+-- DBs hit this migration on first open after the upgrade.
+
+CREATE TABLE IF NOT EXISTS GeocodeCache (
+    rounded_key TEXT NOT NULL PRIMARY KEY,
+    address TEXT NOT NULL,
+    last_used_ms INTEGER NOT NULL
+);

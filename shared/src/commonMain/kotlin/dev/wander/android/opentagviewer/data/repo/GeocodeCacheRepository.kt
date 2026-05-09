@@ -17,23 +17,25 @@ class GeocodeCacheRepository(
     private val nowMs: () -> Long = { Clock.System.now().toEpochMilliseconds() },
 ) {
 
-    fun get(lat: Double, lon: Double): String? {
+    fun get(lat: Double, lon: Double): String? = runCatching {
         val key = roundedKey(lat, lon)
-        val hit = db.geocodeCacheQueries.getByKey(key).executeAsOneOrNull() ?: return null
+        val hit = db.geocodeCacheQueries.getByKey(key).executeAsOneOrNull() ?: return@runCatching null
         // Best-effort touch; not transactional with the read.
-        db.geocodeCacheQueries.touch(nowMs(), key)
-        return hit
-    }
+        runCatching { db.geocodeCacheQueries.touch(nowMs(), key) }
+        hit
+    }.getOrNull()
 
-    fun getMany(coords: Collection<Pair<Double, Double>>): Map<String, String> {
-        if (coords.isEmpty()) return emptyMap()
+    fun getMany(coords: Collection<Pair<Double, Double>>): Map<String, String> = runCatching {
+        if (coords.isEmpty()) return@runCatching emptyMap()
         val keys = coords.map { (lat, lon) -> roundedKey(lat, lon) }.distinct()
-        return db.geocodeCacheQueries.getByKeys(keys).executeAsList()
+        db.geocodeCacheQueries.getByKeys(keys).executeAsList()
             .associate { it.rounded_key to it.address }
-    }
+    }.getOrElse { emptyMap() }
 
     fun put(lat: Double, lon: Double, address: String) {
-        db.geocodeCacheQueries.upsert(roundedKey(lat, lon), address, nowMs())
+        runCatching {
+            db.geocodeCacheQueries.upsert(roundedKey(lat, lon), address, nowMs())
+        }
     }
 
     /** Stable cache key matching the precision used everywhere else. */
