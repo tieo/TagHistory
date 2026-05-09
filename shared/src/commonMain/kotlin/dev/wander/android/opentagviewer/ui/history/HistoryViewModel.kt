@@ -4,12 +4,15 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.github.tieo.taghistory.data.model.BeaconLocationReport
 import io.github.tieo.taghistory.data.repo.BeaconRepository
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlin.time.Clock
 import kotlin.time.ExperimentalTime
 
@@ -29,6 +32,7 @@ class HistoryViewModel(
         { _, _, _ -> emptyList() },
     private val nowMs: () -> Long = { Clock.System.now().toEpochMilliseconds() },
     private val scope: CoroutineScope? = null,
+    private val ioDispatcher: CoroutineDispatcher = Dispatchers.Default,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(HistoryUiState())
@@ -38,7 +42,7 @@ class HistoryViewModel(
 
     fun load(startUnixMs: Long, endUnixMs: Long) {
         _state.update { it.copy(rangeStartMs = startUnixMs, rangeEndMs = endUnixMs) }
-        emitPoints()
+        runScope.launch { emitPoints() }
     }
 
     fun loadLast24h() {
@@ -60,7 +64,9 @@ class HistoryViewModel(
             try {
                 val fetched = fetchRange(beaconId, startUnixMs, endUnixMs)
                 if (fetched.isNotEmpty()) {
-                    beaconRepo.storeToLocationCache(mapOf(beaconId to fetched))
+                    withContext(ioDispatcher) {
+                        beaconRepo.storeToLocationCache(mapOf(beaconId to fetched))
+                    }
                 }
                 emitPoints()
                 _state.update { it.copy(isLoading = false) }
@@ -72,12 +78,15 @@ class HistoryViewModel(
         }
     }
 
-    private fun emitPoints() {
+    private suspend fun emitPoints() {
         val start = _state.value.rangeStartMs ?: return
         val end = _state.value.rangeEndMs ?: return
-        val reports = beaconRepo.getLocationsFor(beaconId, start, end)
-            .sortedByDescending { it.timestamp }
-        _state.update { it.copy(points = reports.map { r -> r.toUi() }) }
+        val points = withContext(ioDispatcher) {
+            beaconRepo.getLocationsFor(beaconId, start, end)
+                .sortedByDescending { it.timestamp }
+                .map { it.toUi() }
+        }
+        _state.update { it.copy(points = points) }
     }
 
     private fun BeaconLocationReport.toUi(): HistoryPoint = HistoryPoint(

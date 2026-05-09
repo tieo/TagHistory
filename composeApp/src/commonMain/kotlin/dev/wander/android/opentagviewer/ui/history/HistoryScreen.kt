@@ -29,13 +29,13 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SheetValue
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberBottomSheetScaffoldState
 import androidx.compose.material3.rememberStandardBottomSheetState
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -58,6 +58,10 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlin.time.Clock
 import kotlin.time.ExperimentalTime
 import kotlin.time.Instant
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 
 @OptIn(ExperimentalTime::class, ExperimentalMaterial3Api::class)
 @Composable
@@ -79,24 +83,46 @@ fun HistoryScreen(
     }
 
     val days = remember(state.points) { buildDayBuckets(state.points) }
-    var dayIdx by remember(days) { mutableIntStateOf(0) }
+
+    // Persist day selection by day-key, not index, so that fetchAndLoad
+    // finishing mid-swipe doesn't yank the user back to today.
+    var selectedDayKey by remember { mutableStateOf<Long?>(null) }
+    val dayIdx = remember(days, selectedDayKey) {
+        if (selectedDayKey == null) 0
+        else days.indexOfFirst { it.key == selectedDayKey }.let {
+            if (it >= 0) it else 0
+        }
+    }
     val selectedDay = days.getOrNull(dayIdx)
 
     val chronological = remember(selectedDay) {
         selectedDay?.points?.sortedBy { it.timestampMs } ?: emptyList()
     }
 
-    var selectedPointIdx by remember(chronological) {
-        mutableIntStateOf((chronological.size - 1).coerceAtLeast(0))
+    // Persist selected-point by timestampMs so refresh-mid-view doesn't
+    // jump the selection.
+    var selectedPointMs by remember { mutableLongStateOf(0L) }
+    val selectedPointIdx = remember(chronological, selectedPointMs) {
+        chronological.indexOfFirst { it.timestampMs == selectedPointMs }
+            .let { if (it >= 0) it else (chronological.size - 1).coerceAtLeast(0) }
     }
 
     val addressCache = remember { mutableStateMapOf<Long, String>() }
     if (reverseGeocode != null) {
         LaunchedEffect(state.points) {
-            for (point in state.points) {
-                if (!addressCache.containsKey(point.timestampMs)) {
-                    val address = reverseGeocode(point.latitude, point.longitude)
-                    if (address != null) addressCache[point.timestampMs] = address
+            // Fan out geocoding with bounded concurrency. The Android
+            // Geocoder is sequential per-call and a list of 100+ history
+            // points used to take well over a minute to fully resolve.
+            val gate = Semaphore(6)
+            coroutineScope {
+                for (point in state.points) {
+                    if (addressCache.containsKey(point.timestampMs)) continue
+                    async {
+                        gate.withPermit {
+                            val address = reverseGeocode(point.latitude, point.longitude)
+                            if (address != null) addressCache[point.timestampMs] = address
+                        }
+                    }
                 }
             }
         }
@@ -116,8 +142,9 @@ fun HistoryScreen(
     val listState = rememberLazyListState()
     LaunchedEffect(selectedPointIdx, chronological.size) {
         if (chronological.isNotEmpty()) {
-            val listIdx = chronological.size - 1 - selectedPointIdx
-            listState.animateScrollToItem(listIdx)
+            val listIdx = (chronological.size - 1 - selectedPointIdx)
+                .coerceIn(0, (chronological.size - 1).coerceAtLeast(0))
+            listState.scrollToItem(listIdx)
         }
     }
 
@@ -136,9 +163,21 @@ fun HistoryScreen(
                 listState = listState,
                 addressCache = addressCache,
                 lastRenderedCount = lastRenderedCount,
-                onDayPrev = { if (dayIdx < days.size - 1) dayIdx++ },
-                onDayNext = { if (dayIdx > 0) dayIdx-- },
-                onSelectPoint = { selectedPointIdx = it },
+                onDayPrev = {
+                    if (dayIdx < days.size - 1) {
+                        selectedDayKey = days[dayIdx + 1].key
+                        selectedPointMs = 0L
+                    }
+                },
+                onDayNext = {
+                    if (dayIdx > 0) {
+                        selectedDayKey = days[dayIdx - 1].key
+                        selectedPointMs = 0L
+                    }
+                },
+                onSelectPoint = { idx ->
+                    chronological.getOrNull(idx)?.let { selectedPointMs = it.timestampMs }
+                },
                 onRetry = {
                     val end = Clock.System.now().toEpochMilliseconds()
                     viewModel.fetchAndLoad(end - 7L * DAY_MS, end)
@@ -273,7 +312,23 @@ private fun SheetContent(
         }
 
         if (isLoading) {
-            LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center,
+            ) {
+                AlwaysSpinningIndicator(
+                    modifier = Modifier.size(14.dp),
+                    strokeWidth = 2.dp,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    "Refreshing…",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
         }
 
         if (error != null && chronological.isEmpty()) {

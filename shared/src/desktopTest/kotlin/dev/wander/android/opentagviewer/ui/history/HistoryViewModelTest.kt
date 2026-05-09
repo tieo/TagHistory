@@ -10,6 +10,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
@@ -43,8 +44,11 @@ class HistoryViewModelTest {
         seedLocation("b1", 300L)
         seedLocation("b1", 200L)
         seedLocation("b1", 999_999L) // outside window
-        val vm = HistoryViewModel(beaconRepo, "b1", scope = this)
+        val vm = HistoryViewModel(
+            beaconRepo, "b1", scope = this, ioDispatcher = Dispatchers.Unconfined,
+        )
         vm.load(0L, 500L)
+        advanceUntilIdle()
         val points = vm.state.value.points.map { it.timestampMs }
         assertEquals(listOf(300L, 200L, 100L), points)
     }
@@ -59,8 +63,10 @@ class HistoryViewModelTest {
             beaconId = "b1",
             nowMs = { nowMs },
             scope = this,
+            ioDispatcher = Dispatchers.Unconfined,
         )
         vm.loadLast24h()
+        advanceUntilIdle()
         assertEquals(1, vm.state.value.points.size)
     }
 
@@ -78,6 +84,7 @@ class HistoryViewModelTest {
             beaconId = "b1",
             fetchRange = { _, _, _ -> fetched },
             scope = this,
+            ioDispatcher = Dispatchers.Unconfined,
         )
         vm.fetchAndLoad(0L, 1_000L)
         advanceUntilIdle()
@@ -93,6 +100,7 @@ class HistoryViewModelTest {
             beaconId = "b1",
             fetchRange = { _, _, _ -> throw RuntimeException("boom") },
             scope = this,
+            ioDispatcher = Dispatchers.Unconfined,
         )
         vm.fetchAndLoad(0L, 1L)
         advanceUntilIdle()
@@ -108,6 +116,7 @@ class HistoryViewModelTest {
             beaconId = "b1",
             fetchRange = { _, _, _ -> emptyList() },
             scope = this,
+            ioDispatcher = Dispatchers.Unconfined,
         )
         vm.fetchAndLoad(0L, 1_000L)
         advanceUntilIdle()
