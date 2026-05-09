@@ -92,7 +92,17 @@ class HistoryViewModel(
         }
         runScope.launch {
             try {
-                val fetched = fetchRange(beaconId, startUnixMs, endUnixMs)
+                // Hop off Main for the actual fetch. fetchRange is the
+                // platform-injected lambda that drives AppleReportsService:
+                // HTTPS calls + AES-GCM decryption of every report. None
+                // of those are suspending boundaries on their own, so
+                // without an explicit dispatcher hop they run on
+                // viewModelScope = Main.immediate and freeze the UI for
+                // the entire fetch + decrypt window (multiple seconds on
+                // a real device with a populated cache).
+                val fetched = withContext(ioDispatcher) {
+                    fetchRange(beaconId, startUnixMs, endUnixMs)
+                }
                 PerfTrace.mark("network fetch done (${fetched.size})")
                 val newRowsAdded = fetched.isNotEmpty()
                 if (newRowsAdded) {

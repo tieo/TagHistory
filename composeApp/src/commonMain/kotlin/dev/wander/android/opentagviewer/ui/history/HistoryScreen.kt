@@ -104,10 +104,12 @@ fun HistoryScreen(
     LaunchedEffect(Unit) {
         PerfTrace.start("history-open beacon=$title")
         val end = Clock.System.now().toEpochMilliseconds()
-        // Show cached data immediately so the screen isn't blank for 15s
-        // while the network fetch runs.
+        // DB-only path. Reports were already fetched + decrypted by the
+        // map screen's periodic refresh and persisted by the sync
+        // orchestrator, so opening history shouldn't re-hit Apple every
+        // time. The "Retry" button on the error block + a future
+        // pull-to-refresh stay as opt-in entrypoints into fetchAndLoad.
         viewModel.load(end - 7L * DAY_MS, end)
-        viewModel.fetchAndLoad(end - 7L * DAY_MS, end)
     }
     LaunchedEffect(state.points.size) {
         PerfTrace.mark("HistoryScreen recompose points=${state.points.size}")
