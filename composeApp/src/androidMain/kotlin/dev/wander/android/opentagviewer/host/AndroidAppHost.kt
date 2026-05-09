@@ -19,6 +19,7 @@ import io.github.tieo.taghistory.apple.mobileme.MobileMeClient
 import io.github.tieo.taghistory.apple.reports.AppleReportsService
 import io.github.tieo.taghistory.apple.reports.LocationReportsClient
 import io.github.tieo.taghistory.data.repo.BeaconRepository
+import io.github.tieo.taghistory.data.repo.GeocodeCacheRepository
 import io.github.tieo.taghistory.data.repo.UserAuthRepository
 import io.github.tieo.taghistory.data.repo.UserDataRepository
 import io.github.tieo.taghistory.data.storage.SecureBlobStore
@@ -61,7 +62,15 @@ class AndroidAppHost private constructor(
     private val geocoder: Geocoder? =
         if (Geocoder.isPresent()) Geocoder(context, Locale.getDefault()) else null
 
-    private suspend fun reverseGeocode(lat: Double, lon: Double): String? {
+    private val geocodeCacheRepo by lazy { GeocodeCacheRepository(db) }
+
+    /**
+     * Raw Geocoder call with no cache. The on-disk cache is layered on
+     * top of this in [reverseGeocodeWithCache] (used by the map screen)
+     * and inside HistoryViewModel (which deduplicates by rounded key
+     * before calling here).
+     */
+    private suspend fun rawReverseGeocode(lat: Double, lon: Double): String? {
         val gc = geocoder ?: return null
         return withContext(Dispatchers.IO) {
             runCatching {
@@ -70,6 +79,22 @@ class AndroidAppHost private constructor(
             }.getOrNull()
         }
     }
+
+    /**
+     * Cache-aware reverse geocode for the map screen. Cache keyed by
+     * ~1 m rounded coordinates, so repeat visits to the same place
+     * skip the Geocoder entirely.
+     */
+    private suspend fun reverseGeocodeWithCache(lat: Double, lon: Double): String? {
+        geocodeCacheRepo.get(lat, lon)?.let { return it }
+        val resolved = rawReverseGeocode(lat, lon) ?: return null
+        runCatching { geocodeCacheRepo.put(lat, lon, resolved) }
+        return resolved
+    }
+
+    /** Back-compat alias for older callers. */
+    private suspend fun reverseGeocode(lat: Double, lon: Double): String? =
+        reverseGeocodeWithCache(lat, lon)
 
     private val beaconRepo by lazy { BeaconRepository(db) }
     private val userSettingsRepo by lazy {
@@ -244,6 +269,10 @@ class AndroidAppHost private constructor(
                 AppleReportsService(reportsClient, account)
                     .fetchReportsByBeacon(mapOf(id to accessory), from, to)[id] ?: emptyList()
             },
+            // Inject the geocode pipeline pieces so HistoryViewModel can
+            // do its own dedupe-by-rounded-key + parallel fan-out.
+            realReverseGeocode = { lat, lon -> rawReverseGeocode(lat, lon) },
+            geocodeCache = geocodeCacheRepo,
         )
     }
 

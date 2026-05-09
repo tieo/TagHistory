@@ -1,0 +1,29 @@
+-- Reverse-geocode cache. Keyed by rounded lat/lon (5 decimal places ≈ 1 m
+-- precision) so two reports from "the same place" share one Geocoder
+-- call across the entire app lifetime. Apple sends back many reports
+-- with identical coordinates and even small clusters benefit hugely.
+
+CREATE TABLE IF NOT EXISTS GeocodeCache (
+    rounded_key TEXT NOT NULL PRIMARY KEY,
+    address TEXT NOT NULL,
+    last_used_ms INTEGER NOT NULL
+);
+
+getByKey:
+SELECT address FROM GeocodeCache WHERE rounded_key = :key;
+
+getByKeys:
+SELECT rounded_key, address FROM GeocodeCache WHERE rounded_key IN :keys;
+
+upsert:
+INSERT OR REPLACE INTO GeocodeCache(rounded_key, address, last_used_ms)
+VALUES (:key, :address, :nowMs);
+
+touch:
+UPDATE GeocodeCache SET last_used_ms = :nowMs WHERE rounded_key = :key;
+
+evictOlderThan:
+DELETE FROM GeocodeCache WHERE last_used_ms < :cutoffMs;
+
+countAll:
+SELECT COUNT(*) FROM GeocodeCache;

@@ -16,11 +16,16 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.automirrored.filled.TrendingFlat
+import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.Place
 import androidx.compose.material.icons.filled.Timeline
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.BottomSheetScaffold
 import io.github.tieo.taghistory.ui.util.AlwaysSpinningIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -36,16 +41,19 @@ import androidx.compose.material3.rememberBottomSheetScaffoldState
 import androidx.compose.material3.rememberStandardBottomSheetState
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import io.github.tieo.taghistory.ui.map.BasemapCycleButton
 import io.github.tieo.taghistory.ui.map.MapBasemap
 import io.github.tieo.taghistory.ui.map.defaultBasemap
+import io.github.tieo.taghistory.util.PerfTrace
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -54,14 +62,28 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import kotlin.math.PI
+import kotlin.math.atan2
+import kotlin.math.cos
+import kotlin.math.roundToInt
+import kotlin.math.roundToLong
+import kotlin.math.sin
+import kotlin.math.sqrt
 import kotlin.time.Clock
 import kotlin.time.ExperimentalTime
 import kotlin.time.Instant
-import kotlinx.coroutines.async
-import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.sync.Semaphore
-import kotlinx.coroutines.sync.withPermit
 
+/**
+ * History screen for one beacon. Lays the map full-bleed under a
+ * Material3 bottom sheet that hosts the per-day list of points,
+ * Maps-Timeline-style: vertical rail with colored nodes, stop / move
+ * icons, summary header (km · time · stops), date selector, refresh
+ * indicator.
+ *
+ * The ViewModel owns DB access, network fetch, and reverse-geocoding —
+ * this composable only holds the UI's "which day / which point is
+ * selected, is the route hidden" state.
+ */
 @OptIn(ExperimentalTime::class, ExperimentalMaterial3Api::class)
 @Composable
 fun HistoryScreen(
@@ -69,22 +91,33 @@ fun HistoryScreen(
     title: String,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
+    /**
+     * Deprecated: addresses are now resolved + cached by the ViewModel.
+     * Kept on the signature so the existing factory wiring compiles, but
+     * unused. Will be removed once all callers stop passing it.
+     */
+    @Suppress("UNUSED_PARAMETER")
     reverseGeocode: (suspend (Double, Double) -> String?)? = null,
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
 
     LaunchedEffect(Unit) {
+        PerfTrace.start("history-open beacon=$title")
         val end = Clock.System.now().toEpochMilliseconds()
-        // Show cached data immediately so the screen isn't blank for 15s while
-        // the network fetch runs.
+        // Show cached data immediately so the screen isn't blank for 15s
+        // while the network fetch runs.
         viewModel.load(end - 7L * DAY_MS, end)
         viewModel.fetchAndLoad(end - 7L * DAY_MS, end)
+    }
+    LaunchedEffect(state.points.size) {
+        PerfTrace.mark("HistoryScreen recompose points=${state.points.size}")
     }
 
     val days = remember(state.points) { buildDayBuckets(state.points) }
 
-    // Persist day selection by day-key, not index, so that fetchAndLoad
-    // finishing mid-swipe doesn't yank the user back to today.
+    // Day + point selection are persisted by stable key (day-start ms,
+    // point hash id) so the background refresh re-emitting state.points
+    // doesn't snap the user back to today / to the newest point.
     var selectedDayKey by remember { mutableStateOf<Long?>(null) }
     val dayIdx = remember(days, selectedDayKey) {
         if (selectedDayKey == null) 0
@@ -98,33 +131,15 @@ fun HistoryScreen(
         selectedDay?.points?.sortedBy { it.timestampMs } ?: emptyList()
     }
 
-    // Persist selected-point by id so refresh-mid-view doesn't jump the
-    // selection. id is the stable hash from the DB; timestamp collides.
     var selectedPointId by remember { mutableStateOf<String?>(null) }
     val selectedPointIdx = remember(chronological, selectedPointId) {
         chronological.indexOfFirst { it.id == selectedPointId }
             .let { if (it >= 0) it else (chronological.size - 1).coerceAtLeast(0) }
     }
 
-    val addressCache = remember { mutableStateMapOf<String, String>() }
-    if (reverseGeocode != null) {
-        LaunchedEffect(state.points) {
-            // Fan out geocoding with bounded concurrency. The Android
-            // Geocoder is sequential per-call and a list of 100+ history
-            // points used to take well over a minute to fully resolve.
-            val gate = Semaphore(6)
-            coroutineScope {
-                for (point in state.points) {
-                    if (addressCache.containsKey(point.id)) continue
-                    async {
-                        gate.withPermit {
-                            val address = reverseGeocode(point.latitude, point.longitude)
-                            if (address != null) addressCache[point.id] = address
-                        }
-                    }
-                }
-            }
-        }
+    // Daily summary — derived once per chronological list.
+    val summary by remember(chronological) {
+        derivedStateOf { buildDaySummary(chronological) }
     }
 
     val sheetState = rememberStandardBottomSheetState(
@@ -135,6 +150,10 @@ fun HistoryScreen(
 
     val themeDefault = defaultBasemap()
     var basemap by remember(themeDefault) { mutableStateOf(themeDefault) }
+
+    // Maps-style: eye-toggle in the corner hides the polyline. The
+    // dots stay visible so the user can still pick stops out of the map.
+    var routeVisible by remember { mutableStateOf(true) }
 
     var lastRenderedCount by remember { mutableIntStateOf(-1) }
 
@@ -150,17 +169,18 @@ fun HistoryScreen(
     BottomSheetScaffold(
         scaffoldState = scaffoldState,
         modifier = modifier.fillMaxSize(),
-        sheetPeekHeight = 240.dp,
+        // Maps gives the map ~⅔ of the screen at peek; match that.
+        sheetPeekHeight = 180.dp,
         sheetContent = {
             SheetContent(
                 days = days,
                 dayIdx = dayIdx,
                 chronological = chronological,
                 selectedPointIdx = selectedPointIdx,
+                summary = summary,
                 isLoading = state.isLoading,
                 error = state.error,
                 listState = listState,
-                addressCache = addressCache,
                 lastRenderedCount = lastRenderedCount,
                 onDayPrev = {
                     if (dayIdx < days.size - 1) {
@@ -189,10 +209,10 @@ fun HistoryScreen(
                 points = chronological,
                 selectedPointIndex = selectedPointIdx,
                 basemap = basemap,
+                routeVisible = routeVisible,
                 onRendered = { lastRenderedCount = it.size },
                 modifier = Modifier.fillMaxSize(),
             )
-
 
             FilledIconButton(
                 onClick = onBack,
@@ -208,20 +228,38 @@ fun HistoryScreen(
                 Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
             }
 
-            BasemapCycleButton(
-                current = basemap,
-                onCycle = {
-                    basemap = when (basemap) {
-                        MapBasemap.LIGHT -> MapBasemap.DARK
-                        MapBasemap.DARK -> MapBasemap.SATELLITE
-                        MapBasemap.SATELLITE -> MapBasemap.LIGHT
-                    }
-                },
+            Row(
                 modifier = Modifier
                     .align(Alignment.TopEnd)
                     .statusBarsPadding()
                     .padding(end = 12.dp, top = 12.dp),
-            )
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                FilledIconButton(
+                    onClick = { routeVisible = !routeVisible },
+                    colors = IconButtonDefaults.filledIconButtonColors(
+                        containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.92f),
+                        contentColor = MaterialTheme.colorScheme.onSurface,
+                    ),
+                    modifier = Modifier.testTag("btn_route_visibility"),
+                ) {
+                    Icon(
+                        imageVector = if (routeVisible) Icons.Filled.Visibility
+                                      else Icons.Filled.VisibilityOff,
+                        contentDescription = if (routeVisible) "Hide route" else "Show route",
+                    )
+                }
+                BasemapCycleButton(
+                    current = basemap,
+                    onCycle = {
+                        basemap = when (basemap) {
+                            MapBasemap.LIGHT -> MapBasemap.DARK
+                            MapBasemap.DARK -> MapBasemap.SATELLITE
+                            MapBasemap.SATELLITE -> MapBasemap.LIGHT
+                        }
+                    },
+                )
+            }
         }
     }
 }
@@ -233,10 +271,10 @@ private fun SheetContent(
     dayIdx: Int,
     chronological: List<HistoryPoint>,
     selectedPointIdx: Int,
+    summary: DaySummary,
     isLoading: Boolean,
     error: String?,
     listState: androidx.compose.foundation.lazy.LazyListState,
-    addressCache: Map<String, String>,
     lastRenderedCount: Int,
     onDayPrev: () -> Unit,
     onDayNext: () -> Unit,
@@ -284,29 +322,8 @@ private fun SheetContent(
             }
         }
 
-        HorizontalDivider()
-
         if (chronological.isNotEmpty()) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(8.dp),
-                horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Icon(
-                    Icons.Filled.Timeline,
-                    contentDescription = null,
-                    modifier = Modifier.size(20.dp),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                Spacer(Modifier.width(8.dp))
-                Text(
-                    "${chronological.size} data point${if (chronological.size == 1) "" else "s"}",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
+            DaySummaryStrip(summary = summary, totalPoints = chronological.size)
             HorizontalDivider()
         }
 
@@ -346,10 +363,13 @@ private fun SheetContent(
             ) { listIdx, point ->
                 val chronoIdx = chronological.size - 1 - listIdx
                 val isSelected = chronoIdx == selectedPointIdx
+                val isFirst = listIdx == 0
+                val isLast = listIdx == reversed.lastIndex
                 HistoryListItem(
                     point = point,
-                    address = addressCache[point.id],
                     isSelected = isSelected,
+                    isFirstInList = isFirst,
+                    isLastInList = isLast,
                     testTag = "history_item_$listIdx",
                     onClick = { onSelectPoint(chronoIdx) },
                 )
@@ -358,40 +378,152 @@ private fun SheetContent(
     }
 }
 
+/** Maps-style: distance · time on the move · stop count, all on one row. */
+@Composable
+private fun DaySummaryStrip(summary: DaySummary, totalPoints: Int) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(20.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        SummaryStat(
+            label = formatDistance(summary.distanceMeters),
+            sub = "distance",
+        )
+        SummaryStat(
+            label = formatDuration(summary.movingMs),
+            sub = "moving",
+        )
+        SummaryStat(
+            label = "${summary.stopCount}",
+            sub = if (summary.stopCount == 1) "stop" else "stops",
+        )
+        Spacer(Modifier.weight(1f))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(
+                Icons.Filled.Timeline,
+                contentDescription = null,
+                modifier = Modifier.size(16.dp),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Spacer(Modifier.width(4.dp))
+            Text(
+                "$totalPoints",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+}
+
+@Composable
+private fun SummaryStat(label: String, sub: String) {
+    Column {
+        Text(
+            label,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.SemiBold,
+        )
+        Text(
+            sub,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
 @Composable
 private fun HistoryListItem(
     point: HistoryPoint,
-    address: String?,
     isSelected: Boolean,
+    isFirstInList: Boolean,
+    isLastInList: Boolean,
     testTag: String? = null,
     onClick: () -> Unit,
 ) {
+    val railColor = MaterialTheme.colorScheme.outlineVariant
+    val nodeColor = when {
+        isSelected -> MaterialTheme.colorScheme.primary
+        point.kind == HistoryPointKind.STOP -> MaterialTheme.colorScheme.tertiary
+        else -> MaterialTheme.colorScheme.onSurfaceVariant
+    }
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .clickable { onClick() }
-            .then(if (testTag != null) Modifier.testTag(testTag) else Modifier)
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
+            .then(if (testTag != null) Modifier.testTag(testTag) else Modifier),
+        verticalAlignment = Alignment.Top,
     ) {
+        // Vertical rail column. The line is drawn as two thin Boxes so
+        // we can hide the segment above the first row and below the
+        // last, giving the list a clean cap on each end like Maps does.
         Box(
-            modifier = Modifier.size(22.dp),
+            modifier = Modifier
+                .width(40.dp)
+                .height(60.dp),
             contentAlignment = Alignment.Center,
         ) {
-            Icon(
-                Icons.Filled.Place,
-                contentDescription = null,
-                modifier = Modifier.size(22.dp),
-                tint = if (isSelected) MaterialTheme.colorScheme.primary
-                       else MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            // Top segment.
+            if (!isFirstInList) {
+                Box(
+                    modifier = Modifier
+                        .width(2.dp)
+                        .height(30.dp)
+                        .align(Alignment.TopCenter)
+                        .background(railColor),
+                )
+            }
+            // Bottom segment.
+            if (!isLastInList) {
+                Box(
+                    modifier = Modifier
+                        .width(2.dp)
+                        .height(30.dp)
+                        .align(Alignment.BottomCenter)
+                        .background(railColor),
+                )
+            }
+            // Node icon. STOPs get a filled pause-style circle; MOVEs
+            // get a smaller arrow inside an outlined ring.
+            Box(
+                modifier = Modifier
+                    .size(if (isSelected) 22.dp else 16.dp)
+                    .clip(CircleShape)
+                    .background(if (point.kind == HistoryPointKind.STOP) nodeColor else Color.Transparent)
+                    .then(
+                        if (point.kind == HistoryPointKind.MOVE) Modifier
+                            .background(MaterialTheme.colorScheme.surface)
+                        else Modifier,
+                    ),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    imageVector = when (point.kind) {
+                        HistoryPointKind.STOP -> Icons.Filled.Place
+                        HistoryPointKind.MOVE -> Icons.AutoMirrored.Filled.TrendingFlat
+                    },
+                    contentDescription = null,
+                    modifier = Modifier.size(if (isSelected) 14.dp else 12.dp),
+                    tint = if (point.kind == HistoryPointKind.STOP)
+                        MaterialTheme.colorScheme.surface
+                    else nodeColor,
+                )
+            }
         }
-        Spacer(Modifier.width(16.dp))
-        Column(modifier = Modifier.weight(1f)) {
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .padding(end = 16.dp, top = 12.dp, bottom = 12.dp),
+        ) {
             Text(
-                address ?: "%.5f, %.5f".format(point.latitude, point.longitude),
+                point.address ?: "%.5f, %.5f".format(point.latitude, point.longitude),
                 style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.Bold,
+                fontWeight = if (point.kind == HistoryPointKind.STOP)
+                    FontWeight.SemiBold else FontWeight.Normal,
+                color = if (isSelected) MaterialTheme.colorScheme.primary
+                        else MaterialTheme.colorScheme.onSurface,
                 maxLines = 2,
                 overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
             )
@@ -445,6 +577,77 @@ private fun FullScreenMessage(
             )
         }
     }
+}
+
+private data class DaySummary(
+    val distanceMeters: Double,
+    val movingMs: Long,
+    val stopCount: Int,
+)
+
+/**
+ * Walks the day's points (chronological) summing pairwise distance and
+ * counting transitions in/out of STOP runs. Distance is in meters
+ * (Haversine); moving time is the wall-clock time between consecutive
+ * MOVE points; stops are contiguous runs of STOP-classified points.
+ */
+private fun buildDaySummary(points: List<HistoryPoint>): DaySummary {
+    if (points.size < 2) {
+        return DaySummary(
+            distanceMeters = 0.0,
+            movingMs = 0L,
+            stopCount = points.count { it.kind == HistoryPointKind.STOP }.let {
+                if (it > 0) 1 else 0
+            },
+        )
+    }
+    var distance = 0.0
+    var movingMs = 0L
+    var stops = 0
+    var inStop = false
+    for (i in points.indices) {
+        val p = points[i]
+        if (p.kind == HistoryPointKind.STOP && !inStop) {
+            stops++
+            inStop = true
+        } else if (p.kind != HistoryPointKind.STOP) {
+            inStop = false
+        }
+        if (i == 0) continue
+        val prev = points[i - 1]
+        distance += haversineMeters(
+            prev.latitude, prev.longitude,
+            p.latitude, p.longitude,
+        )
+        if (prev.kind != HistoryPointKind.STOP || p.kind != HistoryPointKind.STOP) {
+            movingMs += (p.timestampMs - prev.timestampMs).coerceAtLeast(0L)
+        }
+    }
+    return DaySummary(distance, movingMs, stops)
+}
+
+private fun haversineMeters(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Double {
+    val r = 6_371_000.0
+    val dLat = (lat2 - lat1) * PI / 180.0
+    val dLon = (lon2 - lon1) * PI / 180.0
+    val a = sin(dLat / 2).let { it * it } +
+        cos(lat1 * PI / 180.0) * cos(lat2 * PI / 180.0) *
+        sin(dLon / 2).let { it * it }
+    val c = 2 * atan2(sqrt(a), sqrt(1 - a))
+    return r * c
+}
+
+private fun formatDistance(meters: Double): String =
+    if (meters < 1_000.0) "${meters.roundToInt()} m"
+    else "%.1f km".format(meters / 1_000.0)
+
+private fun formatDuration(ms: Long): String {
+    if (ms < 60_000L) return "${(ms / 1_000L).coerceAtLeast(0)} s"
+    val minutes = (ms / 60_000L)
+    if (minutes < 60L) return "${minutes} min"
+    val hours = minutes / 60L
+    val remMin = minutes % 60L
+    return if (remMin == 0L) "${hours} h" else "${hours} h ${remMin} min"
 }
 
 private fun buildDayBuckets(points: List<HistoryPoint>): List<DayBucket> =

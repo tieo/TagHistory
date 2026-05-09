@@ -9,6 +9,13 @@ expect fun HistoryMapView(
     points: List<HistoryPoint>,
     selectedPointIndex: Int? = null,
     basemap: MapBasemap? = null,
+    /**
+     * Toggles the connecting polyline. When false, the start / end /
+     * selected dots are still drawn — only the line is hidden. Useful
+     * when the route would clutter the map but the user still needs to
+     * see the stops.
+     */
+    routeVisible: Boolean = true,
     onRendered: (timestamps: List<Long>) -> Unit = {},
     modifier: Modifier = Modifier,
 )

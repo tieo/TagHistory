@@ -18,6 +18,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import io.github.tieo.taghistory.ui.map.MapBasemap
 import io.github.tieo.taghistory.ui.map.defaultBasemap
 import io.github.tieo.taghistory.ui.map.fromBasemap
+import io.github.tieo.taghistory.util.PerfTrace
 import org.maplibre.android.MapLibre
 import org.maplibre.android.camera.CameraUpdateFactory
 import org.maplibre.android.geometry.LatLng
@@ -54,6 +55,7 @@ actual fun HistoryMapView(
     points: List<HistoryPoint>,
     selectedPointIndex: Int?,
     basemap: MapBasemap?,
+    routeVisible: Boolean,
     onRendered: (List<Long>) -> Unit,
     modifier: Modifier,
 ) {
@@ -66,8 +68,11 @@ actual fun HistoryMapView(
     val selectedColor = MaterialTheme.colorScheme.tertiary.toArgb()
 
     val mapView = remember {
+        PerfTrace.mark("MapView remember start")
         MapLibre.getInstance(context)
-        MapView(context).apply { onCreate(Bundle()) }
+        val v = MapView(context).apply { onCreate(Bundle()) }
+        PerfTrace.mark("MapView constructed")
+        v
     }
     val lastAppliedBasemap = remember { arrayOf(effectiveBasemap) }
     // Track last rendered point list so we know whether to fit camera or just pan.
@@ -118,11 +123,14 @@ actual fun HistoryMapView(
 
     AndroidView(
         factory = { _ ->
+            PerfTrace.mark("HistoryMapView AndroidView factory")
             mapView.getMapAsync { map ->
+                PerfTrace.mark("getMapAsync first callback")
                 map.uiSettings.isRotateGesturesEnabled = false
                 map.uiSettings.isCompassEnabled = false
                 map.uiSettings.isLogoEnabled = false
                 map.setStyle(Style.Builder().fromBasemap(effectiveBasemap, context)) { style ->
+                    PerfTrace.mark("setStyle loaded")
                     installLayers(style, lineColor, selectedColor)
                     val ordered = currentPoints.value.sortedBy { it.timestampMs }
                     val key = ordered.map { it.timestampMs }
@@ -130,6 +138,7 @@ actual fun HistoryMapView(
                     renderPath(map, style, ordered, fitCamera = true)
                     renderSelectedPoint(map, style, ordered, currentSelectedIdx.value, panCamera = false)
                     onRendered(key)
+                    PerfTrace.mark("first renderPath done points=${ordered.size}")
                 }
             }
             mapView
@@ -137,6 +146,7 @@ actual fun HistoryMapView(
         update = { _ ->
             val ordered = points.sortedBy { it.timestampMs }
             val sel = selectedPointIndex
+            val visible = routeVisible
             val newKey = ordered.map { it.timestampMs }
             // Fire synchronously with the new keys so callers know Compose
             // delivered the points to the updater; the async getMapAsync block
@@ -151,6 +161,11 @@ actual fun HistoryMapView(
                     renderPath(map, style, ordered, fitCamera = true)
                 }
                 renderSelectedPoint(map, style, ordered, sel, panCamera = !pointsChanged)
+                style.getLayer(PATH_LAYER)?.setProperties(
+                    PropertyFactory.visibility(
+                        if (visible) Property.VISIBLE else Property.NONE,
+                    ),
+                )
             }
         },
         modifier = modifier,
