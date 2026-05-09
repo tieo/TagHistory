@@ -56,6 +56,7 @@ actual fun HistoryMapView(
     selectedPointIndex: Int?,
     basemap: MapBasemap?,
     routeVisible: Boolean,
+    bottomInsetPx: Int,
     onRendered: (List<Long>) -> Unit,
     modifier: Modifier,
 ) {
@@ -64,6 +65,7 @@ actual fun HistoryMapView(
     val effectiveBasemap = basemap ?: defaultBasemap()
     val currentPoints = rememberUpdatedState(points)
     val currentSelectedIdx = rememberUpdatedState(selectedPointIndex)
+    val currentBottomInset = rememberUpdatedState(bottomInsetPx)
     val lineColor = MaterialTheme.colorScheme.primary.toArgb()
     val selectedColor = MaterialTheme.colorScheme.tertiary.toArgb()
 
@@ -115,7 +117,7 @@ actual fun HistoryMapView(
             map.setStyle(Style.Builder().fromBasemap(effectiveBasemap, context)) { style ->
                 installLayers(style, lineColor, selectedColor)
                 val ordered = currentPoints.value.sortedBy { it.timestampMs }
-                renderPath(map, style, ordered, fitCamera = false)
+                renderPath(map, style, ordered, fitCamera = false, bottomInsetPx = currentBottomInset.value)
                 renderSelectedPoint(map, style, ordered, currentSelectedIdx.value, panCamera = false)
             }
         }
@@ -135,7 +137,7 @@ actual fun HistoryMapView(
                     val ordered = currentPoints.value.sortedBy { it.timestampMs }
                     val key = ordered.map { it.timestampMs }
                     lastRenderedPointsKey[0] = key
-                    renderPath(map, style, ordered, fitCamera = true)
+                    renderPath(map, style, ordered, fitCamera = true, bottomInsetPx = currentBottomInset.value)
                     renderSelectedPoint(map, style, ordered, currentSelectedIdx.value, panCamera = false)
                     onRendered(key)
                     PerfTrace.mark("first renderPath done points=${ordered.size}")
@@ -147,6 +149,7 @@ actual fun HistoryMapView(
             val ordered = points.sortedBy { it.timestampMs }
             val sel = selectedPointIndex
             val visible = routeVisible
+            val inset = bottomInsetPx
             val newKey = ordered.map { it.timestampMs }
             // Fire synchronously with the new keys so callers know Compose
             // delivered the points to the updater; the async getMapAsync block
@@ -158,7 +161,7 @@ actual fun HistoryMapView(
                 val pointsChanged = newKey != lastRenderedPointsKey[0]
                 if (pointsChanged) {
                     lastRenderedPointsKey[0] = newKey
-                    renderPath(map, style, ordered, fitCamera = true)
+                    renderPath(map, style, ordered, fitCamera = true, bottomInsetPx = inset)
                 }
                 renderSelectedPoint(map, style, ordered, sel, panCamera = !pointsChanged)
                 style.getLayer(PATH_LAYER)?.setProperties(
@@ -213,6 +216,7 @@ private fun renderPath(
     style: Style,
     points: List<HistoryPoint>,
     fitCamera: Boolean,
+    bottomInsetPx: Int = 0,
 ) {
     val pathSource = style.getSourceAs<GeoJsonSource>(PATH_SOURCE) ?: return
     val endpointsSource = style.getSourceAs<GeoJsonSource>(ENDPOINTS_SOURCE) ?: return
@@ -247,8 +251,19 @@ private fun renderPath(
             val bounds = runCatching {
                 LatLngBounds.Builder().apply { distinct.forEach { include(it) } }.build()
             }.getOrNull() ?: return
+            // Asymmetric padding: keep the small uniform breathing room
+            // on top / left / right and add the sheet's peek height as
+            // bottom padding so points which would otherwise sit behind
+            // the sheet stay visible above it.
+            val updated = CameraUpdateFactory.newLatLngBounds(
+                bounds,
+                BOUNDS_PADDING_PX,
+                BOUNDS_PADDING_PX,
+                BOUNDS_PADDING_PX,
+                BOUNDS_PADDING_PX + bottomInsetPx,
+            )
             map.animateCamera(
-                CameraUpdateFactory.newLatLngBounds(bounds, BOUNDS_PADDING_PX),
+                updated,
                 400,
                 object : MapLibreMap.CancelableCallback {
                     override fun onCancel() = Unit

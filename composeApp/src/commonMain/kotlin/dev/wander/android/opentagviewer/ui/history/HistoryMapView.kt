@@ -16,6 +16,13 @@ expect fun HistoryMapView(
      * see the stops.
      */
     routeVisible: Boolean = true,
+    /**
+     * Pixels of the map area that are obscured by an overlay (typically
+     * the bottom sheet at peek). Used as bottom padding when fitting
+     * the camera so that points which would otherwise sit behind the
+     * sheet are still visible above it.
+     */
+    bottomInsetPx: Int = 0,
     onRendered: (timestamps: List<Long>) -> Unit = {},
     modifier: Modifier = Modifier,
 )

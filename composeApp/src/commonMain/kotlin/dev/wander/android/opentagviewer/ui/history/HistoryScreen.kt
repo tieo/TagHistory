@@ -35,10 +35,13 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.SheetValue
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberBottomSheetScaffoldState
 import androidx.compose.material3.rememberStandardBottomSheetState
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.draw.clip
@@ -159,6 +162,15 @@ fun HistoryScreen(
 
     var lastRenderedCount by remember { mutableIntStateOf(-1) }
 
+    // Maps-style geometry: sheet peek = 35% of viewport height. The
+    // remaining ~65% is the visible map slice used to fit the day's
+    // bounds; without this, points underneath the sheet got cut off.
+    val configuration = LocalConfiguration.current
+    val density = LocalDensity.current
+    val screenHeightDp = configuration.screenHeightDp.dp
+    val sheetPeek = screenHeightDp * 0.35f
+    val sheetPeekPx = with(density) { sheetPeek.toPx().toInt() }
+
     val listState = rememberLazyListState()
     LaunchedEffect(selectedPointIdx, chronological.size) {
         if (chronological.isNotEmpty()) {
@@ -171,8 +183,23 @@ fun HistoryScreen(
     BottomSheetScaffold(
         scaffoldState = scaffoldState,
         modifier = modifier.fillMaxSize(),
-        // Maps gives the map ~⅔ of the screen at peek; match that.
-        sheetPeekHeight = 180.dp,
+        // Maps Timeline gives the sheet ~35% of the viewport at peek;
+        // the rest is the map. Computed from the actual screen height
+        // so it scales for tablets and landscape.
+        sheetPeekHeight = sheetPeek,
+        // Custom drag handle: the M3 default leaves a chunky vertical
+        // gap below the pill before the first row of content. The slot
+        // overrides that with a single thin pill in a small Box.
+        sheetDragHandle = {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 8.dp, bottom = 4.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                BottomSheetDefaults.DragHandle()
+            }
+        },
         sheetContent = {
             SheetContent(
                 days = days,
@@ -212,6 +239,7 @@ fun HistoryScreen(
                 selectedPointIndex = selectedPointIdx,
                 basemap = basemap,
                 routeVisible = routeVisible,
+                bottomInsetPx = sheetPeekPx,
                 onRendered = { lastRenderedCount = it.size },
                 modifier = Modifier.fillMaxSize(),
             )
