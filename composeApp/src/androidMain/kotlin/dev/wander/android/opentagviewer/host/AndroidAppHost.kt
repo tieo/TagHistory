@@ -306,6 +306,9 @@ class AndroidAppHost private constructor(
         settingsFlow = userSettingsRepo.flow,
         onImport = onImport,
         onRefreshNow = onRefreshNow,
+        onShareGpx = { title, dayLabel, points ->
+            shareDayAsGpx(context, title, dayLabel, points)
+        },
     )
 
     /**

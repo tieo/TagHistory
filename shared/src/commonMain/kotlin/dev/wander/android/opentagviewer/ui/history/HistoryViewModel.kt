@@ -19,38 +19,34 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
-import kotlin.math.round
+import kotlin.math.atan2
+import kotlin.math.cos
+import kotlin.math.sin
+import kotlin.math.sqrt
 import kotlin.time.Clock
 import kotlin.time.ExperimentalTime
 
 /**
- * KMP ViewModel for the per-beacon location history. Owns:
- *   - DB read of cached reports for a time range,
- *   - background network fetch + persist,
- *   - persistent reverse-geocoding with sync DB cache hits + parallel
- *     resolve of the rest, deduped by rounded coordinate so two reports
- *     at the same place share one Geocoder call,
- *   - stop / move classification (consecutive points within ~25 m and
- *     >5 minutes count as a "stop"),
- *   - per-day summary (total distance, time on the move, stop count).
+ * Owns everything visible on the History screen except actual rendering:
  *
- * The platform host injects:
- *   - `fetchRange` for HTTPS calls (kept out of common code),
- *   - a thin `realReverseGeocode` lambda that wraps the system Geocoder.
- *     The VM only calls it on cache miss.
+ *   - DB read of cached reports for a time range,
+ *   - background network fetch + persist (kept off Main via ioDispatcher),
+ *   - persistent reverse-geocoding with sync DB cache hits + parallel
+ *     resolve of misses, deduped by rounded coordinate,
+ *   - stop / move classification per point (Haversine + dwell time),
+ *   - "trip"-style entry grouping where consecutive STOP-classified
+ *     points collapse into a single [HistoryEntry.Stop] with arrival,
+ *     departure and an expandable list of constituent points,
+ *   - filters (stops-only, hide-low-accuracy) re-applied without going
+ *     back to the DB,
+ *   - per-day summary (distance, moving time, stop count).
  */
 @OptIn(ExperimentalTime::class)
 class HistoryViewModel(
     private val beaconRepo: BeaconRepository,
     private val beaconId: String,
-    /** Optional: fetch additional reports for a date range. */
     private val fetchRange: suspend (String, Long, Long) -> List<BeaconLocationReport> =
         { _, _, _ -> emptyList() },
-    /**
-     * On-cache-miss reverse geocode. Returns null if the platform doesn't
-     * support geocoding or the lookup failed. Cached results are read
-     * directly from [geocodeCache] so this lambda only runs for misses.
-     */
     private val realReverseGeocode: (suspend (Double, Double) -> String?)? = null,
     private val geocodeCache: GeocodeCacheRepository? = null,
     private val nowMs: () -> Long = { Clock.System.now().toEpochMilliseconds() },
@@ -92,28 +88,16 @@ class HistoryViewModel(
         }
         runScope.launch {
             try {
-                // Hop off Main for the actual fetch. fetchRange is the
-                // platform-injected lambda that drives AppleReportsService:
-                // HTTPS calls + AES-GCM decryption of every report. None
-                // of those are suspending boundaries on their own, so
-                // without an explicit dispatcher hop they run on
-                // viewModelScope = Main.immediate and freeze the UI for
-                // the entire fetch + decrypt window (multiple seconds on
-                // a real device with a populated cache).
                 val fetched = withContext(ioDispatcher) {
                     fetchRange(beaconId, startUnixMs, endUnixMs)
                 }
                 PerfTrace.mark("network fetch done (${fetched.size})")
-                val newRowsAdded = fetched.isNotEmpty()
-                if (newRowsAdded) {
+                if (fetched.isNotEmpty()) {
                     withContext(ioDispatcher) {
                         beaconRepo.storeToLocationCache(mapOf(beaconId to fetched))
                     }
                     PerfTrace.mark("storeToLocationCache done")
                 }
-                // Always emit at least once so callers that only invoke
-                // fetchAndLoad (without a prior load) see whatever was
-                // already cached in the DB.
                 emitPoints()
                 PerfTrace.mark("post-fetch emitPoints done")
                 _state.update { it.copy(isLoading = false) }
@@ -126,29 +110,56 @@ class HistoryViewModel(
         }
     }
 
+    /** UI hook: pull-to-refresh / the explicit Retry button. */
+    fun refresh() {
+        val start = _state.value.rangeStartMs ?: return
+        val end = _state.value.rangeEndMs ?: return
+        fetchAndLoad(start, end)
+    }
+
+    fun setStopsOnly(value: Boolean) {
+        if (_state.value.filters.stopsOnly == value) return
+        _state.update {
+            val newFilters = it.filters.copy(stopsOnly = value)
+            it.copy(
+                filters = newFilters,
+                entries = buildEntries(it.points, newFilters),
+            )
+        }
+    }
+
+    fun setHideLowAccuracy(value: Boolean) {
+        if (_state.value.filters.hideLowAccuracy == value) return
+        _state.update {
+            val newFilters = it.filters.copy(hideLowAccuracy = value)
+            it.copy(
+                filters = newFilters,
+                entries = buildEntries(it.points, newFilters),
+            )
+        }
+    }
+
     private suspend fun emitPoints() {
         val start = _state.value.rangeStartMs ?: return
         val end = _state.value.rangeEndMs ?: return
-        val points = withContext(ioDispatcher) {
+        val (points, entries) = withContext(ioDispatcher) {
             PerfTrace.mark("emitPoints DB read start")
             val rows = beaconRepo.getLocationsFor(beaconId, start, end)
             PerfTrace.mark("emitPoints DB rows=${rows.size}")
             val sorted = rows.sortedBy { it.timestamp }
-            // Pre-fill addresses from the persistent geocode cache. Each
-            // hit is a single SQLite point query — fast enough to do
-            // synchronously even for hundreds of points, and avoids the
-            // Geocoder round-trip entirely for repeat visits.
             val cache = geocodeCache
             val cached: Map<String, String> = if (cache != null) {
                 cache.getMany(sorted.map { it.latitude to it.longitude })
             } else emptyMap()
             val mapped = sorted.map { it.toUi(cached, cache) }
-            // Newest-first for the list, then classify with stop/move.
+            // Newest-first list as the public point sequence; classify
+            // works on the chronological flip.
             val classified = classify(mapped.sortedByDescending { it.timestampMs })
-            PerfTrace.mark("emitPoints mapped + classified n=${classified.size}")
-            classified
+            val entries = buildEntries(classified, _state.value.filters)
+            PerfTrace.mark("emitPoints mapped + classified n=${classified.size} entries=${entries.size}")
+            classified to entries
         }
-        _state.update { it.copy(points = points) }
+        _state.update { it.copy(points = points, entries = entries) }
     }
 
     private fun BeaconLocationReport.toUi(
@@ -164,8 +175,6 @@ class HistoryViewModel(
             longitude = longitude,
             horizontalAccuracy = horizontalAccuracy,
             address = key?.let { cachedByKey[it] },
-            // kind defaults to MOVE; classify() promotes long-dwell points
-            // to STOP after the full list is built.
             kind = HistoryPointKind.MOVE,
         )
     }
@@ -173,18 +182,16 @@ class HistoryViewModel(
     /**
      * Walks the (newest-first) list and labels runs of points within
      * STOP_RADIUS_M of one another and spanning at least STOP_MIN_MS as
-     * stops. Anything else is a movement waypoint. The classification is
-     * purely UI sugar — points and IDs are unchanged.
+     * stops. Anything else is a movement waypoint.
      */
     private fun classify(points: List<HistoryPoint>): List<HistoryPoint> {
         if (points.size < 2) return points.map { it.copy(kind = HistoryPointKind.STOP) }
         val out = ArrayList<HistoryPoint>(points.size)
-        // Iterate chronologically (oldest first) so dwell math is intuitive.
         val chrono = points.asReversed()
         var clusterStartIdx = 0
         var i = 1
         while (i <= chrono.size) {
-            val end = if (i == chrono.size) i else i
+            val end = i
             val anchor = chrono[clusterStartIdx]
             val current = chrono.getOrNull(i)
             val outOfCluster = current == null ||
@@ -212,9 +219,6 @@ class HistoryViewModel(
         runScope.launch {
             PerfTrace.mark("kickoffGeocoding start")
             val current = _state.value.points
-            // Group points by rounded key so two points at the same
-            // place don't both call the Geocoder. This is the single
-            // biggest win for any "spent 4 hours at home" history day.
             val keyToPoints = HashMap<String, MutableList<HistoryPoint>>()
             for (p in current) {
                 if (p.address != null) continue
@@ -237,15 +241,14 @@ class HistoryViewModel(
                                 real(anchor.latitude, anchor.longitude)
                             }.getOrNull() ?: return@withPermit
                             cache?.put(anchor.latitude, anchor.longitude, resolved)
-                            // Patch every point in the group to the
-                            // resolved address, in one state update so
-                            // the list doesn't flicker per row.
                             val ids = group.mapTo(HashSet(group.size)) { it.id }
                             _state.update { state ->
+                                val patchedPoints = state.points.map { p ->
+                                    if (p.id in ids) p.copy(address = resolved) else p
+                                }
                                 state.copy(
-                                    points = state.points.map { p ->
-                                        if (p.id in ids) p.copy(address = resolved) else p
-                                    },
+                                    points = patchedPoints,
+                                    entries = buildEntries(patchedPoints, state.filters),
                                 )
                             }
                         }
@@ -256,33 +259,131 @@ class HistoryViewModel(
         }
     }
 
+    /**
+     * Group the classified points (newest-first) into [HistoryEntry]s.
+     *
+     * - Consecutive STOP-classified points become a single
+     *   [HistoryEntry.Stop] with arrival = oldest member, departure =
+     *   newest member, dwell = departure − arrival.
+     * - Each MOVE-classified point becomes one [HistoryEntry.Move]
+     *   carrying the distance + duration since the previous (older)
+     *   point so the UI can show "12 km/h" without reaching back into
+     *   the raw list.
+     *
+     * Filters:
+     *   - `stopsOnly` drops the Move entries.
+     *   - `hideLowAccuracy` drops points with horizontalAccuracy >
+     *     threshold before grouping (so a noisy GPS fix in the middle
+     *     of a stop doesn't spuriously break the cluster).
+     */
+    private fun buildEntries(
+        points: List<HistoryPoint>,
+        filters: HistoryFilters,
+    ): List<HistoryEntry> {
+        if (points.isEmpty()) return emptyList()
+        val effective = points.filter { p ->
+            !(filters.hideLowAccuracy &&
+                p.horizontalAccuracy > filters.accuracyThresholdMeters)
+        }
+        if (effective.isEmpty()) return emptyList()
+
+        // Iterate chronologically so arrival/departure read intuitively;
+        // then reverse the entry list at the end so the UI keeps its
+        // newest-first convention.
+        val chrono = effective.sortedBy { it.timestampMs }
+        val out = mutableListOf<HistoryEntry>()
+        var stopBuf: MutableList<HistoryPoint>? = null
+        var prev: HistoryPoint? = null
+
+        fun flushStop() {
+            val buf = stopBuf
+            if (buf.isNullOrEmpty()) {
+                stopBuf = null
+                return
+            }
+            val first = buf.first()
+            val last = buf.last()
+            // Pick the address from the first non-null member; in
+            // practice they should all share one because the cluster
+            // is within ~25 m, but be defensive.
+            val addr = buf.firstNotNullOfOrNull { it.address }
+            out += HistoryEntry.Stop(
+                id = "stop-${first.id}-${last.id}",
+                timestampMs = last.timestampMs,
+                arrivalMs = first.timestampMs,
+                departureMs = last.timestampMs,
+                anchor = last.copy(address = addr),
+                members = buf.toList(),
+            )
+            stopBuf = null
+        }
+
+        for (p in chrono) {
+            if (p.kind == HistoryPointKind.STOP) {
+                (stopBuf ?: mutableListOf<HistoryPoint>().also { stopBuf = it }).add(p)
+            } else {
+                flushStop()
+                if (!filters.stopsOnly) {
+                    val prevPoint = prev
+                    val dist = if (prevPoint != null) {
+                        haversineMeters(prevPoint.latitude, prevPoint.longitude,
+                            p.latitude, p.longitude)
+                    } else 0.0
+                    val dur = if (prevPoint != null) p.timestampMs - prevPoint.timestampMs else 0L
+                    out += HistoryEntry.Move(
+                        id = "move-${p.id}",
+                        timestampMs = p.timestampMs,
+                        point = p,
+                        fromPrevMeters = dist,
+                        durationFromPrevMs = dur,
+                    )
+                }
+            }
+            prev = p
+        }
+        flushStop()
+        // Newest-first to match `points`.
+        return out.asReversed()
+    }
+
     private companion object {
         const val DAY_MS: Long = 24L * 60L * 60L * 1000L
-
-        /** Two points within this distance count as the same location. */
         const val STOP_RADIUS_M: Double = 25.0
-
-        /** Minimum dwell time for a cluster to be promoted to a STOP. */
         const val STOP_MIN_MS: Long = 5L * 60L * 1000L
 
         fun haversineMeters(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Double {
             val r = 6_371_000.0
             val dLat = (lat2 - lat1) * kotlin.math.PI / 180.0
             val dLon = (lon2 - lon1) * kotlin.math.PI / 180.0
-            val a = kotlin.math.sin(dLat / 2).let { it * it } +
-                kotlin.math.cos(lat1 * kotlin.math.PI / 180.0) *
-                kotlin.math.cos(lat2 * kotlin.math.PI / 180.0) *
-                kotlin.math.sin(dLon / 2).let { it * it }
-            val c = 2 * kotlin.math.atan2(kotlin.math.sqrt(a), kotlin.math.sqrt(1 - a))
+            val a = sin(dLat / 2).let { it * it } +
+                cos(lat1 * kotlin.math.PI / 180.0) *
+                cos(lat2 * kotlin.math.PI / 180.0) *
+                sin(dLon / 2).let { it * it }
+            val c = 2 * atan2(sqrt(a), sqrt(1 - a))
             return r * c
         }
     }
 }
 
+data class HistoryFilters(
+    val stopsOnly: Boolean = false,
+    val hideLowAccuracy: Boolean = false,
+    val accuracyThresholdMeters: Long = 100L,
+)
+
 data class HistoryUiState(
     val rangeStartMs: Long? = null,
     val rangeEndMs: Long? = null,
+    /** Raw classified points, newest first. The UI uses this for the map. */
     val points: List<HistoryPoint> = emptyList(),
+    /**
+     * Grouped, filtered list for the bottom-sheet UI. Stop runs are
+     * collapsed into a single expandable entry; Moves are kept as
+     * individual entries with distance / duration from the previous
+     * point.
+     */
+    val entries: List<HistoryEntry> = emptyList(),
+    val filters: HistoryFilters = HistoryFilters(),
     val isLoading: Boolean = false,
     val error: String? = null,
 )
@@ -290,27 +391,49 @@ data class HistoryUiState(
 enum class HistoryPointKind { STOP, MOVE }
 
 data class HistoryPoint(
-    /**
-     * Stable unique identifier for this point. Sourced from the DB row
-     * primary key (SHA-256 hash) when available; the UI uses this as the
-     * Compose `key` for LazyColumn items so duplicate timestamps cannot
-     * crash the screen.
-     */
     val id: String,
     val timestampMs: Long,
     val latitude: Double,
     val longitude: Double,
     val horizontalAccuracy: Long,
-    /**
-     * Resolved street-level address, if any. Populated synchronously
-     * from the persistent geocode cache when the points list is built,
-     * and patched in place later as background lookups resolve.
-     */
     val address: String? = null,
-    /**
-     * STOP for points inside a long-dwell cluster, MOVE otherwise. Used
-     * by the list to render the timeline rail icon and by the map to
-     * pick which points get a labeled bubble.
-     */
     val kind: HistoryPointKind = HistoryPointKind.MOVE,
 )
+
+/**
+ * Entry as rendered by the bottom-sheet list. Entries are produced by
+ * [HistoryViewModel.buildEntries] from the classified points + the
+ * active filters; the UI never has to repeat that grouping work.
+ */
+sealed class HistoryEntry {
+    abstract val id: String
+    abstract val timestampMs: Long
+
+    data class Stop(
+        override val id: String,
+        override val timestampMs: Long,
+        val arrivalMs: Long,
+        val departureMs: Long,
+        /** Latest point in the cluster; carries the resolved address. */
+        val anchor: HistoryPoint,
+        /** All raw points that made up this stop, oldest first. */
+        val members: List<HistoryPoint>,
+    ) : HistoryEntry() {
+        val dwellMs: Long get() = departureMs - arrivalMs
+    }
+
+    data class Move(
+        override val id: String,
+        override val timestampMs: Long,
+        val point: HistoryPoint,
+        /** Distance from the previous (older) point, in meters. */
+        val fromPrevMeters: Double,
+        /** Duration since the previous (older) point, in ms. */
+        val durationFromPrevMs: Long,
+    ) : HistoryEntry() {
+        val avgSpeedKmh: Double
+            get() = if (durationFromPrevMs > 0) {
+                (fromPrevMeters / 1000.0) / (durationFromPrevMs / 3_600_000.0)
+            } else 0.0
+    }
+}

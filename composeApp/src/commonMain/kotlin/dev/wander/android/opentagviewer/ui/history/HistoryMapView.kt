@@ -23,6 +23,13 @@ expect fun HistoryMapView(
      * sheet are still visible above it.
      */
     bottomInsetPx: Int = 0,
+    /**
+     * Fires when the user taps near a rendered history dot. The
+     * argument is the [HistoryPoint.id] of the closest dot under the
+     * tap; HistoryScreen routes that into selectedPointId so the row +
+     * map highlight stay in sync.
+     */
+    onPointSelected: (String) -> Unit = {},
     onRendered: (timestamps: List<Long>) -> Unit = {},
     modifier: Modifier = Modifier,
 )

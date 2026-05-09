@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths>
+    <!-- Cache-only export root for the GPX share intent. The exporter
+         writes to ${cacheDir}/exports/<safe-name>.gpx and hands the
+         FileProvider URI off via ACTION_SEND. -->
+    <cache-path name="exports" path="exports/" />
+</paths>

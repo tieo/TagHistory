@@ -76,6 +76,14 @@ data class AppHostFactories(
      */
     val onRefreshNow: (suspend () -> String?)? = null,
     val reverseGeocode: (suspend (Double, Double) -> String?)? = null,
+    /**
+     * Platform handler for "share this day's history as GPX". Receives
+     * the beacon's display title, a human-readable day label
+     * ("Today", "2026-05-08", …) and the chronological points making up
+     * that day. The Android implementation writes a temp file and
+     * fires ACTION_SEND so the user can pick a share target.
+     */
+    val onShareGpx: ((title: String, dayLabel: String, points: List<io.github.tieo.taghistory.ui.history.HistoryPoint>) -> Unit)? = null,
 )
 
 @Composable
@@ -235,6 +243,7 @@ private fun AuthedNav(
                         title = screen.title,
                         onBack = { nav = nav.pop() },
                         reverseGeocode = factories.reverseGeocode,
+                        onShareGpx = factories.onShareGpx,
                     )
                 }
             }

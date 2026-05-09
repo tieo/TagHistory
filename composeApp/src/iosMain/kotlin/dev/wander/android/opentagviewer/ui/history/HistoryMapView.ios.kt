@@ -16,6 +16,7 @@ actual fun HistoryMapView(
     basemap: MapBasemap?,
     routeVisible: Boolean,
     bottomInsetPx: Int,
+    onPointSelected: (String) -> Unit,
     onRendered: (List<Long>) -> Unit,
     modifier: Modifier,
 ) {
