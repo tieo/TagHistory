@@ -20,4 +20,11 @@ data class BeaconLocationReport(
     val longitude: Double,
     val horizontalAccuracy: Long,
     val status: Long,
+    /**
+     * SHA-256 content hash, identical to the row primary key in the
+     * LocationReport table. Always populated for reports read back from
+     * the DB; null for freshly-decoded reports that have not been written
+     * yet (the repo computes the hash at insert time).
+     */
+    val hashId: String? = null,
 )

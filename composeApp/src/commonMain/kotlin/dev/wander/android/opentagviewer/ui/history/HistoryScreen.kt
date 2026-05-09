@@ -35,7 +35,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.rememberBottomSheetScaffoldState
 import androidx.compose.material3.rememberStandardBottomSheetState
 import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -99,15 +98,15 @@ fun HistoryScreen(
         selectedDay?.points?.sortedBy { it.timestampMs } ?: emptyList()
     }
 
-    // Persist selected-point by timestampMs so refresh-mid-view doesn't
-    // jump the selection.
-    var selectedPointMs by remember { mutableLongStateOf(0L) }
-    val selectedPointIdx = remember(chronological, selectedPointMs) {
-        chronological.indexOfFirst { it.timestampMs == selectedPointMs }
+    // Persist selected-point by id so refresh-mid-view doesn't jump the
+    // selection. id is the stable hash from the DB; timestamp collides.
+    var selectedPointId by remember { mutableStateOf<String?>(null) }
+    val selectedPointIdx = remember(chronological, selectedPointId) {
+        chronological.indexOfFirst { it.id == selectedPointId }
             .let { if (it >= 0) it else (chronological.size - 1).coerceAtLeast(0) }
     }
 
-    val addressCache = remember { mutableStateMapOf<Long, String>() }
+    val addressCache = remember { mutableStateMapOf<String, String>() }
     if (reverseGeocode != null) {
         LaunchedEffect(state.points) {
             // Fan out geocoding with bounded concurrency. The Android
@@ -116,11 +115,11 @@ fun HistoryScreen(
             val gate = Semaphore(6)
             coroutineScope {
                 for (point in state.points) {
-                    if (addressCache.containsKey(point.timestampMs)) continue
+                    if (addressCache.containsKey(point.id)) continue
                     async {
                         gate.withPermit {
                             val address = reverseGeocode(point.latitude, point.longitude)
-                            if (address != null) addressCache[point.timestampMs] = address
+                            if (address != null) addressCache[point.id] = address
                         }
                     }
                 }
@@ -166,17 +165,17 @@ fun HistoryScreen(
                 onDayPrev = {
                     if (dayIdx < days.size - 1) {
                         selectedDayKey = days[dayIdx + 1].key
-                        selectedPointMs = 0L
+                        selectedPointId = null
                     }
                 },
                 onDayNext = {
                     if (dayIdx > 0) {
                         selectedDayKey = days[dayIdx - 1].key
-                        selectedPointMs = 0L
+                        selectedPointId = null
                     }
                 },
                 onSelectPoint = { idx ->
-                    chronological.getOrNull(idx)?.let { selectedPointMs = it.timestampMs }
+                    chronological.getOrNull(idx)?.let { selectedPointId = it.id }
                 },
                 onRetry = {
                     val end = Clock.System.now().toEpochMilliseconds()
@@ -237,7 +236,7 @@ private fun SheetContent(
     isLoading: Boolean,
     error: String?,
     listState: androidx.compose.foundation.lazy.LazyListState,
-    addressCache: Map<Long, String>,
+    addressCache: Map<String, String>,
     lastRenderedCount: Int,
     onDayPrev: () -> Unit,
     onDayNext: () -> Unit,
@@ -341,12 +340,15 @@ private fun SheetContent(
             state = listState,
             modifier = Modifier.weight(1f, fill = false),
         ) {
-            itemsIndexed(reversed, key = { _, p -> p.timestampMs }) { listIdx, point ->
+            itemsIndexed(
+                reversed,
+                key = { _, p -> p.id },
+            ) { listIdx, point ->
                 val chronoIdx = chronological.size - 1 - listIdx
                 val isSelected = chronoIdx == selectedPointIdx
                 HistoryListItem(
                     point = point,
-                    address = addressCache[point.timestampMs],
+                    address = addressCache[point.id],
                     isSelected = isSelected,
                     testTag = "history_item_$listIdx",
                     onClick = { onSelectPoint(chronoIdx) },

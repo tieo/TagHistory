@@ -90,6 +90,14 @@ class HistoryViewModel(
     }
 
     private fun BeaconLocationReport.toUi(): HistoryPoint = HistoryPoint(
+        // hashId is the SHA-256 row PK from the LocationReport table; it
+        // is the only field guaranteed unique across reports (timestamp
+        // collisions are real — Apple sometimes serves two distinct
+        // reports at the exact same millisecond). Fall back to a synthetic
+        // composite for the rare freshly-decoded-but-not-yet-persisted
+        // path so the UI key stays stable in either case.
+        id = hashId
+            ?: "$timestamp|$latitude|$longitude|$horizontalAccuracy|$status",
         timestampMs = timestamp,
         latitude = latitude,
         longitude = longitude,
@@ -110,6 +118,13 @@ data class HistoryUiState(
 )
 
 data class HistoryPoint(
+    /**
+     * Stable unique identifier for this point. Sourced from the DB row
+     * primary key (SHA-256 hash) when available; the UI uses this as the
+     * Compose `key` for LazyColumn items so duplicate timestamps cannot
+     * crash the screen.
+     */
+    val id: String,
     val timestampMs: Long,
     val latitude: Double,
     val longitude: Double,

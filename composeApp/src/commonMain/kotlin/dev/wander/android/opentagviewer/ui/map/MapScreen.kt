@@ -439,7 +439,6 @@ private fun TagCard(
                     icon = Icons.AutoMirrored.Filled.List,
                     label = "History",
                     onClick = onOpenHistory,
-                    enabled = hasLocation,
                     tag = "btn_card_history",
                 )
                 CardCircleAction(

@@ -194,6 +194,7 @@ class BeaconRepository(
                     longitude = r.longitude,
                     horizontalAccuracy = r.horizontal_accuracy,
                     status = r.status,
+                    hashId = r.hash_id,
                 )
             }
 
