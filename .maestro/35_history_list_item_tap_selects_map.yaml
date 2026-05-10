@@ -11,15 +11,7 @@ name: History — tapping a list item selects the point (highlighted entry)
       text: "Today"
     timeout: 25000
 
-# Expand sheet (twice in case the first didn't reach Expanded state).
-- swipe:
-    start: "50%, 88%"
-    end: "50%, 40%"
-    duration: 400
-- swipe:
-    start: "50%, 70%"
-    end: "50%, 20%"
-    duration: 400
+# Sheet is fixed at peek; items 0 and 1 are visible without expanding.
 - extendedWaitUntil:
     visible:
       id: "history_item_0"
@@ -48,15 +40,15 @@ name: History — tapping a list item selects the point (highlighted entry)
     timeout: 25000
 - extendedWaitUntil:
     visible:
-      text: ".*data point.*"
+      text: "distance"
     timeout: 25000
 
 # Tap item 2 to select older point. Day label is still Today (3 points).
 - tapOn:
-    id: "history_item_2"
+    id: "history_item_1"
 - extendedWaitUntil:
     visible:
-      id: "history_item_2"
+      id: "history_item_1"
     timeout: 25000
 - extendedWaitUntil:
     visible:

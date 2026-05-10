@@ -179,16 +179,24 @@ fun HistoryScreen(
 
     val listState = rememberLazyListState()
     LaunchedEffect(selectedPointIdx, chronological.size) {
-        if (chronological.isNotEmpty()) {
-            // Find the entry containing the selected point, scroll to that.
-            val target = dayEntries.indexOfFirst { e ->
-                when (e) {
-                    is HistoryEntry.Stop -> e.members.any { it.id == chronological.getOrNull(selectedPointIdx)?.id }
-                    is HistoryEntry.Move -> e.point.id == chronological.getOrNull(selectedPointIdx)?.id
-                }
+        if (chronological.isEmpty()) return@LaunchedEffect
+        val target = dayEntries.indexOfFirst { e ->
+            when (e) {
+                is HistoryEntry.Stop -> e.members.any { it.id == chronological.getOrNull(selectedPointIdx)?.id }
+                is HistoryEntry.Move -> e.point.id == chronological.getOrNull(selectedPointIdx)?.id
             }
-            if (target >= 0) listState.scrollToItem(target)
         }
+        if (target < 0) return@LaunchedEffect
+        // Only scroll when the target row is OUTSIDE the current visible
+        // window. Otherwise selecting a row that's already on screen
+        // would scroll it to the top and push other already-visible rows
+        // off — so tapping history_item_1 used to silently hide
+        // history_item_0 even though both are sitting right there.
+        val visible = listState.layoutInfo.visibleItemsInfo
+        val firstIdx = visible.firstOrNull()?.index ?: -1
+        val lastIdx = visible.lastOrNull()?.index ?: -1
+        val onScreen = target in firstIdx..lastIdx
+        if (!onScreen) listState.scrollToItem(target)
     }
 
     var showDatePicker by remember { mutableStateOf(false) }

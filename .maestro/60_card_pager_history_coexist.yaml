@@ -77,14 +77,6 @@ name: History + Pager — open history, back, swipe to next, open history again
     visible:
       text: "Today"
     timeout: 25000
-- swipe:
-    start: "50%, 88%"
-    end: "50%, 40%"
-    duration: 400
-- swipe:
-    start: "50%, 70%"
-    end: "50%, 20%"
-    duration: 400
 - extendedWaitUntil:
     visible:
       id: "history_item_0"
@@ -92,7 +84,7 @@ name: History + Pager — open history, back, swipe to next, open history again
 # Car Keys today: 3 points — items 0, 1, 2 all visible.
 - extendedWaitUntil:
     visible:
-      id: "history_item_2"
+      id: "history_item_1"
     timeout: 25000
 - back
 - extendedWaitUntil:
@@ -123,14 +115,6 @@ name: History + Pager — open history, back, swipe to next, open history again
     visible:
       id: "btn_day_prev"
     timeout: 25000
-- swipe:
-    start: "50%, 88%"
-    end: "50%, 40%"
-    duration: 400
-- swipe:
-    start: "50%, 70%"
-    end: "50%, 20%"
-    duration: 400
 - extendedWaitUntil:
     visible:
       id: "history_item_0"

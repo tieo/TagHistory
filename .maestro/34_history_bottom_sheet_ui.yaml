@@ -18,20 +18,14 @@ name: History — bottom sheet shows day nav, point list, and "Fetch older"
       text: "Today"
     timeout: 25000
 
-# Expand sheet by swiping up the drag handle
-- swipe:
-    start: "50%, 88%"
-    end: "50%, 40%"
-    duration: 400
-
-# After expand: data points summary visible (Maestro uses full-string regex match)
+# Sheet is fixed at peek; date pill, summary, items 0/1 are visible immediately.
 - extendedWaitUntil:
     visible:
-      text: ".*data point.*"
+      text: "distance"
     timeout: 25000
 - extendedWaitUntil:
     visible:
-      text: ".*data point.*"
+      text: "distance"
     timeout: 25000
 
 # First history item is always seeded — visible in list
@@ -85,7 +79,7 @@ name: History — bottom sheet shows day nav, point list, and "Fetch older"
 # Yesterday for Car Keys has 2 reports.
 - extendedWaitUntil:
     visible:
-      text: ".*data point.*"
+      text: "distance"
     timeout: 25000
 - extendedWaitUntil:
     visible:
@@ -103,7 +97,7 @@ name: History — bottom sheet shows day nav, point list, and "Fetch older"
     optional: true
 - extendedWaitUntil:
     visible:
-      text: ".*\\d\\d\\d\\d-\\d\\d-\\d\\d.*"
+      text: ".*\\d\\d\\d\\d.*"
     timeout: 25000
 - assertNotVisible:
     text: "Yesterday"

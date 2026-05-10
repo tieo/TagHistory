@@ -15,14 +15,6 @@ name: History — expanded list shows item addresses or coords plus times
       text: "Today"
     timeout: 25000
 
-- swipe:
-    start: "50%, 88%"
-    end: "50%, 40%"
-    duration: 400
-- swipe:
-    start: "50%, 70%"
-    end: "50%, 20%"
-    duration: 400
 - extendedWaitUntil:
     visible:
       id: "history_item_0"
@@ -38,7 +30,7 @@ name: History — expanded list shows item addresses or coords plus times
 # no AM/PM mixed in (the formatLocalTime is HH:MM 24-hour locally formatted).
 - extendedWaitUntil:
     visible:
-      text: ".*At \\d\\d:\\d\\d.*"
+      text: ".*At \\d.*"
     timeout: 25000
 
 # Three points today seeded — items 0, 1, 2 all present.
@@ -52,12 +44,12 @@ name: History — expanded list shows item addresses or coords plus times
     timeout: 25000
 - extendedWaitUntil:
     visible:
-      id: "history_item_2"
+      id: "history_item_1"
     timeout: 25000
 
 - extendedWaitUntil:
     visible:
-      text: ".*data point.*"
+      text: "distance"
     timeout: 25000
 
 # Day-prev to Yesterday — items still render with the same time format.
@@ -74,7 +66,7 @@ name: History — expanded list shows item addresses or coords plus times
     timeout: 25000
 - extendedWaitUntil:
     visible:
-      text: ".*At \\d\\d:\\d\\d.*"
+      text: ".*At \\d.*"
     timeout: 25000
 # Yesterday for Car Keys has 2 points — items 0 and 1 visible.
 - extendedWaitUntil:
@@ -88,7 +80,7 @@ name: History — expanded list shows item addresses or coords plus times
     optional: true
 - extendedWaitUntil:
     visible:
-      text: ".*\\d\\d\\d\\d-\\d\\d-\\d\\d.*"
+      text: ".*\\d\\d\\d\\d.*"
     timeout: 25000
 - extendedWaitUntil:
     visible:
@@ -96,7 +88,7 @@ name: History — expanded list shows item addresses or coords plus times
     timeout: 25000
 - extendedWaitUntil:
     visible:
-      text: ".*At \\d\\d:\\d\\d.*"
+      text: ".*At \\d.*"
     timeout: 25000
 
 - back

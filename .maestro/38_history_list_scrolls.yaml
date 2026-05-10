@@ -1,9 +1,11 @@
 appId: io.github.tieo.taghistory
-name: History — list scrolls when expanded with multiple items
+name: History — list scrolls without crashing across day switches
 ---
-# Car Keys has 6 reports across 3 days. With sheet expanded and on Today,
-# at least history_item_0 is visible. After scrolling, item 0 may go
-# off-screen (depending on count) but the list itself remains alive.
+# Car Keys has 6 reports across 3 days. Sheet is fixed at peek; today's
+# items 0 and 1 are visible immediately. The list inside scrolls
+# without expanding the sheet (covered separately by flow 62); this
+# flow exercises a few burst scrolls + a day switch and asserts the
+# screen stays alive.
 - runFlow:
     file: 00_seed_test_data.yaml
 
@@ -13,67 +15,38 @@ name: History — list scrolls when expanded with multiple items
     visible:
       text: "Today"
     timeout: 25000
-
-# Expand sheet
-- swipe:
-    start: "50%, 88%"
-    end: "50%, 40%"
-    duration: 400
 - extendedWaitUntil:
     visible:
       id: "history_item_0"
     timeout: 25000
 
-# Try a downward swipe inside the list area to scroll. Even with 3 items,
-# the list shouldn't crash and history_item_0 must remain reachable
-# (scroll back up via reverse swipe).
+# Burst of scrolls inside the sheet's peek slice — list scrolls but
+# the screen survives.
 - swipe:
-    start: "50%, 70%"
-    end: "50%, 30%"
+    start: "50%, 95%"
+    end: "50%, 80%"
     duration: 400
 - swipe:
-    start: "50%, 30%"
-    end: "50%, 70%"
+    start: "50%, 80%"
+    end: "50%, 95%"
+    duration: 400
+- swipe:
+    start: "50%, 95%"
+    end: "50%, 80%"
+    duration: 400
+- swipe:
+    start: "50%, 80%"
+    end: "50%, 95%"
     duration: 400
 
-# Back to first item still rendered.
+# Summary still rendered (peek didn't break).
 - extendedWaitUntil:
     visible:
-      id: "history_item_0"
-    timeout: 25000
-- extendedWaitUntil:
-    visible:
-      id: "history_item_0"
-    timeout: 25000
-- extendedWaitUntil:
-    visible:
-      text: ".*data point.*"
+      text: "distance"
     timeout: 25000
 - extendedWaitUntil:
     visible:
       text: ".*At \\d.*"
-    timeout: 25000
-
-# Aggressive scroll burst — list does not crash.
-- swipe:
-    start: "50%, 70%"
-    end: "50%, 20%"
-    duration: 400
-- swipe:
-    start: "50%, 70%"
-    end: "50%, 20%"
-    duration: 400
-- swipe:
-    start: "50%, 20%"
-    end: "50%, 70%"
-    duration: 400
-- swipe:
-    start: "50%, 20%"
-    end: "50%, 70%"
-    duration: 400
-- extendedWaitUntil:
-    visible:
-      id: "history_item_0"
     timeout: 25000
 
 # Day-prev to Yesterday: the list re-renders with Yesterday's points.
@@ -88,15 +61,6 @@ name: History — list scrolls when expanded with multiple items
     visible:
       id: "history_item_0"
     timeout: 25000
-# Re-scroll inside Yesterday — list still alive.
-- swipe:
-    start: "50%, 70%"
-    end: "50%, 30%"
-    duration: 400
-- swipe:
-    start: "50%, 30%"
-    end: "50%, 70%"
-    duration: 400
 
 - back
 - extendedWaitUntil:

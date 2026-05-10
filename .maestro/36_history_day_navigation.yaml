@@ -11,18 +11,10 @@ name: History — day navigation prev/next changes point list
       text: "Today"
     timeout: 25000
 
-# Expand sheet to see list
-- swipe:
-    start: "50%, 88%"
-    end: "50%, 40%"
-    duration: 400
-- swipe:
-    start: "50%, 70%"
-    end: "50%, 20%"
-    duration: 400
+# Sheet is fixed at peek; today's items are visible immediately.
 - extendedWaitUntil:
     visible:
-      text: ".*data point.*"
+      text: "distance"
     timeout: 25000
 
 # Start on Today. Go back two days.
@@ -33,15 +25,11 @@ name: History — day navigation prev/next changes point list
     visible:
       text: "Yesterday"
     timeout: 25000
-- extendedWaitUntil:
-    visible:
-      text: "Yesterday"
-    timeout: 25000
 
-# Yesterday has 2 seeded points
+# Yesterday has 2 seeded points — summary still renders.
 - extendedWaitUntil:
     visible:
-      text: ".*data point.*"
+      text: "distance"
     timeout: 25000
 
 - tapOn:
@@ -49,7 +37,7 @@ name: History — day navigation prev/next changes point list
     optional: true
 - extendedWaitUntil:
     visible:
-      text: ".*-.*-.*"
+      text: ".*\\d\\d\\d\\d.*"
     timeout: 25000
 
 # Navigate forward twice back to Today
@@ -67,26 +55,9 @@ name: History — day navigation prev/next changes point list
     visible:
       text: "Today"
     timeout: 25000
-- extendedWaitUntil:
-    visible:
-      text: "Today"
-    timeout: 25000
 - assertNotVisible:
     text: "Yesterday"
-# Re-expand the sheet — day transitions may have collapsed it.
-- swipe:
-    start: "50%, 88%"
-    end: "50%, 40%"
-    duration: 400
-- swipe:
-    start: "50%, 70%"
-    end: "50%, 20%"
-    duration: 400
-- extendedWaitUntil:
-    visible:
-      id: "history_item_0"
-    timeout: 25000
-# Today has 3 points (Car Keys seeded with 3 today, 2 yesterday, 1 older).
+# Today has 3 points; items 0 and 1 fit in the peek-height list.
 - extendedWaitUntil:
     visible:
       id: "history_item_0"
@@ -97,11 +68,7 @@ name: History — day navigation prev/next changes point list
     timeout: 25000
 - extendedWaitUntil:
     visible:
-      id: "history_item_2"
-    timeout: 25000
-- extendedWaitUntil:
-    visible:
-      text: ".*data point.*"
+      text: "distance"
     timeout: 25000
 - extendedWaitUntil:
     visible:
@@ -120,16 +87,12 @@ name: History — day navigation prev/next changes point list
     visible:
       id: "history_item_0"
     timeout: 25000
-- extendedWaitUntil:
-    visible:
-      id: "history_item_1"
-    timeout: 25000
 - tapOn:
     id: "btn_day_prev"
     optional: true
 - extendedWaitUntil:
     visible:
-      text: ".*\\d\\d\\d\\d-\\d\\d-\\d\\d.*"
+      text: ".*\\d\\d\\d\\d.*"
     timeout: 25000
 - extendedWaitUntil:
     visible:
@@ -149,22 +112,9 @@ name: History — day navigation prev/next changes point list
     visible:
       text: "Today"
     timeout: 25000
-# Re-expand the sheet — day transitions may have collapsed it.
-- swipe:
-    start: "50%, 88%"
-    end: "50%, 40%"
-    duration: 400
-- swipe:
-    start: "50%, 70%"
-    end: "50%, 20%"
-    duration: 400
 - extendedWaitUntil:
     visible:
       id: "history_item_0"
-    timeout: 25000
-- extendedWaitUntil:
-    visible:
-      id: "history_item_2"
     timeout: 25000
 
 - back

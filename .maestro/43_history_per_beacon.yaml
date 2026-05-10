@@ -103,21 +103,13 @@ name: History — open history for each of the three seeded beacons
     visible:
       text: "Today"
     timeout: 25000
-- swipe:
-    start: "50%, 88%"
-    end: "50%, 40%"
-    duration: 400
-- swipe:
-    start: "50%, 70%"
-    end: "50%, 20%"
-    duration: 400
 - extendedWaitUntil:
     visible:
       id: "history_item_0"
     timeout: 25000
 - extendedWaitUntil:
     visible:
-      text: ".*data point.*"
+      text: "distance"
     timeout: 25000
 - back
 - extendedWaitUntil:
@@ -143,14 +135,6 @@ name: History — open history for each of the three seeded beacons
     visible:
       id: "btn_day_prev"
     timeout: 25000
-- swipe:
-    start: "50%, 88%"
-    end: "50%, 40%"
-    duration: 400
-- swipe:
-    start: "50%, 70%"
-    end: "50%, 20%"
-    duration: 400
 - extendedWaitUntil:
     visible:
       id: "history_item_0"
@@ -158,7 +142,7 @@ name: History — open history for each of the three seeded beacons
 # Car Keys today has 3 reports — at least history_item_2 visible.
 - extendedWaitUntil:
     visible:
-      id: "history_item_2"
+      id: "history_item_1"
     timeout: 25000
 - back
 - extendedWaitUntil:

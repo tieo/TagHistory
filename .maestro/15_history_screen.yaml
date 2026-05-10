@@ -31,10 +31,6 @@ name: History screen — seeded reports visible, day nav works, back returns to 
     id: "btn_card_details"
 
 # Expand the bottom sheet so we can verify the chronological list renders.
-- swipe:
-    start: "50%, 88%"
-    end: "50%, 40%"
-    duration: 400
 - extendedWaitUntil:
     visible:
       id: "history_item_0"
@@ -46,7 +42,7 @@ name: History screen — seeded reports visible, day nav works, back returns to 
 # "data point" / "data points" pluralization rendered.
 - extendedWaitUntil:
     visible:
-      text: ".*data point.*"
+      text: "distance"
     timeout: 25000
 # At least one "At HH:MM" timestamp visible — catches UTC-vs-local format bugs.
 - extendedWaitUntil:

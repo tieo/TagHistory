@@ -47,17 +47,13 @@ name: History — navigating past the oldest seeded day still keeps controls ali
     timeout: 25000
 
 # Today seeded with 3 items — list is non-empty.
-- swipe:
-    start: "50%, 88%"
-    end: "50%, 40%"
-    duration: 400
 - extendedWaitUntil:
     visible:
       id: "history_item_0"
     timeout: 25000
 - extendedWaitUntil:
     visible:
-      text: ".*data point.*"
+      text: "distance"
     timeout: 25000
 
 # Walk past the end again, then forward — the boundary holds without crash.
