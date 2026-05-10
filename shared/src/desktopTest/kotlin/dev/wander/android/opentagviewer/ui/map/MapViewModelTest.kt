@@ -8,10 +8,7 @@ import io.github.tieo.taghistory.data.repo.BeaconRepository
 import io.github.tieo.taghistory.data.repo.UserAuthRepository
 import io.github.tieo.taghistory.data.repo.UserDataRepository
 import io.github.tieo.taghistory.data.storage.SecureBlobStore
-import io.github.tieo.taghistory.db.BeaconNamingRecord
 import io.github.tieo.taghistory.db.TagHistoryDatabase
-import io.github.tieo.taghistory.db.OwnedBeacons
-import io.github.tieo.taghistory.db.UserBeaconOptions
 import java.util.Properties
 import kotlin.test.BeforeTest
 import kotlin.test.Test

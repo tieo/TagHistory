@@ -55,7 +55,6 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import kotlin.math.abs
-import kotlin.math.cos
 import io.github.tieo.taghistory.data.model.UserMapCameraPosition
 import org.maplibre.android.MapLibre
 import org.maplibre.android.camera.CameraPosition
@@ -274,6 +273,12 @@ actual fun PlatformMapView(
     val cameraKey = selectedMarker?.let { "${it.beaconId}|${it.latitude}|${it.longitude}" }
     LaunchedEffect(cameraKey) {
         val target = selectedMarker ?: return@LaunchedEffect
+        // Claim "we have done at least one focus" synchronously so a
+        // recomposition arriving before getMapAsync's callback sees the
+        // up-to-date flag. Doing this inside the async block was caught
+        // by :verifyNoAsyncMapStateWrite — same hazard class as the
+        // map-history zoom-jump fixed in 7fd54a0.
+        didInitialFocus[0] = true
         mapView.getMapAsync { map ->
             val currentZoom = map.cameraPosition.zoom
             // Zoom in to at least street level; preserve higher zoom if already there.
@@ -283,7 +288,6 @@ actual fun PlatformMapView(
                 targetZoom,
             )
             map.animateCamera(update)
-            didInitialFocus[0] = true
         }
     }
 }

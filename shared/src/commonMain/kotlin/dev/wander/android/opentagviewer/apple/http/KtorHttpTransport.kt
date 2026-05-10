@@ -9,7 +9,6 @@ import io.ktor.client.statement.bodyAsBytes
 import io.ktor.http.ContentType
 import io.ktor.http.HttpMethod
 import io.ktor.http.contentType
-import io.ktor.http.isSuccess
 
 /**
  * Ktor-backed [HttpTransport]. Platform code constructs the [HttpClient]

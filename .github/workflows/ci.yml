@@ -48,13 +48,13 @@ jobs:
 
       - run: echo "MAPS_API_KEY=${{ secrets.MAPS_API_KEY || 'maps_key_default_value' }}" > secrets.properties
 
-      - name: Build APK + run unit tests in container
+      - name: Build APK + run unit tests + lint in container
         run: |
           docker compose build build
           docker compose run --rm \
             -v ${HOME}/.gradle:/root/.gradle \
             build \
-            ./gradlew test :androidApp:assembleDebug
+            ./gradlew ktlintCheck verifyNoAsyncMapStateWrite test :androidApp:assembleDebug
 
       - uses: actions/upload-artifact@v4
         with:

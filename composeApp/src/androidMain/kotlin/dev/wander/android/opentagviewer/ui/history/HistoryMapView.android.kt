@@ -140,6 +140,15 @@ actual fun HistoryMapView(
     AndroidView(
         factory = { _ ->
             PerfTrace.mark("HistoryMapView AndroidView factory")
+            // Synchronously claim the first key so the very next
+            // recomposition's `update` block sees a non-empty
+            // lastRenderedPointsKey. Doing this inside the async
+            // getMapAsync callback opens the same fitCamera-stacking
+            // race we already fixed in update; lint catches that
+            // pattern via :verifyNoAsyncMapStateWrite.
+            val initialOrdered = currentPoints.value.sortedBy { it.timestampMs }
+            val initialKey = initialOrdered.map { it.timestampMs }
+            lastRenderedPointsKey[0] = initialKey
             mapView.getMapAsync { map ->
                 PerfTrace.mark("getMapAsync first callback")
                 map.uiSettings.isRotateGesturesEnabled = false
@@ -180,9 +189,12 @@ actual fun HistoryMapView(
                 map.setStyle(Style.Builder().fromBasemap(effectiveBasemap, context)) { style ->
                     PerfTrace.mark("setStyle loaded")
                     installLayers(style, lineColor, selectedColor, onSurfaceColor, surfaceColor)
+                    // Re-read currentPoints in case state.points changed
+                    // between factory entry and style-loaded; render
+                    // against the latest, but the synchronous key claim
+                    // happened above so the update block won't double-fit.
                     val ordered = currentPoints.value.sortedBy { it.timestampMs }
                     val key = ordered.map { it.timestampMs }
-                    lastRenderedPointsKey[0] = key
                     renderPath(map, style, ordered, fitCamera = true, bottomInsetPx = currentBottomInset.value)
                     renderSelectedPoint(map, style, ordered, currentSelectedIdx.value, panCamera = false)
                     renderLabels(style, ordered, currentSelectedIdx.value)

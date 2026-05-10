@@ -5,11 +5,9 @@ import io.github.tieo.taghistory.data.model.BeaconData
 import io.github.tieo.taghistory.data.model.BeaconInformation
 import io.github.tieo.taghistory.data.model.BeaconLocationReport
 import io.github.tieo.taghistory.data.model.ImportData
-import io.github.tieo.taghistory.db.BeaconNamingRecord
 import io.github.tieo.taghistory.db.DailyHistoryFetchRecord
 import io.github.tieo.taghistory.db.Import
 import io.github.tieo.taghistory.db.TagHistoryDatabase
-import io.github.tieo.taghistory.db.OwnedBeacons
 import io.github.tieo.taghistory.db.UserBeaconOptions
 import io.github.tieo.taghistory.util.BeaconCombinerUtil
 import io.github.tieo.taghistory.util.BeaconLocationReportHasher
