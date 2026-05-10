@@ -4,7 +4,6 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -27,14 +26,11 @@ import androidx.compose.material.icons.automirrored.filled.TrendingFlat
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
-import androidx.compose.material.icons.filled.FileDownload
-import androidx.compose.material.icons.filled.FilterAlt
 import androidx.compose.material.icons.filled.Place
-import androidx.compose.material.icons.filled.Speed
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Timeline
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
-import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.BottomSheetScaffold
 import io.github.tieo.taghistory.ui.util.AlwaysSpinningIndicator
 import androidx.compose.material3.DatePicker
@@ -42,8 +38,6 @@ import androidx.compose.material3.DatePickerDefaults
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledIconButton
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -53,19 +47,14 @@ import androidx.compose.material3.SelectableDates
 import androidx.compose.material3.SheetValue
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.pulltorefresh.PullToRefreshBox
-import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.material3.rememberBottomSheetScaffoldState
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.material3.rememberStandardBottomSheetState
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.contentDescription
@@ -82,7 +71,6 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
@@ -90,7 +78,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlin.math.PI
-import kotlin.math.abs
 import kotlin.math.atan2
 import kotlin.math.cos
 import kotlin.math.roundToInt
@@ -98,7 +85,6 @@ import kotlin.math.sin
 import kotlin.math.sqrt
 import kotlin.time.Clock
 import kotlin.time.ExperimentalTime
-import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalTime::class, ExperimentalMaterial3Api::class)
@@ -205,14 +191,24 @@ fun HistoryScreen(
         scaffoldState = scaffoldState,
         modifier = modifier.fillMaxSize(),
         sheetPeekHeight = sheetPeek,
+        // Material3's default drag handle has 22 dp of vertical padding
+        // baked into it; replace with a tight 3 dp pill so the gap to
+        // the date row above shrinks to a hairline. Aligned via the
+        // outer Box so the pill stays centered without extra padding.
         sheetDragHandle = {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(top = 8.dp, bottom = 4.dp),
+                    .padding(top = 6.dp, bottom = 0.dp),
                 contentAlignment = Alignment.Center,
             ) {
-                BottomSheetDefaults.DragHandle()
+                Box(
+                    modifier = Modifier
+                        .width(40.dp)
+                        .height(4.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.outlineVariant),
+                )
             }
         },
         sheetContent = {
@@ -223,7 +219,6 @@ fun HistoryScreen(
                 dayEntries = dayEntries,
                 selectedPointIdx = selectedPointIdx,
                 summary = summary,
-                filters = state.filters,
                 isLoading = state.isLoading,
                 error = state.error,
                 listState = listState,
@@ -255,10 +250,8 @@ fun HistoryScreen(
                 onSelectPoint = { id ->
                     selectedPointId = id
                 },
+                onRefresh = { viewModel.refresh() },
                 onRetry = { viewModel.refresh() },
-                onPullRefresh = { viewModel.refresh() },
-                onToggleStopsOnly = { viewModel.setStopsOnly(it) },
-                onToggleHideLowAccuracy = { viewModel.setHideLowAccuracy(it) },
             )
         },
     ) { _ ->
@@ -353,7 +346,6 @@ private fun SheetContent(
     dayEntries: List<HistoryEntry>,
     selectedPointIdx: Int,
     summary: DaySummary,
-    filters: HistoryFilters,
     isLoading: Boolean,
     error: String?,
     listState: androidx.compose.foundation.lazy.LazyListState,
@@ -363,14 +355,10 @@ private fun SheetContent(
     onDayTitleTap: () -> Unit,
     onDayTitleLongPress: () -> Unit,
     onSelectPoint: (String) -> Unit,
+    onRefresh: () -> Unit,
     onRetry: () -> Unit,
-    onPullRefresh: () -> Unit,
-    onToggleStopsOnly: (Boolean) -> Unit,
-    onToggleHideLowAccuracy: (Boolean) -> Unit,
 ) {
-    val haptics = androidx.compose.ui.platform.LocalHapticFeedback.current
-
-    Column(modifier = Modifier.fillMaxWidth()) {
+    Column(modifier = Modifier.fillMaxSize()) {
         Box(
             modifier = Modifier
                 .size(1.dp)
@@ -378,38 +366,14 @@ private fun SheetContent(
                 .semantics { contentDescription = "map_render_$lastRenderedCount" },
         )
 
-        // Date row: left arrow / day-name (tap = picker, long-press =
-        // GPX share) / right arrow. The whole row also accepts a
-        // horizontal swipe gesture for next/prev day.
-        var dragAccum by remember { mutableStateOf(0f) }
-        val swipeThresholdPx = with(LocalDensity.current) { 48.dp.toPx() }
+        // Date row: chevron / day-name (tap = picker, long-press = GPX
+        // share) / chevron / refresh. No horizontal swipe gesture: it
+        // collided with the bottom-sheet's vertical drag handler and
+        // misfired day switches when the user just meant to scroll.
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 8.dp, vertical = 4.dp)
-                .pointerInput(dayIdx, days.size) {
-                    detectHorizontalDragGestures(
-                        onDragStart = { dragAccum = 0f },
-                        onDragEnd = { dragAccum = 0f },
-                        onDragCancel = { dragAccum = 0f },
-                        onHorizontalDrag = { _, delta ->
-                            dragAccum += delta
-                            if (dragAccum > swipeThresholdPx) {
-                                dragAccum = 0f
-                                onDayPrev()
-                                haptics.performHapticFeedback(
-                                    androidx.compose.ui.hapticfeedback.HapticFeedbackType.TextHandleMove,
-                                )
-                            } else if (dragAccum < -swipeThresholdPx) {
-                                dragAccum = 0f
-                                onDayNext()
-                                haptics.performHapticFeedback(
-                                    androidx.compose.ui.hapticfeedback.HapticFeedbackType.TextHandleMove,
-                                )
-                            }
-                        },
-                    )
-                },
+                .padding(horizontal = 4.dp, vertical = 0.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             IconButton(
@@ -451,36 +415,26 @@ private fun SheetContent(
             ) {
                 Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = "Next day")
             }
+            IconButton(
+                onClick = onRefresh,
+                enabled = !isLoading,
+                modifier = Modifier.testTag("btn_history_refresh"),
+            ) {
+                if (isLoading) {
+                    AlwaysSpinningIndicator(
+                        modifier = Modifier.size(18.dp),
+                        strokeWidth = 2.dp,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                } else {
+                    Icon(Icons.Filled.Refresh, contentDescription = "Refresh")
+                }
+            }
         }
 
         if (chronological.isNotEmpty()) {
             DaySummaryStrip(summary = summary, totalPoints = chronological.size)
-            FilterChipsRow(
-                filters = filters,
-                onToggleStopsOnly = onToggleStopsOnly,
-                onToggleHideLowAccuracy = onToggleHideLowAccuracy,
-            )
             HorizontalDivider()
-        }
-
-        if (isLoading) {
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Center,
-            ) {
-                AlwaysSpinningIndicator(
-                    modifier = Modifier.size(14.dp),
-                    strokeWidth = 2.dp,
-                    color = MaterialTheme.colorScheme.primary,
-                )
-                Spacer(Modifier.width(8.dp))
-                Text(
-                    "Refreshing…",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
         }
 
         if (error != null && chronological.isEmpty()) {
@@ -488,20 +442,17 @@ private fun SheetContent(
             return@Column
         }
 
-        val pullState = rememberPullToRefreshState()
-        PullToRefreshBox(
-            isRefreshing = isLoading,
-            onRefresh = onPullRefresh,
-            state = pullState,
-            modifier = Modifier.weight(1f, fill = false),
-        ) {
-            EntriesList(
-                entries = dayEntries,
-                listState = listState,
-                selectedPointId = chronological.getOrNull(selectedPointIdx)?.id,
-                onSelectPoint = onSelectPoint,
-            )
-        }
+        // Plain LazyColumn — no PullToRefreshBox. The previous wrapper
+        // intercepted scroll gestures, which combined with the bottom
+        // sheet's nested-scroll connection meant the user had to drag
+        // the sheet up before the list would scroll.
+        EntriesList(
+            entries = dayEntries,
+            listState = listState,
+            selectedPointId = chronological.getOrNull(selectedPointIdx)?.id,
+            onSelectPoint = onSelectPoint,
+            modifier = Modifier.fillMaxSize(),
+        )
     }
 }
 
@@ -561,49 +512,6 @@ private fun SummaryStat(label: String, sub: String) {
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun FilterChipsRow(
-    filters: HistoryFilters,
-    onToggleStopsOnly: (Boolean) -> Unit,
-    onToggleHideLowAccuracy: (Boolean) -> Unit,
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 12.dp, vertical = 4.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        FilterChip(
-            selected = filters.stopsOnly,
-            onClick = { onToggleStopsOnly(!filters.stopsOnly) },
-            label = { Text("Stops only") },
-            leadingIcon = {
-                Icon(
-                    Icons.Filled.Place,
-                    contentDescription = null,
-                    modifier = Modifier.size(16.dp),
-                )
-            },
-            modifier = Modifier.testTag("chip_stops_only"),
-        )
-        FilterChip(
-            selected = filters.hideLowAccuracy,
-            onClick = { onToggleHideLowAccuracy(!filters.hideLowAccuracy) },
-            label = { Text("Hide low-accuracy") },
-            leadingIcon = {
-                Icon(
-                    Icons.Filled.FilterAlt,
-                    contentDescription = null,
-                    modifier = Modifier.size(16.dp),
-                )
-            },
-            modifier = Modifier.testTag("chip_hide_lowaccuracy"),
-        )
-    }
-}
-
 @OptIn(ExperimentalTime::class)
 @Composable
 private fun EntriesList(
@@ -611,10 +519,11 @@ private fun EntriesList(
     listState: androidx.compose.foundation.lazy.LazyListState,
     selectedPointId: String?,
     onSelectPoint: (String) -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     LazyColumn(
         state = listState,
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier,
     ) {
         items(entries, key = { it.id }) { entry ->
             when (entry) {
@@ -834,17 +743,25 @@ private fun MoveRow(
                 .weight(1f)
                 .padding(end = 16.dp, top = 10.dp, bottom = 10.dp),
         ) {
-            val distLabel = formatDistance(entry.fromPrevMeters)
-            val durLabel = if (entry.durationFromPrevMs > 0) formatDuration(entry.durationFromPrevMs) else "—"
-            val speedLabel = if (entry.fromPrevMeters > 5.0 && entry.durationFromPrevMs > 0) {
-                " · " + formatSpeed(entry.avgSpeedKmh)
-            } else ""
-            Text(
-                "$distLabel · $durLabel$speedLabel",
-                style = MaterialTheme.typography.bodyMedium,
-                color = if (isSelected) MaterialTheme.colorScheme.primary
-                        else MaterialTheme.colorScheme.onSurface,
-            )
+            // First Move row in the day has no "previous" point to
+            // measure from — distance and duration would be 0 / —, both
+            // misleading. Drop the line entirely and just show the
+            // timestamp + accuracy. Also drop the speed badge across
+            // the board: it added noise without much information given
+            // the sparse sampling (one report every ~10 minutes is
+            // typical, so any "12 km/h" is averaged over noisy gaps).
+            if (!isFirst && entry.fromPrevMeters > 0.0) {
+                val distLabel = formatDistance(entry.fromPrevMeters)
+                val durLabel = if (entry.durationFromPrevMs > 0)
+                    formatDuration(entry.durationFromPrevMs)
+                else "—"
+                Text(
+                    "$distLabel · $durLabel",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = if (isSelected) MaterialTheme.colorScheme.primary
+                            else MaterialTheme.colorScheme.onSurface,
+                )
+            }
             Text(
                 "At ${formatLocalTime(entry.point.timestampMs)}  ·  ±${entry.point.horizontalAccuracy} m",
                 style = MaterialTheme.typography.bodySmall,

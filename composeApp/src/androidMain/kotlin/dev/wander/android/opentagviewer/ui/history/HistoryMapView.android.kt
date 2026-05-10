@@ -199,13 +199,21 @@ actual fun HistoryMapView(
             val visible = routeVisible
             val inset = bottomInsetPx
             val newKey = ordered.map { it.timestampMs }
+            // Detect the diff and commit the new key SYNCHRONOUSLY,
+            // before queuing the async getMapAsync block. Two updates
+            // arriving in quick succession (e.g. day-switch + a follow-up
+            // VM emit during geocode patching) would otherwise both
+            // observe the stale lastRenderedPointsKey, both fire
+            // fitCamera, and stack two animateCamera calls — the
+            // composed animation snapped the user past the intended
+            // bounds and looked like a spurious zoom-in.
+            val pointsChanged = newKey != lastRenderedPointsKey[0]
+            if (pointsChanged) lastRenderedPointsKey[0] = newKey
             onRendered(newKey)
             mapView.getMapAsync { map ->
                 val style = map.style ?: return@getMapAsync
                 if (!style.isFullyLoaded) return@getMapAsync
-                val pointsChanged = newKey != lastRenderedPointsKey[0]
                 if (pointsChanged) {
-                    lastRenderedPointsKey[0] = newKey
                     renderPath(map, style, ordered, fitCamera = true, bottomInsetPx = inset)
                     renderAllDots(style, ordered)
                 }
