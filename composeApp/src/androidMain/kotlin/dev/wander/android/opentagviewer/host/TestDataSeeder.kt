@@ -24,6 +24,24 @@ fun seedTestData(context: Context) {
     val app = context.applicationContext
     val db = TagHistoryDatabase(DatabaseDriverFactory(app).create())
 
+    // Refuse to overwrite a non-empty real DB with the seed beacons.
+    // The seed is meant for fresh / empty installs only — running it
+    // on a populated database (real beacons + real reports) used to
+    // silently insert the 'Car Keys' / 'Backpack' / 'Bike' fakes
+    // alongside the user's data, which they read as 'mock data
+    // landed on my phone'. Idempotency (the early-return below)
+    // already guards the test-data path; this guard ensures we
+    // never co-mingle.
+    val existingOwned = db.ownedBeaconQueries.getAll().executeAsList()
+    val hasReal = existingOwned.any { it.id !in setOf(SEED_BEACON_1, SEED_BEACON_2, SEED_BEACON_3) }
+    if (hasReal) {
+        android.util.Log.w(
+            "TestDataSeeder",
+            "Refusing to seed: real beacons already present (${existingOwned.size} rows)",
+        )
+        return
+    }
+
     if (db.ownedBeaconQueries.getById(SEED_BEACON_1).executeAsOneOrNull() != null) return
 
     // ── Auth ──────────────────────────────────────────────────────────────
