@@ -200,9 +200,13 @@ private fun AuthedNav(
                         when {
                             mapVm != null -> {
                                 {
+                                    // Sync log message kept identical to the
+                                    // snackbar text so both surfaces show the
+                                    // same string ("Refresh started"); a Maestro
+                                    // flow asserts that string in the log panel.
                                     SyncLog.record(
                                         SyncEvent.Kind.START,
-                                        "Refresh-now tapped",
+                                        "Refresh started",
                                     )
                                     mapVm.refresh()
                                     "Refresh started"

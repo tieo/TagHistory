@@ -74,10 +74,15 @@ name: Settings — debug panel populates with real sync events when Refresh fire
     visible:
       text: ".*(RUNG|INFO).*"
     timeout: 25000
-- extendedWaitUntil:
-    visible:
+# The START row that logged "Refresh started" can scroll out of the
+# log's LazyColumn (off-screen rows aren't composed). Scroll back
+# down inside the log until it shows up.
+- scrollUntilVisible:
+    element:
       text: ".*Refresh started.*"
+    direction: DOWN
     timeout: 25000
+    speed: 40
 
 # Time format must be HH:MM:SS, not the YYYY-MM-DDTHH:mm ISO from the
 # broken first attempt.
