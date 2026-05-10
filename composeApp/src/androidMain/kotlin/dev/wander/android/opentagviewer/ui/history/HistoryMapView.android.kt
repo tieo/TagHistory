@@ -352,28 +352,41 @@ private fun renderPath(
             val bounds = runCatching {
                 LatLngBounds.Builder().apply { distinct.forEach { include(it) } }.build()
             }.getOrNull() ?: return
-            val updated = CameraUpdateFactory.newLatLngBounds(
-                bounds,
+            // ONE-SHOT animate. Compute the natural bounds-fit camera
+            // up front, clamp the zoom to MAX_FIT_ZOOM in code, then
+            // animate to that exact target in a single pass.
+            //
+            // The previous two-stage path (animateCamera bounds →
+            // onFinish "if zoom > 17, zoomTo(17)") caused a visible
+            // "tight zoom-in then back out" on every day-switch and
+            // could stack with the next switch's animation if the user
+            // tapped again mid-flight, producing the in-and-out
+            // jitter the user reported. Bundling the cap into the
+            // initial target removes both the second hop and the
+            // overlap risk.
+            val padding = intArrayOf(
                 BOUNDS_PADDING_PX,
                 BOUNDS_PADDING_PX,
                 BOUNDS_PADDING_PX,
                 BOUNDS_PADDING_PX + bottomInsetPx,
             )
-            map.animateCamera(
-                updated,
-                400,
-                object : MapLibreMap.CancelableCallback {
-                    override fun onCancel() = Unit
-                    override fun onFinish() {
-                        if (map.cameraPosition.zoom > 17.0) {
-                            map.animateCamera(CameraUpdateFactory.zoomTo(17.0))
-                        }
-                    }
-                },
-            )
+            val natural = runCatching {
+                map.getCameraForLatLngBounds(bounds, padding)
+            }.getOrNull()
+            val targetZoom = (natural?.zoom ?: map.cameraPosition.zoom)
+                .coerceAtMost(MAX_FIT_ZOOM)
+            val targetCenter = natural?.target ?: bounds.center
+            val cameraPos = org.maplibre.android.camera.CameraPosition.Builder()
+                .target(targetCenter)
+                .zoom(targetZoom)
+                .build()
+            map.animateCamera(CameraUpdateFactory.newCameraPosition(cameraPos), 400)
         }
     }
 }
+
+/** Upper bound for the auto-fit zoom on a multi-point history day. */
+private const val MAX_FIT_ZOOM = 17.0
 
 private fun renderSelectedPoint(
     map: MapLibreMap,
