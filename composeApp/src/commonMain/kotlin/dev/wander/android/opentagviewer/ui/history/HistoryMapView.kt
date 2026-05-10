@@ -17,10 +17,17 @@ expect fun HistoryMapView(
      */
     routeVisible: Boolean = true,
     /**
-     * Pixels of the map area that are obscured by an overlay (typically
-     * the bottom sheet at peek). Used as bottom padding when fitting
-     * the camera so that points which would otherwise sit behind the
-     * sheet are still visible above it.
+     * Pixels of the map area that are obscured by an overlay at the
+     * top — status bar, notch, and the back / route-toggle / basemap
+     * buttons floating in that strip. Excluded from the camera fit so
+     * a point that would otherwise sit under the notch is padded down
+     * into the visible slice.
+     */
+    topInsetPx: Int = 0,
+    /**
+     * Pixels of the map area that are obscured by an overlay at the
+     * bottom (typically the sheet at peek). Excluded from the camera
+     * fit the same way as [topInsetPx].
      */
     bottomInsetPx: Int = 0,
     /**

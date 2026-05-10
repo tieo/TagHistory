@@ -52,11 +52,19 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberBottomSheetScaffoldState
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.material3.rememberStandardBottomSheetState
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import io.github.tieo.taghistory.ui.map.BasemapCycleButton
@@ -162,11 +170,21 @@ fun HistoryScreen(
 
     var lastRenderedCount by remember { mutableIntStateOf(-1) }
 
+    // Sheet peek = 25% of viewport height (down from 35% — the user
+    // wanted the sheet not to eat ~10% extra). Top inset = status
+    // bar + floating buttons strip; the map is told about both so
+    // the camera fit only considers the slice that's actually
+    // visible between the notch and the sheet, not the whole window.
     val configuration = LocalConfiguration.current
     val density = LocalDensity.current
     val screenHeightDp = configuration.screenHeightDp.dp
-    val sheetPeek = screenHeightDp * 0.35f
+    val sheetPeek = screenHeightDp * 0.25f
     val sheetPeekPx = with(density) { sheetPeek.toPx().toInt() }
+    val statusBarPad = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
+    // Status bar + button height (48 dp) + the 12 dp top + 12 dp bottom
+    // padding around the floating row.
+    val topInsetDp = statusBarPad + 48.dp + 24.dp
+    val topInsetPx = with(density) { topInsetDp.toPx().toInt() }
 
     val listState = rememberLazyListState()
     LaunchedEffect(selectedPointIdx, chronological.size) {
@@ -261,6 +279,7 @@ fun HistoryScreen(
                 selectedPointIndex = selectedPointIdx,
                 basemap = basemap,
                 routeVisible = routeVisible,
+                topInsetPx = topInsetPx,
                 bottomInsetPx = sheetPeekPx,
                 onPointSelected = { id -> selectedPointId = id },
                 onRendered = { lastRenderedCount = it.size },
@@ -358,6 +377,22 @@ private fun SheetContent(
     onRefresh: () -> Unit,
     onRetry: () -> Unit,
 ) {
+    // See HistoryScreen for the rationale: swallow the residual scroll
+    // here so the BottomSheetScaffold never sees it and can't hijack
+    // the user's intent to scroll the list.
+    val listOwnsScroll = remember {
+        object : NestedScrollConnection {
+            override fun onPostScroll(
+                consumed: Offset,
+                available: Offset,
+                source: NestedScrollSource,
+            ): Offset = available
+            override suspend fun onPostFling(
+                consumed: Velocity,
+                available: Velocity,
+            ): Velocity = available
+        }
+    }
     Column(modifier = Modifier.fillMaxSize()) {
         Box(
             modifier = Modifier
@@ -451,7 +486,7 @@ private fun SheetContent(
             listState = listState,
             selectedPointId = chronological.getOrNull(selectedPointIdx)?.id,
             onSelectPoint = onSelectPoint,
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier.fillMaxSize().nestedScroll(listOwnsScroll),
         )
     }
 }
@@ -743,18 +778,15 @@ private fun MoveRow(
                 .weight(1f)
                 .padding(end = 16.dp, top = 10.dp, bottom = 10.dp),
         ) {
-            // First Move row in the day has no "previous" point to
-            // measure from — distance and duration would be 0 / —, both
-            // misleading. Drop the line entirely and just show the
-            // timestamp + accuracy. Also drop the speed badge across
-            // the board: it added noise without much information given
-            // the sparse sampling (one report every ~10 minutes is
-            // typical, so any "12 km/h" is averaged over noisy gaps).
-            if (!isFirst && entry.fromPrevMeters > 0.0) {
+            // Show the distance / duration line only when the VM
+            // actually populated both — buildEntries zeros them out
+            // for the chronologically-first move of a day so we never
+            // show the cross-day gap as if it were a continuous trip.
+            // No speed badge: with ~10 min sampling the per-leg km/h
+            // is mostly noise.
+            if (entry.fromPrevMeters > 0.0 && entry.durationFromPrevMs > 0L) {
                 val distLabel = formatDistance(entry.fromPrevMeters)
-                val durLabel = if (entry.durationFromPrevMs > 0)
-                    formatDuration(entry.durationFromPrevMs)
-                else "—"
+                val durLabel = formatDuration(entry.durationFromPrevMs)
                 Text(
                     "$distLabel · $durLabel",
                     style = MaterialTheme.typography.bodyMedium,

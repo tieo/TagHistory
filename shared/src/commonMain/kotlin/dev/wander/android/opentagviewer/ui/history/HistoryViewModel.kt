@@ -50,6 +50,16 @@ class HistoryViewModel(
     private val realReverseGeocode: (suspend (Double, Double) -> String?)? = null,
     private val geocodeCache: GeocodeCacheRepository? = null,
     private val nowMs: () -> Long = { Clock.System.now().toEpochMilliseconds() },
+    /**
+     * Tz-aware "day-bucket key" function. Used by [buildEntries] to
+     * detect when consecutive points cross a local-day boundary so the
+     * cross-day distance/duration of the first point of each day isn't
+     * shown as if it were a regular move. Default implementation is the
+     * identity, so unit tests that don't care about day boundaries
+     * still get sensible behaviour; the Android host injects the real
+     * implementation backed by [java.time]'s system-zone day start.
+     */
+    private val localDayStart: (Long) -> Long = { it },
     private val scope: CoroutineScope? = null,
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.Default,
     private val geocodeConcurrency: Int = 16,
@@ -325,11 +335,23 @@ class HistoryViewModel(
                 flushStop()
                 if (!filters.stopsOnly) {
                     val prevPoint = prev
-                    val dist = if (prevPoint != null) {
-                        haversineMeters(prevPoint.latitude, prevPoint.longitude,
+                    // "Same local day" is the only case where a
+                    // distance / duration line for this Move makes
+                    // sense. Otherwise we'd be showing the gap from
+                    // last night's report to this morning's first
+                    // fix as if it were a continuous trip — which
+                    // produced lines like "52 m · 12 h 3 min" on the
+                    // chronologically-first entry of a day.
+                    val sameDay = prevPoint != null &&
+                        localDayStart(prevPoint.timestampMs) ==
+                            localDayStart(p.timestampMs)
+                    val dist = if (sameDay) {
+                        haversineMeters(prevPoint!!.latitude, prevPoint.longitude,
                             p.latitude, p.longitude)
                     } else 0.0
-                    val dur = if (prevPoint != null) p.timestampMs - prevPoint.timestampMs else 0L
+                    val dur = if (sameDay) {
+                        p.timestampMs - prevPoint!!.timestampMs
+                    } else 0L
                     out += HistoryEntry.Move(
                         id = "move-${p.id}",
                         timestampMs = p.timestampMs,

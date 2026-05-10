@@ -273,6 +273,11 @@ class AndroidAppHost private constructor(
             // do its own dedupe-by-rounded-key + parallel fan-out.
             realReverseGeocode = { lat, lon -> rawReverseGeocode(lat, lon) },
             geocodeCache = geocodeCacheRepo,
+            // Tz-aware day-bucket function. Used by buildEntries to
+            // detect cross-day breaks so the chronologically-first
+            // Move of a day doesn't display the gap from yesterday's
+            // last fix as if it were a continuous trip.
+            localDayStart = { ms -> io.github.tieo.taghistory.ui.history.localDayStart(ms) },
         )
     }
 

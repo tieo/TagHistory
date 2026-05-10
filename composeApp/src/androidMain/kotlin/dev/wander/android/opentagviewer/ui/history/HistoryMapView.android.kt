@@ -67,6 +67,7 @@ actual fun HistoryMapView(
     selectedPointIndex: Int?,
     basemap: MapBasemap?,
     routeVisible: Boolean,
+    topInsetPx: Int,
     bottomInsetPx: Int,
     onPointSelected: (String) -> Unit,
     onRendered: (List<Long>) -> Unit,
@@ -78,6 +79,7 @@ actual fun HistoryMapView(
     val effectiveBasemap = basemap ?: defaultBasemap()
     val currentPoints = rememberUpdatedState(points)
     val currentSelectedIdx = rememberUpdatedState(selectedPointIndex)
+    val currentTopInset = rememberUpdatedState(topInsetPx)
     val currentBottomInset = rememberUpdatedState(bottomInsetPx)
     val currentOnPointSelected = rememberUpdatedState(onPointSelected)
     val lineColor = MaterialTheme.colorScheme.primary.toArgb()
@@ -129,7 +131,7 @@ actual fun HistoryMapView(
             map.setStyle(Style.Builder().fromBasemap(effectiveBasemap, context)) { style ->
                 installLayers(style, lineColor, selectedColor, onSurfaceColor, surfaceColor)
                 val ordered = currentPoints.value.sortedBy { it.timestampMs }
-                renderPath(map, style, ordered, fitCamera = false, bottomInsetPx = currentBottomInset.value)
+                renderPath(map, style, ordered, fitCamera = false, topInsetPx = currentTopInset.value, bottomInsetPx = currentBottomInset.value)
                 renderSelectedPoint(map, style, ordered, currentSelectedIdx.value, panCamera = false)
                 renderLabels(style, ordered, currentSelectedIdx.value)
                 renderAllDots(style, ordered)
@@ -195,7 +197,7 @@ actual fun HistoryMapView(
                     // happened above so the update block won't double-fit.
                     val ordered = currentPoints.value.sortedBy { it.timestampMs }
                     val key = ordered.map { it.timestampMs }
-                    renderPath(map, style, ordered, fitCamera = true, bottomInsetPx = currentBottomInset.value)
+                    renderPath(map, style, ordered, fitCamera = true, topInsetPx = currentTopInset.value, bottomInsetPx = currentBottomInset.value)
                     renderSelectedPoint(map, style, ordered, currentSelectedIdx.value, panCamera = false)
                     renderLabels(style, ordered, currentSelectedIdx.value)
                     renderAllDots(style, ordered)
@@ -209,7 +211,8 @@ actual fun HistoryMapView(
             val ordered = points.sortedBy { it.timestampMs }
             val sel = selectedPointIndex
             val visible = routeVisible
-            val inset = bottomInsetPx
+            val topInset = topInsetPx
+            val bottomInset = bottomInsetPx
             val newKey = ordered.map { it.timestampMs }
             // Detect the diff and commit the new key SYNCHRONOUSLY,
             // before queuing the async getMapAsync block. Two updates
@@ -226,7 +229,7 @@ actual fun HistoryMapView(
                 val style = map.style ?: return@getMapAsync
                 if (!style.isFullyLoaded) return@getMapAsync
                 if (pointsChanged) {
-                    renderPath(map, style, ordered, fitCamera = true, bottomInsetPx = inset)
+                    renderPath(map, style, ordered, fitCamera = true, topInsetPx = topInset, bottomInsetPx = bottomInset)
                     renderAllDots(style, ordered)
                 }
                 renderSelectedPoint(map, style, ordered, sel, panCamera = !pointsChanged)
@@ -320,6 +323,7 @@ private fun renderPath(
     style: Style,
     points: List<HistoryPoint>,
     fitCamera: Boolean,
+    topInsetPx: Int = 0,
     bottomInsetPx: Int = 0,
 ) {
     val pathSource = style.getSourceAs<GeoJsonSource>(PATH_SOURCE) ?: return
@@ -364,9 +368,14 @@ private fun renderPath(
             // jitter the user reported. Bundling the cap into the
             // initial target removes both the second hop and the
             // overlap risk.
+            // padding = [left, top, right, bottom]. Top + bottom both
+            // get the platform inset added so the camera fit only
+            // considers the screen slice that's actually visible
+            // between the status bar / floating top buttons and the
+            // bottom sheet — not the whole window.
             val padding = intArrayOf(
                 BOUNDS_PADDING_PX,
-                BOUNDS_PADDING_PX,
+                BOUNDS_PADDING_PX + topInsetPx,
                 BOUNDS_PADDING_PX,
                 BOUNDS_PADDING_PX + bottomInsetPx,
             )
