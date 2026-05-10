@@ -16,7 +16,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
@@ -31,7 +31,6 @@ import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Timeline
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
-import androidx.compose.material3.BottomSheetScaffold
 import io.github.tieo.taghistory.ui.util.AlwaysSpinningIndicator
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDefaults
@@ -44,14 +43,12 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SelectableDates
-import androidx.compose.material3.SheetValue
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.rememberBottomSheetScaffoldState
 import androidx.compose.material3.rememberDatePickerState
-import androidx.compose.material3.rememberStandardBottomSheetState
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.statusBars
@@ -157,12 +154,6 @@ fun HistoryScreen(
         derivedStateOf { buildDaySummary(chronological) }
     }
 
-    val sheetState = rememberStandardBottomSheetState(
-        initialValue = SheetValue.PartiallyExpanded,
-        skipHiddenState = true,
-    )
-    val scaffoldState = rememberBottomSheetScaffoldState(bottomSheetState = sheetState)
-
     val themeDefault = defaultBasemap()
     var basemap by remember(themeDefault) { mutableStateOf(themeDefault) }
 
@@ -205,141 +196,154 @@ fun HistoryScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
 
-    BottomSheetScaffold(
-        scaffoldState = scaffoldState,
-        modifier = modifier.fillMaxSize(),
-        sheetPeekHeight = sheetPeek,
-        // Material3's default drag handle has 22 dp of vertical padding
-        // baked into it; replace with a tight 3 dp pill so the gap to
-        // the date row above shrinks to a hairline. Aligned via the
-        // outer Box so the pill stays centered without extra padding.
-        sheetDragHandle = {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 6.dp, bottom = 0.dp),
-                contentAlignment = Alignment.Center,
-            ) {
-                Box(
-                    modifier = Modifier
-                        .width(40.dp)
-                        .height(4.dp)
-                        .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.outlineVariant),
-                )
-            }
-        },
-        sheetContent = {
-            SheetContent(
-                days = days,
-                dayIdx = dayIdx,
-                chronological = chronological,
-                dayEntries = dayEntries,
-                selectedPointIdx = selectedPointIdx,
-                summary = summary,
-                isLoading = state.isLoading,
-                error = state.error,
-                listState = listState,
-                lastRenderedCount = lastRenderedCount,
-                onDayPrev = {
-                    if (dayIdx < days.size - 1) {
-                        selectedDayKey = days[dayIdx + 1].key
-                        selectedPointId = null
-                    }
-                },
-                onDayNext = {
-                    if (dayIdx > 0) {
-                        selectedDayKey = days[dayIdx - 1].key
-                        selectedPointId = null
-                    }
-                },
-                onDayTitleTap = { showDatePicker = true },
-                onDayTitleLongPress = {
-                    selectedDay?.let { day ->
-                        val label = dayLabel(day.key, Clock.System.now().toEpochMilliseconds())
-                        onShareGpx?.invoke(title, label, chronological)
-                            ?: coroutineScope.launch {
-                                snackbarHostState.showSnackbar(
-                                    "GPX export not available on this platform",
-                                )
-                            }
-                    }
-                },
-                onSelectPoint = { id ->
-                    selectedPointId = id
-                },
-                onRefresh = { viewModel.refresh() },
-                onRetry = { viewModel.refresh() },
-            )
-        },
-    ) { _ ->
-        Box(modifier = Modifier.fillMaxSize()) {
-            HistoryMapView(
-                points = chronological,
-                selectedPointIndex = selectedPointIdx,
-                basemap = basemap,
-                routeVisible = routeVisible,
-                topInsetPx = topInsetPx,
-                bottomInsetPx = sheetPeekPx,
-                onPointSelected = { id -> selectedPointId = id },
-                onRendered = { lastRenderedCount = it.size },
-                modifier = Modifier.fillMaxSize(),
-            )
+    // Custom fixed-height bottom sheet. Replaces M3's
+    // BottomSheetScaffold because the scaffold sized its sheet
+    // content at the EXPANDED height regardless of state, which
+    // meant a 3-item LazyColumn with weight(1f) inside never
+    // overflowed its viewport (~full sheet height) at peek; the
+    // list was therefore not scrollable. Bounding the sheet to a
+    // fixed peek height makes the inner LazyColumn overflow as
+    // soon as it has more items than fit, and scroll works.
+    Box(modifier = modifier.fillMaxSize()) {
+        HistoryMapView(
+            points = chronological,
+            selectedPointIndex = selectedPointIdx,
+            basemap = basemap,
+            routeVisible = routeVisible,
+            topInsetPx = topInsetPx,
+            bottomInsetPx = sheetPeekPx,
+            onPointSelected = { id -> selectedPointId = id },
+            onRendered = { lastRenderedCount = it.size },
+            modifier = Modifier.fillMaxSize(),
+        )
 
+        FilledIconButton(
+            onClick = onBack,
+            modifier = Modifier
+                .align(Alignment.TopStart)
+                .statusBarsPadding()
+                .padding(start = 12.dp, top = 12.dp),
+            colors = IconButtonDefaults.filledIconButtonColors(
+                containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.92f),
+                contentColor = MaterialTheme.colorScheme.onSurface,
+            ),
+        ) {
+            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+        }
+
+        Row(
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .statusBarsPadding()
+                .padding(end = 12.dp, top = 12.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
             FilledIconButton(
-                onClick = onBack,
-                modifier = Modifier
-                    .align(Alignment.TopStart)
-                    .statusBarsPadding()
-                    .padding(start = 12.dp, top = 12.dp),
+                onClick = { routeVisible = !routeVisible },
                 colors = IconButtonDefaults.filledIconButtonColors(
                     containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.92f),
                     contentColor = MaterialTheme.colorScheme.onSurface,
                 ),
+                modifier = Modifier.testTag("btn_route_visibility"),
             ) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-            }
-
-            Row(
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .statusBarsPadding()
-                    .padding(end = 12.dp, top = 12.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                FilledIconButton(
-                    onClick = { routeVisible = !routeVisible },
-                    colors = IconButtonDefaults.filledIconButtonColors(
-                        containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.92f),
-                        contentColor = MaterialTheme.colorScheme.onSurface,
-                    ),
-                    modifier = Modifier.testTag("btn_route_visibility"),
-                ) {
-                    Icon(
-                        imageVector = if (routeVisible) Icons.Filled.Visibility
-                                      else Icons.Filled.VisibilityOff,
-                        contentDescription = if (routeVisible) "Hide route" else "Show route",
-                    )
-                }
-                BasemapCycleButton(
-                    current = basemap,
-                    onCycle = {
-                        basemap = when (basemap) {
-                            MapBasemap.LIGHT -> MapBasemap.DARK
-                            MapBasemap.DARK -> MapBasemap.SATELLITE
-                            MapBasemap.SATELLITE -> MapBasemap.LIGHT
-                        }
-                    },
+                Icon(
+                    imageVector = if (routeVisible) Icons.Filled.Visibility
+                                  else Icons.Filled.VisibilityOff,
+                    contentDescription = if (routeVisible) "Hide route" else "Show route",
                 )
             }
-
-            SnackbarHost(
-                hostState = snackbarHostState,
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .padding(bottom = sheetPeek + 8.dp),
+            BasemapCycleButton(
+                current = basemap,
+                onCycle = {
+                    basemap = when (basemap) {
+                        MapBasemap.LIGHT -> MapBasemap.DARK
+                        MapBasemap.DARK -> MapBasemap.SATELLITE
+                        MapBasemap.SATELLITE -> MapBasemap.LIGHT
+                    }
+                },
             )
         }
+
+        // Fixed-height sheet at bottom.
+        Surface(
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .fillMaxWidth()
+                .height(sheetPeek),
+            color = MaterialTheme.colorScheme.surface,
+            shape = androidx.compose.foundation.shape.RoundedCornerShape(
+                topStart = 16.dp,
+                topEnd = 16.dp,
+            ),
+            tonalElevation = 2.dp,
+            shadowElevation = 6.dp,
+        ) {
+            Column(modifier = Modifier.fillMaxSize()) {
+                // Decorative pill at top — not draggable, but kept for
+                // visual continuity with the previous M3 sheet so
+                // existing screenshots / docs still look familiar.
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 8.dp, bottom = 4.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .width(36.dp)
+                            .height(4.dp)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.outlineVariant),
+                    )
+                }
+                SheetContent(
+                    days = days,
+                    dayIdx = dayIdx,
+                    chronological = chronological,
+                    dayEntries = dayEntries,
+                    selectedPointIdx = selectedPointIdx,
+                    summary = summary,
+                    isLoading = state.isLoading,
+                    error = state.error,
+                    listState = listState,
+                    lastRenderedCount = lastRenderedCount,
+                    onDayPrev = {
+                        if (dayIdx < days.size - 1) {
+                            selectedDayKey = days[dayIdx + 1].key
+                            selectedPointId = null
+                        }
+                    },
+                    onDayNext = {
+                        if (dayIdx > 0) {
+                            selectedDayKey = days[dayIdx - 1].key
+                            selectedPointId = null
+                        }
+                    },
+                    onDayTitleTap = { showDatePicker = true },
+                    onDayTitleLongPress = {
+                        selectedDay?.let { day ->
+                            val label = dayLabel(day.key, Clock.System.now().toEpochMilliseconds())
+                            onShareGpx?.invoke(title, label, chronological)
+                                ?: coroutineScope.launch {
+                                    snackbarHostState.showSnackbar(
+                                        "GPX export not available on this platform",
+                                    )
+                                }
+                        }
+                    },
+                    onSelectPoint = { id -> selectedPointId = id },
+                    onRefresh = { viewModel.refresh() },
+                    onRetry = { viewModel.refresh() },
+                )
+            }
+        }
+
+        SnackbarHost(
+            hostState = snackbarHostState,
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = sheetPeek + 8.dp),
+        )
     }
 
     if (showDatePicker) {
@@ -486,7 +490,17 @@ private fun SheetContent(
             listState = listState,
             selectedPointId = chronological.getOrNull(selectedPointIdx)?.id,
             onSelectPoint = onSelectPoint,
-            modifier = Modifier.fillMaxSize().nestedScroll(listOwnsScroll),
+            // weight(1f) gives the LazyColumn a bounded height inside
+            // the Column. fillMaxSize alone left the list with the
+            // parent's full height, so when it had more rows than fit
+            // the peek the viewport extended past the sheet bottom and
+            // the LazyColumn never thought it had to scroll. The
+            // nestedScroll override still ensures the leftover never
+            // bubbles to the BottomSheetScaffold.
+            modifier = Modifier
+                .weight(1f, fill = true)
+                .fillMaxWidth()
+                .nestedScroll(listOwnsScroll),
         )
     }
 }
@@ -560,21 +574,29 @@ private fun EntriesList(
         state = listState,
         modifier = modifier,
     ) {
-        items(entries, key = { it.id }) { entry ->
+        itemsIndexed(entries, key = { _, e -> e.id }) { idx, entry ->
+            // Stable test-tag tied to list position (used by Maestro
+            // tests that scroll the list and assert which row remains
+            // visible). Re-introduced after the Stop/Move rewrite
+            // accidentally dropped the original `history_item_X` tag
+            // which existed on the previous flat HistoryListItem.
+            val tag = "history_item_$idx"
             when (entry) {
                 is HistoryEntry.Stop -> StopRow(
                     entry = entry,
-                    isFirst = entry == entries.firstOrNull(),
-                    isLast = entry == entries.lastOrNull(),
+                    isFirst = idx == 0,
+                    isLast = idx == entries.lastIndex,
                     isSelected = entry.members.any { it.id == selectedPointId },
+                    testTag = tag,
                     onSelect = { onSelectPoint(entry.anchor.id) },
                     onSelectMember = { p -> onSelectPoint(p.id) },
                 )
                 is HistoryEntry.Move -> MoveRow(
                     entry = entry,
-                    isFirst = entry == entries.firstOrNull(),
-                    isLast = entry == entries.lastOrNull(),
+                    isFirst = idx == 0,
+                    isLast = idx == entries.lastIndex,
                     isSelected = entry.point.id == selectedPointId,
+                    testTag = tag,
                     onSelect = { onSelectPoint(entry.point.id) },
                 )
             }
@@ -589,6 +611,7 @@ private fun StopRow(
     isFirst: Boolean,
     isLast: Boolean,
     isSelected: Boolean,
+    testTag: String? = null,
     onSelect: () -> Unit,
     onSelectMember: (HistoryPoint) -> Unit,
 ) {
@@ -596,7 +619,11 @@ private fun StopRow(
     val nodeColor = if (isSelected) MaterialTheme.colorScheme.primary
                     else MaterialTheme.colorScheme.tertiary
     val railColor = MaterialTheme.colorScheme.outlineVariant
-    Column(modifier = Modifier.fillMaxWidth()) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .then(if (testTag != null) Modifier.testTag(testTag) else Modifier),
+    ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -723,6 +750,7 @@ private fun MoveRow(
     isFirst: Boolean,
     isLast: Boolean,
     isSelected: Boolean,
+    testTag: String? = null,
     onSelect: () -> Unit,
 ) {
     val railColor = MaterialTheme.colorScheme.outlineVariant
@@ -731,7 +759,8 @@ private fun MoveRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { onSelect() },
+            .clickable { onSelect() }
+            .then(if (testTag != null) Modifier.testTag(testTag) else Modifier),
         verticalAlignment = Alignment.Top,
     ) {
         Box(

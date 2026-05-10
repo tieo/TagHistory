@@ -1,0 +1,61 @@
+appId: io.github.tieo.taghistory
+name: History list scrolls inside sheet without first expanding the sheet
+---
+# Regression: with the M3 BottomSheetScaffold defaults, an upward
+# scroll gesture on the inner list always pulled the sheet up first
+# (the user reported "I cannot scroll inside without dragging the
+# menu up"). After the fix (sheetSwipeEnabled = false + custom drag
+# handle), the same gesture must scroll the list while the sheet
+# stays at peek.
+#
+# Distinguisher: at peek the list shows roughly its first two items,
+# i.e. history_item_0 visible. If the gesture scrolled the LIST,
+# item 0 scrolls off-screen and a deeper item (item 2) becomes
+# visible. If the gesture instead expanded the SHEET, item 0
+# stays visible at the top of the now-larger list.
+
+- runFlow:
+    file: 00_seed_test_data.yaml
+
+- tapOn:
+    id: "btn_card_history"
+- extendedWaitUntil:
+    visible:
+      text: "Today"
+    timeout: 25000
+- extendedWaitUntil:
+    visible:
+      id: "history_item_0"
+    timeout: 25000
+
+# Scroll inside the list area. Coordinates kept above the bottom
+# 100 px of the screen so Android's home-gesture handler doesn't
+# eat the swipe before Compose ever sees it.
+- swipe:
+    start: "50%, 95%"
+    end: "50%, 80%"
+    duration: 600
+- swipe:
+    start: "50%, 95%"
+    end: "50%, 80%"
+    duration: 600
+- swipe:
+    start: "50%, 95%"
+    end: "50%, 80%"
+    duration: 600
+
+# After scrolling the LIST, item 2 must be on screen and item 0
+# must have scrolled off. If the sheet had expanded instead, item 0
+# would still be visible at the top of the now-taller sheet.
+- extendedWaitUntil:
+    visible:
+      id: "history_item_2"
+    timeout: 25000
+- assertNotVisible:
+    id: "history_item_0"
+
+- back
+- extendedWaitUntil:
+    visible:
+      id: "btn_settings"
+    timeout: 25000
