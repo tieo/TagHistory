@@ -8,7 +8,10 @@ name: Seed test data — fake auth + 3 beacons + location reports
 - launchApp:
     clearState: true
 - openLink: taghistory://test/seed
+# CI emulators occasionally take >90 s for the cold-start +
+# TestSeedActivity → MainActivity hop to land on the map screen,
+# which made the seed flow flaky. Bumped to 180 s.
 - extendedWaitUntil:
     visible:
       id: "btn_settings"
-    timeout: 90000
+    timeout: 180000
