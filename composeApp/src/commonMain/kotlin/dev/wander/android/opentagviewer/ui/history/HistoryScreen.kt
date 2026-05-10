@@ -161,15 +161,15 @@ fun HistoryScreen(
 
     var lastRenderedCount by remember { mutableIntStateOf(-1) }
 
-    // Sheet peek = 25% of viewport height (down from 35% — the user
-    // wanted the sheet not to eat ~10% extra). Top inset = status
-    // bar + floating buttons strip; the map is told about both so
-    // the camera fit only considers the slice that's actually
-    // visible between the notch and the sheet, not the whole window.
+    // Sheet height = 40% of viewport at default. Map gets the
+    // remaining 60%. Top inset = status bar + floating buttons strip;
+    // the map is told about both so the camera fit only considers
+    // the slice that's actually visible between the notch and the
+    // sheet, not the whole window.
     val configuration = LocalConfiguration.current
     val density = LocalDensity.current
     val screenHeightDp = configuration.screenHeightDp.dp
-    val sheetPeek = screenHeightDp * 0.25f
+    val sheetPeek = screenHeightDp * 0.40f
     val sheetPeekPx = with(density) { sheetPeek.toPx().toInt() }
     val statusBarPad = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
     // Status bar + button height (48 dp) + the 12 dp top + 12 dp bottom
