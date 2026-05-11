@@ -851,44 +851,37 @@ private sealed class RenderedItem {
 @Composable
 private fun LegLabel(distanceMeters: Double, durationMs: Long) {
     val railColor = MaterialTheme.colorScheme.outlineVariant
-    // Box holds: full-height rail bar + chip centered on the same
-    // 36dp rail column, breaking the line visually but staying ON
-    // the timeline. The chip is allowed to overflow horizontally via
-    // wrapContentSize(unbounded = true) so a long label like
-    // "1.2 km · 12 min" doesn't get squeezed into 36dp.
+    // Box layered: full-height rail bar at x = 17 dp (matches the
+    // 36 dp rail column the entry rows use) + chip aligned to the
+    // rail's right edge so it reads "1.5 km · 7 h 9 min" from the
+    // rail outward instead of being centered on the 36 dp column
+    // (which pushed the distance prefix off-screen on the left).
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .height(28.dp),
-        contentAlignment = Alignment.CenterStart,
     ) {
         Box(
             modifier = Modifier
-                .width(36.dp)
-                .fillMaxHeight(),
+                .padding(start = 17.dp)
+                .width(2.dp)
+                .fillMaxHeight()
+                .background(railColor),
+        )
+        Surface(
+            modifier = Modifier
+                .padding(start = 18.dp)
+                .align(Alignment.CenterStart),
+            shape = androidx.compose.foundation.shape.RoundedCornerShape(10.dp),
+            color = MaterialTheme.colorScheme.surfaceVariant,
+            contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+            tonalElevation = 0.dp,
         ) {
-            Box(
-                modifier = Modifier
-                    .width(2.dp)
-                    .fillMaxHeight()
-                    .align(Alignment.Center)
-                    .background(railColor),
+            Text(
+                text = "${formatDistance(distanceMeters)} · ${formatDuration(durationMs)}",
+                style = MaterialTheme.typography.labelSmall,
+                modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
             )
-            Surface(
-                modifier = Modifier
-                    .align(Alignment.Center)
-                    .wrapContentSize(align = Alignment.Center, unbounded = true),
-                shape = androidx.compose.foundation.shape.RoundedCornerShape(10.dp),
-                color = MaterialTheme.colorScheme.surfaceVariant,
-                contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                tonalElevation = 0.dp,
-            ) {
-                Text(
-                    text = "${formatDistance(distanceMeters)} · ${formatDuration(durationMs)}",
-                    style = MaterialTheme.typography.labelSmall,
-                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
-                )
-            }
         }
     }
 }
@@ -1321,7 +1314,14 @@ private fun buildDaySummary(points: List<HistoryPoint>): DaySummary {
         val accFloor = maxOf(prev.horizontalAccuracy, p.horizontalAccuracy)
         if (isRealMove(d, dt, accFloor)) {
             distance += d
-            movingMs += dt
+            // The fix-to-fix gap dt is mostly the tag SITTING at the
+            // previous location — only the tail end was actual travel.
+            // Cap each leg's "moving time" contribution at the time
+            // it would take to walk the distance (5 km/h ≈ 1.4 m/s).
+            // Without this, a 200 m hop after 4 h of sitting still
+            // credited the full 4 h as "moving time".
+            val walkMs = (d / 1.4 * 1000.0).toLong()
+            movingMs += minOf(dt, walkMs)
         }
     }
     return DaySummary(distance, movingMs, stops)
