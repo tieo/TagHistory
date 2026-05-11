@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -116,7 +117,25 @@ fun HistoryScreen(
      * wire one through.
      */
     onRoute: (lat: Double, lon: Double, label: String) -> Unit = noopRoute,
+    /**
+     * Every known beacon (id + display name + optional emoji), used
+     * to populate the device switcher dialog when the user taps the
+     * title chip. Empty list disables the switcher (renders a static
+     * label instead of a clickable chip).
+     */
+    beacons: List<HistoryBeaconChoice> = emptyList(),
+    /**
+     * Host callback to swap the currently viewed beacon. Implementations
+     * typically pop+push a new History screen so the ViewModel rebinds
+     * via remember(beaconId).
+     */
+    onSwitchBeacon: (beaconId: String, title: String) -> Unit = { _, _ -> },
 ) {
+    val currentBeacon = remember(beacons, title) {
+        beacons.firstOrNull { it.displayName == title }
+    }
+    val canSwitch = beacons.size > 1
+    var showSwitcher by remember { mutableStateOf(false) }
     val state by viewModel.state.collectAsStateWithLifecycle()
 
     LaunchedEffect(Unit) {
@@ -249,6 +268,55 @@ fun HistoryScreen(
             Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
         }
 
+        // Title chip — shows the currently viewed device (emoji + name).
+        // Tappable when more than one beacon is known, opening a picker
+        // dialog so the user can switch device without going back to
+        // the map. Sits between the back button and the route/basemap
+        // row at the top of the screen.
+        Surface(
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .statusBarsPadding()
+                .padding(top = 12.dp)
+                .then(
+                    if (canSwitch) Modifier.clickable { showSwitcher = true }
+                    else Modifier,
+                )
+                .testTag("history_title_chip"),
+            color = MaterialTheme.colorScheme.surface.copy(alpha = 0.92f),
+            contentColor = MaterialTheme.colorScheme.onSurface,
+            shape = androidx.compose.foundation.shape.RoundedCornerShape(20.dp),
+            tonalElevation = 2.dp,
+            shadowElevation = 4.dp,
+        ) {
+            Row(
+                modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                val emoji = currentBeacon?.emoji
+                if (!emoji.isNullOrBlank()) {
+                    Text(emoji, style = MaterialTheme.typography.titleMedium)
+                }
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 1,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                    modifier = Modifier.widthIn(max = 220.dp),
+                )
+                if (canSwitch) {
+                    Icon(
+                        Icons.Filled.ExpandMore,
+                        contentDescription = "Switch device",
+                        modifier = Modifier.size(18.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+        }
+
         Row(
             modifier = Modifier
                 .align(Alignment.TopEnd)
@@ -374,6 +442,75 @@ fun HistoryScreen(
             onDismiss = { showDatePicker = false },
         )
     }
+
+    if (showSwitcher) {
+        DeviceSwitcherDialog(
+            beacons = beacons,
+            currentTitle = title,
+            onPick = { choice ->
+                showSwitcher = false
+                if (choice.displayName != title) {
+                    onSwitchBeacon(choice.beaconId, choice.displayName)
+                }
+            },
+            onDismiss = { showSwitcher = false },
+        )
+    }
+}
+
+@Composable
+private fun DeviceSwitcherDialog(
+    beacons: List<HistoryBeaconChoice>,
+    currentTitle: String,
+    onPick: (HistoryBeaconChoice) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    androidx.compose.material3.AlertDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = {
+            TextButton(onClick = onDismiss) { Text("Cancel") }
+        },
+        title = { Text("Switch device") },
+        text = {
+            LazyColumn(
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                itemsIndexed(beacons, key = { _, b -> b.beaconId }) { _, b ->
+                    val isCurrent = b.displayName == currentTitle
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onPick(b) }
+                            .padding(vertical = 10.dp, horizontal = 4.dp)
+                            .testTag("history_switch_${b.beaconId}"),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    ) {
+                        if (!b.emoji.isNullOrBlank()) {
+                            Text(b.emoji, style = MaterialTheme.typography.titleMedium)
+                        } else {
+                            Spacer(Modifier.width(20.dp))
+                        }
+                        Text(
+                            b.displayName,
+                            style = MaterialTheme.typography.bodyLarge,
+                            fontWeight = if (isCurrent) FontWeight.SemiBold else FontWeight.Normal,
+                            color = if (isCurrent) MaterialTheme.colorScheme.primary
+                                    else MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.weight(1f),
+                        )
+                        if (isCurrent) {
+                            Text(
+                                "viewing",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.primary,
+                            )
+                        }
+                    }
+                }
+            }
+        },
+    )
 }
 
 @OptIn(ExperimentalTime::class, ExperimentalMaterial3Api::class)
@@ -1124,3 +1261,10 @@ private const val DAY_MS: Long = 24L * 60L * 60L * 1000L
 
 /** Sentinel for HistoryScreen's onRoute default. Compared by identity. */
 private val noopRoute: (Double, Double, String) -> Unit = { _, _, _ -> }
+
+/** One row in the device-switcher dialog. */
+data class HistoryBeaconChoice(
+    val beaconId: String,
+    val displayName: String,
+    val emoji: String?,
+)

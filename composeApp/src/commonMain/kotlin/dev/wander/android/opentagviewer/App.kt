@@ -242,6 +242,16 @@ private fun AuthedNav(
                 }
                 is Screen.History -> {
                     val vm = remember(screen.beaconId) { factories.createHistory(screen.beaconId) }
+                    val mapState = mapVm?.state?.collectAsStateWithLifecycle()?.value
+                    val beaconChoices = remember(mapState?.cards) {
+                        mapState?.cards?.map { c ->
+                            io.github.tieo.taghistory.ui.history.HistoryBeaconChoice(
+                                beaconId = c.beaconId,
+                                displayName = c.displayName,
+                                emoji = c.emoji,
+                            )
+                        } ?: emptyList()
+                    }
                     HistoryScreen(
                         viewModel = vm,
                         title = screen.title,
@@ -249,6 +259,13 @@ private fun AuthedNav(
                         reverseGeocode = factories.reverseGeocode,
                         onShareGpx = factories.onShareGpx,
                         onRoute = factories.routeTo,
+                        beacons = beaconChoices,
+                        onSwitchBeacon = { id, t ->
+                            // pop + push so the History VM rebinds via
+                            // remember(beaconId) instead of trying to
+                            // mutate the existing one.
+                            nav = nav.pop().push(Screen.History(id, t))
+                        },
                     )
                 }
             }
