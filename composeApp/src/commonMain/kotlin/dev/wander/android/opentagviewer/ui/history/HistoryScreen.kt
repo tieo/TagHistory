@@ -1327,21 +1327,39 @@ private fun buildDaySummary(points: List<HistoryPoint>): DaySummary {
     return DaySummary(distance, movingMs, stops)
 }
 
+/** Anything smaller than this is below the "interesting motion" UX floor. */
 private const val MIN_MOVE_METERS = 20.0
-private const val MIN_MOVE_KMH = 3.0
-/** Need at least a minute of motion — a 40m hop in 4 s is GPS jitter. */
-private const val MIN_MOVE_DURATION_MS = 60_000L
-/**
- * Leg must clear (max accuracy radius * this) to count. A fix with
- * ±82 m accuracy can shift up to 82 m without the tag ever moving;
- * only a multiple of that is plausibly real motion.
- */
-private const val MIN_MOVE_ACCURACY_MULT = 1.5
 
 /**
- * Single source of truth for "is this leg a real movement, not GPS
- * jitter?" — applied to the day summary, the MoveRow subline and the
- * rail leg-label rendering so all three agree.
+ * Borderline leg (dist between MULT_FLOOR and MULT_TRUSTED times the
+ * accuracy) must clear MIN_SUSTAINED_KMH average speed.
+ */
+private const val MIN_MOVE_ACCURACY_MULT_FLOOR = 2.0
+
+/** Above this ratio, the leg is clearly larger than GPS noise — trust it regardless of duration. */
+private const val MIN_MOVE_ACCURACY_MULT_TRUSTED = 5.0
+
+/** Hard cap. Above this, the fix is teleporting and we treat it as a bad sample. */
+private const val MAX_PLAUSIBLE_KMH = 250.0
+
+/** Borderline-leg average-speed floor. Below this, treat as stationary drift over a long window. */
+private const val MIN_SUSTAINED_KMH = 1.5
+
+/**
+ * Single source of truth for "is this leg real movement, not GPS
+ * jitter?" — applied to the day summary, the MoveRow accuracy
+ * subline and the rail leg-label so all three agree.
+ *
+ * Decision tree:
+ *  1. distance < 20 m -> jitter (UX floor).
+ *  2. distance < 2 * max(accuracy) -> jitter (well within noise radius).
+ *  3. speed > 250 km/h -> jitter (teleport).
+ *  4. distance >= 5 * max(accuracy) -> real (clearly larger than noise,
+ *     trust regardless of duration — handles "tag was stationary for
+ *     a long time, then moved 30 m right before this report").
+ *  5. otherwise borderline -> real only if average speed is at least
+ *     a slow walk (1.5 km/h). Filters out a 30 m drift accumulated
+ *     across two hours by a tag that never actually went anywhere.
  */
 private fun isRealMove(
     distanceMeters: Double,
@@ -1349,12 +1367,13 @@ private fun isRealMove(
     accuracyFloorMeters: Long,
 ): Boolean {
     if (distanceMeters < MIN_MOVE_METERS) return false
-    if (distanceMeters < accuracyFloorMeters * MIN_MOVE_ACCURACY_MULT) return false
-    if (durationMs < MIN_MOVE_DURATION_MS) return false
+    if (distanceMeters < accuracyFloorMeters * MIN_MOVE_ACCURACY_MULT_FLOOR) return false
     val speedKmh = if (durationMs > 0)
         (distanceMeters / 1000.0) / (durationMs / 3_600_000.0)
-    else 0.0
-    return speedKmh >= MIN_MOVE_KMH
+    else Double.POSITIVE_INFINITY
+    if (speedKmh > MAX_PLAUSIBLE_KMH) return false
+    if (distanceMeters >= accuracyFloorMeters * MIN_MOVE_ACCURACY_MULT_TRUSTED) return true
+    return speedKmh >= MIN_SUSTAINED_KMH
 }
 
 private fun haversineMeters(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Double {
