@@ -190,9 +190,7 @@ class HistoryViewModel(
                 cache.getMany(sorted.map { it.latitude to it.longitude })
             } else emptyMap()
             val mapped = sorted.map { it.toUi(cached, cache) }
-            val classified = classify(mapped.sortedByDescending { it.timestampMs })
-            val entries = buildEntries(classified, _state.value.filters)
-            classified to entries
+            processByDay(mapped)
         }
         _state.update { it.copy(points = points, entries = entries) }
     }
@@ -212,8 +210,7 @@ class HistoryViewModel(
             val mapped = sorted.map { it.toUi(cached, cache) }
             // Newest-first list as the public point sequence; classify
             // works on the chronological flip.
-            val classified = classify(mapped.sortedByDescending { it.timestampMs })
-            val entries = buildEntries(classified, _state.value.filters)
+            val (classified, entries) = processByDay(mapped)
             PerfTrace.mark("emitPoints mapped + classified n=${classified.size} entries=${entries.size}")
             classified to entries
         }
@@ -238,9 +235,50 @@ class HistoryViewModel(
     }
 
     /**
-     * Walks the (newest-first) list and labels runs of points within
-     * STOP_RADIUS_M of one another and spanning at least STOP_MIN_MS as
-     * stops. Anything else is a movement waypoint.
+     * Run the entire classify -> smooth -> buildEntries pipeline once
+     * per local-day bucket and concatenate the results newest-day-
+     * first. Keeps cross-day context from bleeding into clustering:
+     * a tag at the same place on Monday morning and Wednesday evening
+     * shouldn't fuse into one giant Stop spanning 48 h of unknown
+     * whereabouts — they're two separate visits to the same place.
+     *
+     * Returns (classifiedPointsNewestFirst, entriesNewestFirst).
+     */
+    private fun processByDay(
+        mappedChrono: List<HistoryPoint>,
+    ): Pair<List<HistoryPoint>, List<HistoryEntry>> {
+        if (mappedChrono.isEmpty()) return emptyList<HistoryPoint>() to emptyList()
+        val byDay = mappedChrono.groupBy { localDayStart(it.timestampMs) }
+        val daysDesc = byDay.keys.sortedDescending()
+        val pointsOut = mutableListOf<HistoryPoint>()
+        val entriesOut = mutableListOf<HistoryEntry>()
+        val filters = _state.value.filters
+        for (dayKey in daysDesc) {
+            val dayChrono = byDay.getValue(dayKey).sortedBy { it.timestampMs }
+            val dayNewestFirst = dayChrono.asReversed()
+            val classified = smoothJitterRuns(classify(dayNewestFirst))
+            pointsOut += classified
+            entriesOut += buildEntries(classified, filters)
+        }
+        return pointsOut to entriesOut
+    }
+
+    /**
+     * Walks the (newest-first) list and labels runs of points that
+     * could plausibly share a physical location as stops. Anything
+     * else is a movement waypoint.
+     *
+     * Cluster radius is the larger of STOP_RADIUS_M and the two
+     * fixes' own horizontal accuracies — so a pair of ±80 m fixes
+     * 50 m apart is still treated as the same place (they're inside
+     * each other's confidence radii) instead of being split into two
+     * Moves that then render as a fake leg on the timeline.
+     *
+     * The "must dwell at least N minutes" gate is gone too: a tag
+     * that reports three near-identical fixes in 30 s is reporting
+     * "I'm sitting here" three times — collapsing to one Stop is the
+     * truthful rendering, not three Moves with a leg label between
+     * each.
      */
     private fun classify(points: List<HistoryPoint>): List<HistoryPoint> {
         if (points.size < 2) return points.map { it.copy(kind = HistoryPointKind.STOP) }
@@ -252,13 +290,18 @@ class HistoryViewModel(
             val end = i
             val anchor = chrono[clusterStartIdx]
             val current = chrono.getOrNull(i)
-            val outOfCluster = current == null ||
+            val outOfCluster = current == null || run {
+                val radius = maxOf(
+                    STOP_RADIUS_M,
+                    anchor.horizontalAccuracy.toDouble(),
+                    current.horizontalAccuracy.toDouble(),
+                )
                 haversineMeters(anchor.latitude, anchor.longitude,
-                    current.latitude, current.longitude) > STOP_RADIUS_M
+                    current.latitude, current.longitude) > radius
+            }
             if (outOfCluster) {
                 val clusterEnd = end - 1
-                val span = chrono[clusterEnd].timestampMs - chrono[clusterStartIdx].timestampMs
-                val isStop = span >= STOP_MIN_MS && (clusterEnd - clusterStartIdx) >= 1
+                val isStop = (clusterEnd - clusterStartIdx) >= 1
                 for (k in clusterStartIdx..clusterEnd) {
                     out += chrono[k].copy(
                         kind = if (isStop) HistoryPointKind.STOP else HistoryPointKind.MOVE,
@@ -269,6 +312,101 @@ class HistoryViewModel(
             i++
         }
         return out.asReversed()
+    }
+
+    /**
+     * Second pass after [classify]: collapses runs of MOVE-classified
+     * points that, taken together, look like a stationary cluster
+     * rather than directed motion. A single leg can't distinguish "I
+     * walked 30 m" from "GPS bounced 30 m around me", but a run of
+     * legs can — if the run's net displacement (start to end) is
+     * small relative to the cumulative path length (sum of every
+     * leg) AND lies within the worst accuracy radius of any fix in
+     * the run, the tag was sitting still while its reported position
+     * wandered.
+     *
+     * Concrete thresholds:
+     *  - run length >= 2 legs (3+ points) — needs cross-leg context
+     *  - net displacement <= max(horizontalAccuracy) in the run
+     *  - net / path < JITTER_PATH_RATIO (back-and-forth, not directed)
+     *
+     * Real walks survive: a 5-fix leg with each fix ~50 m further
+     * down a street has net ~ path, ratio > 0.5 -> kept as MOVE.
+     */
+    private fun smoothJitterRuns(classified: List<HistoryPoint>): List<HistoryPoint> {
+        if (classified.size < 3) return classified
+        val chrono = classified.asReversed().toMutableList()
+
+        // Pass 1: back-and-forth runs. A sequence of N >= 3 consecutive
+        // MOVE points whose net displacement is small relative to the
+        // cumulative path AND fits inside the worst accuracy circle is
+        // the tag wandering in place, not a real walk.
+        var i = 0
+        while (i < chrono.size) {
+            if (chrono[i].kind != HistoryPointKind.MOVE) { i++; continue }
+            var j = i
+            while (j < chrono.size && chrono[j].kind == HistoryPointKind.MOVE) j++
+            val runEnd = j - 1
+            if (runEnd - i >= 2) {
+                val first = chrono[i]
+                val last = chrono[runEnd]
+                val net = haversineMeters(
+                    first.latitude, first.longitude,
+                    last.latitude, last.longitude,
+                )
+                var path = 0.0
+                var maxAcc = 0L
+                for (k in i until runEnd) {
+                    path += haversineMeters(
+                        chrono[k].latitude, chrono[k].longitude,
+                        chrono[k + 1].latitude, chrono[k + 1].longitude,
+                    )
+                    maxAcc = maxOf(
+                        maxAcc,
+                        chrono[k].horizontalAccuracy,
+                        chrono[k + 1].horizontalAccuracy,
+                    )
+                }
+                val ratio = if (path > 0.0) net / path else 1.0
+                val isJitterRun = net <= maxAcc.toDouble() && ratio < JITTER_PATH_RATIO
+                if (isJitterRun) {
+                    for (k in i..runEnd) {
+                        chrono[k] = chrono[k].copy(kind = HistoryPointKind.STOP)
+                    }
+                }
+            }
+            i = j
+        }
+
+        // Pass 2: a single MOVE sandwiched between two STOPs is an
+        // outlier only when the mid-point's accuracy circle could
+        // plausibly cover BOTH neighbours — meaning we can't
+        // distinguish its reported location from theirs. If the
+        // circle doesn't reach prev/next, the tag really did move
+        // somewhere else and we keep the MOVE.
+        for (k in 1 until chrono.size - 1) {
+            if (chrono[k].kind != HistoryPointKind.MOVE) continue
+            val prev = chrono[k - 1]
+            val next = chrono[k + 1]
+            if (prev.kind != HistoryPointKind.STOP) continue
+            if (next.kind != HistoryPointKind.STOP) continue
+            val mid = chrono[k]
+            val midToPrev = haversineMeters(
+                mid.latitude, mid.longitude,
+                prev.latitude, prev.longitude,
+            )
+            val midToNext = haversineMeters(
+                mid.latitude, mid.longitude,
+                next.latitude, next.longitude,
+            )
+            val reachPrev = (mid.horizontalAccuracy + prev.horizontalAccuracy).toDouble()
+            val reachNext = (mid.horizontalAccuracy + next.horizontalAccuracy).toDouble()
+            if (midToPrev <= reachPrev && midToNext <= reachNext) {
+                chrono[k] = chrono[k].copy(kind = HistoryPointKind.STOP)
+            }
+        }
+
+        return chrono.asReversed()
     }
 
     private fun kickoffGeocoding() {
@@ -378,6 +516,30 @@ class HistoryViewModel(
 
         for (p in chrono) {
             if (p.kind == HistoryPointKind.STOP) {
+                // Flush the current Stop buffer when the new point is
+                // outside the cluster's accuracy radius — classify()
+                // emits adjacent STOP clusters with no MOVE between
+                // them when one stop ends and another begins, so
+                // buildEntries has to spot the spatial break itself.
+                // Without this the visit-on-May-8 cluster and the
+                // visit-on-May-10 cluster fuse into one entry anchored
+                // at the newer day, leaving the older day's list empty.
+                val buf = stopBuf
+                if (!buf.isNullOrEmpty()) {
+                    val anchor = buf.first()
+                    val radius = maxOf(
+                        STOP_RADIUS_M,
+                        anchor.horizontalAccuracy.toDouble(),
+                        p.horizontalAccuracy.toDouble(),
+                    )
+                    if (haversineMeters(
+                            anchor.latitude, anchor.longitude,
+                            p.latitude, p.longitude,
+                        ) > radius
+                    ) {
+                        flushStop()
+                    }
+                }
                 (stopBuf ?: mutableListOf<HistoryPoint>().also { stopBuf = it }).add(p)
             } else {
                 flushStop()
@@ -419,7 +581,14 @@ class HistoryViewModel(
     private companion object {
         const val DAY_MS: Long = 24L * 60L * 60L * 1000L
         const val STOP_RADIUS_M: Double = 25.0
-        const val STOP_MIN_MS: Long = 5L * 60L * 1000L
+        /**
+         * A run of MOVE points is reclassified as stationary jitter
+         * when its net / path ratio falls below this AND the net
+         * displacement is within the worst accuracy radius of any
+         * fix in the run. 0.5 catches "back-and-forth" wandering
+         * while letting straight-line walks (ratio ~ 1) survive.
+         */
+        const val JITTER_PATH_RATIO: Double = 0.5
 
         fun haversineMeters(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Double {
             val r = 6_371_000.0
