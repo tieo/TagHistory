@@ -61,6 +61,14 @@ class MapViewModel(
      */
     private val currentLocation: () -> Pair<Double, Double>? = { null },
     private val hoursBack: Int = DEFAULT_HOURS_BACK,
+    /**
+     * Interval between background refresh ticks. Runs in viewModelScope
+     * so it stays active for the whole logged-in session — independent
+     * of which screen is currently composed (History, Settings, etc.
+     * used to silently pause auto-refresh because the timer lived on
+     * MapScreen). Set to 0 in tests to disable.
+     */
+    private val refreshIntervalMs: Long = DEFAULT_REFRESH_INTERVAL_MS,
     private val scope: CoroutineScope? = null,
     /** All DB/IO work hops to this. Tests can inject the test scheduler's dispatcher. */
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.Default,
@@ -112,6 +120,16 @@ class MapViewModel(
         runScope.launch {
             boot().join()
             refresh()
+            // Periodic refresh lives on the VM (not on MapScreen) so the
+            // app keeps pulling new reports while the user is on
+            // History / Settings / DeviceInfo too. Cancels with the VM
+            // when the user signs out or the process dies.
+            if (refreshIntervalMs > 0) {
+                while (true) {
+                    kotlinx.coroutines.delay(refreshIntervalMs)
+                    refresh()
+                }
+            }
         }
     }
 
@@ -497,5 +515,6 @@ class MapViewModel(
          * refreshes. History screen uses its own wider window.
          */
         const val DEFAULT_HOURS_BACK: Int = 2
+        const val DEFAULT_REFRESH_INTERVAL_MS: Long = 60_000L
     }
 }

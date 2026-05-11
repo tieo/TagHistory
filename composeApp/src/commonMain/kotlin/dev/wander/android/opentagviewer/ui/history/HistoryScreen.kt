@@ -138,7 +138,12 @@ fun HistoryScreen(
     var showSwitcher by remember { mutableStateOf(false) }
     val state by viewModel.state.collectAsStateWithLifecycle()
 
-    LaunchedEffect(Unit) {
+    // Keyed on viewModel so switching beacon (which gives us a new VM
+    // via remember(beaconId)) re-fires load() against the new VM.
+    // Previously keyed on Unit, which only triggered once for the
+    // composable's lifetime — the switcher swapped in a new VM but
+    // nobody ever called load() on it, hence "No data".
+    LaunchedEffect(viewModel) {
         PerfTrace.start("history-open beacon=$title")
         val end = Clock.System.now().toEpochMilliseconds()
         viewModel.load(end - 7L * DAY_MS, end)
@@ -254,81 +259,82 @@ fun HistoryScreen(
             modifier = Modifier.fillMaxSize(),
         )
 
-        FilledIconButton(
-            onClick = onBack,
-            modifier = Modifier
-                .align(Alignment.TopStart)
-                .statusBarsPadding()
-                .padding(start = 12.dp, top = 12.dp),
-            colors = IconButtonDefaults.filledIconButtonColors(
-                containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.92f),
-                contentColor = MaterialTheme.colorScheme.onSurface,
-            ),
-        ) {
-            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-        }
-
-        // Title chip — shows the currently viewed device (emoji + name).
-        // Tappable when more than one beacon is known, opening a picker
-        // dialog so the user can switch device without going back to
-        // the map. Sits between the back button and the route/basemap
-        // row at the top of the screen.
-        Surface(
-            modifier = Modifier
-                .align(Alignment.TopCenter)
-                .statusBarsPadding()
-                .padding(top = 12.dp)
-                .then(
-                    if (canSwitch) Modifier.clickable { showSwitcher = true }
-                    else Modifier,
-                )
-                .testTag("history_title_chip"),
-            color = MaterialTheme.colorScheme.surface.copy(alpha = 0.92f),
-            contentColor = MaterialTheme.colorScheme.onSurface,
-            shape = androidx.compose.foundation.shape.RoundedCornerShape(20.dp),
-            tonalElevation = 2.dp,
-            shadowElevation = 4.dp,
-        ) {
-            Row(
-                modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                val emoji = currentBeacon?.emoji
-                if (!emoji.isNullOrBlank()) {
-                    Text(emoji, style = MaterialTheme.typography.titleMedium)
-                }
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    maxLines = 1,
-                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
-                    modifier = Modifier.widthIn(max = 220.dp),
-                )
-                if (canSwitch) {
-                    Icon(
-                        Icons.Filled.ExpandMore,
-                        contentDescription = "Switch device",
-                        modifier = Modifier.size(18.dp),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-            }
-        }
-
+        // Single top row so back / title chip / route+basemap don't
+        // overlap. Each "slot" is one logical group; the chip takes
+        // the leftover middle space (centered) and shrinks via
+        // Modifier.weight so long names don't shove the side buttons
+        // off-screen. Same statusBarsPadding + top padding applies to
+        // the whole row so all three groups share the same baseline.
         Row(
             modifier = Modifier
-                .align(Alignment.TopEnd)
+                .align(Alignment.TopCenter)
+                .fillMaxWidth()
                 .statusBarsPadding()
-                .padding(end = 12.dp, top = 12.dp),
+                .padding(horizontal = 12.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            // Route button — fires the platform's geo: intent with
-            // the currently selected point's coords, so the user
-            // gets a chooser across every nav app installed (Google
-            // Maps, Waze, OsmAnd, Organic Maps, …). Disabled when
-            // no point is selected.
+            FilledIconButton(
+                onClick = onBack,
+                colors = IconButtonDefaults.filledIconButtonColors(
+                    containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.92f),
+                    contentColor = MaterialTheme.colorScheme.onSurface,
+                ),
+            ) {
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+            }
+
+            // Title chip — shows current device (emoji + name).
+            // Tappable when more than one beacon is known, opens a
+            // picker. weight(1f, fill = false) lets the chip shrink
+            // when the side buttons need room but never grow past its
+            // intrinsic width, so it stays centered between them.
+            Box(
+                modifier = Modifier.weight(1f),
+                contentAlignment = Alignment.Center,
+            ) {
+                Surface(
+                    modifier = Modifier
+                        .then(
+                            if (canSwitch) Modifier.clickable { showSwitcher = true }
+                            else Modifier,
+                        )
+                        .testTag("history_title_chip"),
+                    color = MaterialTheme.colorScheme.surface.copy(alpha = 0.92f),
+                    contentColor = MaterialTheme.colorScheme.onSurface,
+                    shape = androidx.compose.foundation.shape.RoundedCornerShape(20.dp),
+                    tonalElevation = 2.dp,
+                    shadowElevation = 4.dp,
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        val emoji = currentBeacon?.emoji
+                        if (!emoji.isNullOrBlank()) {
+                            Text(emoji, style = MaterialTheme.typography.titleMedium)
+                        }
+                        Text(
+                            text = title,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            maxLines = 1,
+                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                            modifier = Modifier.widthIn(max = 180.dp),
+                        )
+                        if (canSwitch) {
+                            Icon(
+                                Icons.Filled.ExpandMore,
+                                contentDescription = "Switch device",
+                                modifier = Modifier.size(18.dp),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+                }
+            }
+
             val selectedPoint = chronological.getOrNull(selectedPointIdx)
             FilledIconButton(
                 onClick = {
@@ -726,33 +732,155 @@ private fun EntriesList(
     onSelectPoint: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    // Interleave entries with leg-label rows. The leg shows distance +
+    // duration between adjacent entries (older -> newer) ON the rail
+    // itself, not as a subline on the row above. Below-threshold legs
+    // (jitter) collapse to nothing so the rail just runs straight
+    // through.
+    val rendered = remember(entries) { buildRenderedItems(entries) }
     LazyColumn(
         state = listState,
         modifier = modifier,
     ) {
-        itemsIndexed(entries, key = { _, e -> e.id }) { idx, entry ->
-            val tag = "history_item_$idx"
-            when (entry) {
-                is HistoryEntry.Stop -> StopRow(
-                    entry = entry,
-                    isFirst = idx == 0,
-                    isLast = idx == entries.lastIndex,
-                    isSelected = entry.members.any { it.id == selectedPointId },
-                    hideCity = hideCity,
-                    testTag = tag,
-                    onSelect = { onSelectPoint(entry.anchor.id) },
-                    onSelectMember = { p -> onSelectPoint(p.id) },
-                )
-                is HistoryEntry.Move -> MoveRow(
-                    entry = entry,
-                    isFirst = idx == 0,
-                    isLast = idx == entries.lastIndex,
-                    isSelected = entry.point.id == selectedPointId,
-                    hideCity = hideCity,
-                    testTag = tag,
-                    onSelect = { onSelectPoint(entry.point.id) },
+        itemsIndexed(rendered, key = { _, item -> item.key }) { _, item ->
+            when (item) {
+                is RenderedItem.EntryItem -> {
+                    val tag = "history_item_${item.idx}"
+                    when (val entry = item.entry) {
+                        is HistoryEntry.Stop -> StopRow(
+                            entry = entry,
+                            isFirst = item.isFirst,
+                            isLast = item.isLast,
+                            isSelected = entry.members.any { it.id == selectedPointId },
+                            hideCity = hideCity,
+                            testTag = tag,
+                            onSelect = { onSelectPoint(entry.anchor.id) },
+                            onSelectMember = { p -> onSelectPoint(p.id) },
+                        )
+                        is HistoryEntry.Move -> MoveRow(
+                            entry = entry,
+                            isFirst = item.isFirst,
+                            isLast = item.isLast,
+                            isSelected = entry.point.id == selectedPointId,
+                            hideCity = hideCity,
+                            testTag = tag,
+                            onSelect = { onSelectPoint(entry.point.id) },
+                        )
+                    }
+                }
+                is RenderedItem.LegItem -> LegLabel(
+                    distanceMeters = item.distanceMeters,
+                    durationMs = item.durationMs,
                 )
             }
+        }
+    }
+}
+
+/**
+ * Walks the (newest-first) entry list, emitting an [EntryItem] for
+ * each row and inserting a [LegItem] between any two consecutive
+ * entries whose travel exceeds the jitter floor. Same-day check
+ * prevents an overnight gap from rendering as a long leg.
+ */
+private fun buildRenderedItems(entries: List<HistoryEntry>): List<RenderedItem> {
+    if (entries.isEmpty()) return emptyList()
+    val out = mutableListOf<RenderedItem>()
+    entries.forEachIndexed { i, e ->
+        out += RenderedItem.EntryItem(
+            entry = e,
+            idx = i,
+            isFirst = i == 0,
+            isLast = i == entries.lastIndex,
+        )
+        if (i < entries.lastIndex) {
+            val older = entries[i + 1]
+            val newerAnchor = entryAnchor(e)
+            val olderAnchor = entryAnchor(older)
+            val sameDay = localDayStart(newerAnchor.timestampMs) ==
+                localDayStart(olderAnchor.timestampMs)
+            if (sameDay) {
+                val dist = haversineMeters(
+                    newerAnchor.latitude, newerAnchor.longitude,
+                    olderAnchor.latitude, olderAnchor.longitude,
+                )
+                val dur = (newerAnchor.timestampMs - olderAnchor.timestampMs)
+                    .coerceAtLeast(0L)
+                val speedKmh = if (dur > 0)
+                    (dist / 1000.0) / (dur / 3_600_000.0)
+                else 0.0
+                if (dist >= MIN_MOVE_METERS && speedKmh >= MIN_MOVE_KMH) {
+                    out += RenderedItem.LegItem(
+                        distanceMeters = dist,
+                        durationMs = dur,
+                        key = "leg-${e.id}-${older.id}",
+                    )
+                }
+            }
+        }
+    }
+    return out
+}
+
+private fun entryAnchor(e: HistoryEntry): HistoryPoint = when (e) {
+    is HistoryEntry.Stop -> e.anchor
+    is HistoryEntry.Move -> e.point
+}
+
+private sealed class RenderedItem {
+    abstract val key: String
+
+    data class EntryItem(
+        val entry: HistoryEntry,
+        val idx: Int,
+        val isFirst: Boolean,
+        val isLast: Boolean,
+    ) : RenderedItem() {
+        override val key: String get() = entry.id
+    }
+
+    data class LegItem(
+        val distanceMeters: Double,
+        val durationMs: Long,
+        override val key: String,
+    ) : RenderedItem()
+}
+
+@Composable
+private fun LegLabel(distanceMeters: Double, durationMs: Long) {
+    val railColor = MaterialTheme.colorScheme.outlineVariant
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(26.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        // Rail column: continuous bar so the timeline still reads
+        // through the leg label.
+        Box(
+            modifier = Modifier
+                .width(36.dp)
+                .fillMaxHeight(),
+        ) {
+            Box(
+                modifier = Modifier
+                    .width(2.dp)
+                    .fillMaxHeight()
+                    .align(Alignment.Center)
+                    .background(railColor),
+            )
+        }
+        Surface(
+            shape = androidx.compose.foundation.shape.RoundedCornerShape(10.dp),
+            color = MaterialTheme.colorScheme.surfaceVariant,
+            contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+            tonalElevation = 0.dp,
+        ) {
+            Text(
+                text = "${formatDistance(distanceMeters)} · ${formatDuration(durationMs)}",
+                style = MaterialTheme.typography.labelSmall,
+                modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+            )
         }
     }
 }
@@ -860,19 +988,10 @@ private fun MoveRow(
 ) {
     val nodeColor = if (isSelected) MaterialTheme.colorScheme.primary
                     else MaterialTheme.colorScheme.onSurfaceVariant
-    val subline = buildString {
-        val d = entry.fromPrevMeters
-        val dt = entry.durationFromPrevMs
-        val speedKmh = if (dt > 0) (d / 1000.0) / (dt / 3_600_000.0) else 0.0
-        val isRealMove = d >= MIN_MOVE_METERS && speedKmh >= MIN_MOVE_KMH
-        if (isRealMove) {
-            append(formatDistance(d))
-            append(" · ")
-            append(formatDuration(dt))
-            append(" · ")
-        }
-        append("±${entry.point.horizontalAccuracy} m")
-    }
+    // Distance + duration to the prior entry now live on the rail
+    // between rows (see LegLabel), not as a subline here. Keep the
+    // accuracy chip — it's per-row info that doesn't fit on the rail.
+    val subline = "±${entry.point.horizontalAccuracy} m"
     val parsed = entry.point.address?.let { parseAddress(it) }
         ?: ParsedAddress(
             "%.5f, %.5f".format(entry.point.latitude, entry.point.longitude),

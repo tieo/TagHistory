@@ -68,7 +68,6 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlin.time.Clock
 import kotlin.time.ExperimentalTime
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 
@@ -85,22 +84,13 @@ fun MapScreen(
     onOpenHistory: (String, String) -> Unit = { _, _ -> },
     onRoute: (lat: Double, lon: Double, label: String) -> Unit = { _, _, _ -> },
     onImport: (suspend () -> String?)? = null,
-    /** In-foreground auto-refresh interval. */
-    refreshIntervalMs: Long = 60_000L,
     snackbarHostState: SnackbarHostState? = null,
     modifier: Modifier = Modifier,
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
 
-    // VM init block already kicks off boot + refresh at construction so
-    // first paint isn't blocked on Compose mount. Nothing to do here.
-
-    LaunchedEffect(refreshIntervalMs) {
-        while (true) {
-            delay(refreshIntervalMs)
-            viewModel.refresh()
-        }
-    }
+    // Periodic refresh lives in MapViewModel.init so it keeps running
+    // across every screen, not just while MapScreen is composed.
 
     val refreshError = state.refreshError
     LaunchedEffect(refreshError, snackbarHostState) {
