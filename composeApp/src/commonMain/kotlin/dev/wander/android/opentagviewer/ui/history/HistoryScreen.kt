@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -806,10 +807,11 @@ private fun buildRenderedItems(entries: List<HistoryEntry>): List<RenderedItem> 
                 )
                 val dur = (newerAnchor.timestampMs - olderAnchor.timestampMs)
                     .coerceAtLeast(0L)
-                val speedKmh = if (dur > 0)
-                    (dist / 1000.0) / (dur / 3_600_000.0)
-                else 0.0
-                if (dist >= MIN_MOVE_METERS && speedKmh >= MIN_MOVE_KMH) {
+                val accFloor = maxOf(
+                    newerAnchor.horizontalAccuracy,
+                    olderAnchor.horizontalAccuracy,
+                )
+                if (isRealMove(dist, dur, accFloor)) {
                     out += RenderedItem.LegItem(
                         distanceMeters = dist,
                         durationMs = dur,
@@ -849,14 +851,17 @@ private sealed class RenderedItem {
 @Composable
 private fun LegLabel(distanceMeters: Double, durationMs: Long) {
     val railColor = MaterialTheme.colorScheme.outlineVariant
-    Row(
+    // Box holds: full-height rail bar + chip centered on the same
+    // 36dp rail column, breaking the line visually but staying ON
+    // the timeline. The chip is allowed to overflow horizontally via
+    // wrapContentSize(unbounded = true) so a long label like
+    // "1.2 km · 12 min" doesn't get squeezed into 36dp.
+    Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(26.dp),
-        verticalAlignment = Alignment.CenterVertically,
+            .height(28.dp),
+        contentAlignment = Alignment.CenterStart,
     ) {
-        // Rail column: continuous bar so the timeline still reads
-        // through the leg label.
         Box(
             modifier = Modifier
                 .width(36.dp)
@@ -869,18 +874,21 @@ private fun LegLabel(distanceMeters: Double, durationMs: Long) {
                     .align(Alignment.Center)
                     .background(railColor),
             )
-        }
-        Surface(
-            shape = androidx.compose.foundation.shape.RoundedCornerShape(10.dp),
-            color = MaterialTheme.colorScheme.surfaceVariant,
-            contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-            tonalElevation = 0.dp,
-        ) {
-            Text(
-                text = "${formatDistance(distanceMeters)} · ${formatDuration(durationMs)}",
-                style = MaterialTheme.typography.labelSmall,
-                modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
-            )
+            Surface(
+                modifier = Modifier
+                    .align(Alignment.Center)
+                    .wrapContentSize(align = Alignment.Center, unbounded = true),
+                shape = androidx.compose.foundation.shape.RoundedCornerShape(10.dp),
+                color = MaterialTheme.colorScheme.surfaceVariant,
+                contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                tonalElevation = 0.dp,
+            ) {
+                Text(
+                    text = "${formatDistance(distanceMeters)} · ${formatDuration(durationMs)}",
+                    style = MaterialTheme.typography.labelSmall,
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+                )
+            }
         }
     }
 }
@@ -1310,14 +1318,8 @@ private fun buildDaySummary(points: List<HistoryPoint>): DaySummary {
         val prev = points[i - 1]
         val d = haversineMeters(prev.latitude, prev.longitude, p.latitude, p.longitude)
         val dt = (p.timestampMs - prev.timestampMs).coerceAtLeast(0L)
-        // Only credit movement when the leg passes both a distance
-        // floor (20 m) AND a speed floor (~3 km/h). GPS jitter on a
-        // tag sitting still routinely produces 5–15 m of noise across
-        // back-to-back reports, which used to inflate "260 m distance"
-        // summaries for days the tag never actually left a room.
-        val speedKmh = if (dt > 0) (d / 1000.0) / (dt / 3_600_000.0) else 0.0
-        val isRealMove = d >= MIN_MOVE_METERS && speedKmh >= MIN_MOVE_KMH
-        if (isRealMove) {
+        val accFloor = maxOf(prev.horizontalAccuracy, p.horizontalAccuracy)
+        if (isRealMove(d, dt, accFloor)) {
             distance += d
             movingMs += dt
         }
@@ -1327,6 +1329,33 @@ private fun buildDaySummary(points: List<HistoryPoint>): DaySummary {
 
 private const val MIN_MOVE_METERS = 20.0
 private const val MIN_MOVE_KMH = 3.0
+/** Need at least a minute of motion — a 40m hop in 4 s is GPS jitter. */
+private const val MIN_MOVE_DURATION_MS = 60_000L
+/**
+ * Leg must clear (max accuracy radius * this) to count. A fix with
+ * ±82 m accuracy can shift up to 82 m without the tag ever moving;
+ * only a multiple of that is plausibly real motion.
+ */
+private const val MIN_MOVE_ACCURACY_MULT = 1.5
+
+/**
+ * Single source of truth for "is this leg a real movement, not GPS
+ * jitter?" — applied to the day summary, the MoveRow subline and the
+ * rail leg-label rendering so all three agree.
+ */
+private fun isRealMove(
+    distanceMeters: Double,
+    durationMs: Long,
+    accuracyFloorMeters: Long,
+): Boolean {
+    if (distanceMeters < MIN_MOVE_METERS) return false
+    if (distanceMeters < accuracyFloorMeters * MIN_MOVE_ACCURACY_MULT) return false
+    if (durationMs < MIN_MOVE_DURATION_MS) return false
+    val speedKmh = if (durationMs > 0)
+        (distanceMeters / 1000.0) / (durationMs / 3_600_000.0)
+    else 0.0
+    return speedKmh >= MIN_MOVE_KMH
+}
 
 private fun haversineMeters(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Double {
     val r = 6_371_000.0
