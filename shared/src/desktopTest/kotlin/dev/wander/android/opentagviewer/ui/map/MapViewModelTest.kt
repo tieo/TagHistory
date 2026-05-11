@@ -412,12 +412,17 @@ class MapViewModelTest {
             )
         })
         advanceUntilIdle()
-        assertEquals(listOf("a", "b", "c"), vm.state.value.cards.map { it.beaconId },
-            "After init's first refresh: only 'a' located, so 'a' first then unlocated tail")
+        // Boot now drives the cascade through all rungs until every
+        // beacon has either a fix or has been queried at the widest
+        // window — so 'b' lands via rung 2 (newer timestamp), 'a'
+        // remains located from rung 1, 'c' stays unlocated. Cards
+        // sort newest-located first, so 'b' beats 'a'.
+        assertEquals(listOf("b", "a", "c"), vm.state.value.cards.map { it.beaconId },
+            "After init's cascade: 'b' came in on the wider rung with a newer timestamp")
 
         vm.refresh(); advanceUntilIdle()
         assertEquals(listOf("b", "a", "c"), vm.state.value.cards.map { it.beaconId },
-            "After 'b' gets a newer report: 'b' moves to the front")
+            "After another refresh: still newest-first ordering")
     }
 
     @Test

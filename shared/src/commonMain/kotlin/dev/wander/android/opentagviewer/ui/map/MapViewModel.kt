@@ -290,18 +290,32 @@ class MapViewModel(
                         "non_responding_beacons" to toFetch.keys.minus(reports.keys).joinToString(","),
                     ),
                 )
+                // Only mark the initial fetch complete once SOMETHING was
+                // located in this rung. Otherwise the next rung (6h, then
+                // 24h) gets a chance to find older reports. The previous
+                // logic flipped the flag after every successful rung
+                // regardless of report count, then break'd, so a 1h
+                // rung returning 0 reports halted the cascade with
+                // "0 located" instead of escalating.
+                val anyLocated = markers.isNotEmpty()
                 _state.update { current ->
                     current.copy(
-                        isInitialFetchComplete = true,
+                        isInitialFetchComplete = current.isInitialFetchComplete || anyLocated,
                         markers = markers,
                         cards = cards,
                         selectedBeaconId = pickSelection(current.selectedBeaconId, markers),
                     )
                 }
                 kickoffGeocoding()
-                // Once the initial fetch is marked done mid-cascade, stop trying
-                // wider windows — the next periodic tick will cover stragglers.
-                if (!isPeriodic && _state.value.isInitialFetchComplete && window != effective.last()) {
+                // Stop early only when we actually have a fix on every
+                // known beacon — otherwise let the cascade widen to find
+                // stragglers. The next periodic tick still covers the
+                // long tail.
+                if (!isPeriodic &&
+                    beaconsById.isNotEmpty() &&
+                    beaconsById.keys.all { latestLocationByBeacon[it] != null } &&
+                    window != effective.last()
+                ) {
                     break
                 }
             }
@@ -310,6 +324,10 @@ class MapViewModel(
                     isRefreshing = false,
                     refreshError = lastError,
                     fetchingBeaconIds = emptySet(),
+                    // Cascade has finished; even if no rung located a
+                    // beacon, the shimmer card has to come down so the
+                    // user sees the (empty) state instead of waiting.
+                    isInitialFetchComplete = true,
                 )
             }
             val locatedCount = _state.value.markers.size
