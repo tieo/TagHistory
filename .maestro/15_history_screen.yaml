@@ -44,10 +44,10 @@ name: History screen — seeded reports visible, day nav works, back returns to 
     visible:
       text: "distance"
     timeout: 25000
-# At least one "At HH:MM" timestamp visible — catches UTC-vs-local format bugs.
+# At least one "HH:MM" timestamp visible — catches UTC-vs-local format bugs.
 - extendedWaitUntil:
     visible:
-      text: ".*At \\d.*"
+      text: ".*\\d+:\\d\\d.*"
     timeout: 25000
 
 # Day-prev to Yesterday: list re-renders.

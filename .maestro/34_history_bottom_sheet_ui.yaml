@@ -87,7 +87,7 @@ name: History — bottom sheet shows day nav, point list, and "Fetch older"
     timeout: 25000
 - extendedWaitUntil:
     visible:
-      text: ".*At \\d.*"
+      text: ".*\\d+:\\d\\d.*"
     timeout: 25000
 
 # Day-prev once more — older bucket (3 days ago, 1 report). The label is a

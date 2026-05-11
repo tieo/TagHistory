@@ -46,7 +46,7 @@ name: History — list scrolls without crashing across day switches
     timeout: 25000
 - extendedWaitUntil:
     visible:
-      text: ".*At \\d.*"
+      text: ".*\\d+:\\d\\d.*"
     timeout: 25000
 
 # Day-prev to Yesterday: the list re-renders with Yesterday's points.

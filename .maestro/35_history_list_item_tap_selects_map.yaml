@@ -70,7 +70,7 @@ name: History — tapping a list item selects the point (highlighted entry)
 # At least one timestamp line is rendered — catches blank labels.
 - extendedWaitUntil:
     visible:
-      text: ".*At \\d.*"
+      text: ".*\\d+:\\d\\d.*"
     timeout: 25000
 
 # Day-prev to Yesterday — items reset, item 0 is now Yesterday's newest.

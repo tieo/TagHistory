@@ -72,7 +72,7 @@ name: History — day navigation prev/next changes point list
     timeout: 25000
 - extendedWaitUntil:
     visible:
-      text: ".*At \\d.*"
+      text: ".*\\d+:\\d\\d.*"
     timeout: 25000
 
 # Walk back two days, then forward two days again — exercises VM caching.

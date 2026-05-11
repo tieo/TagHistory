@@ -24,13 +24,13 @@ name: History — expanded list shows item addresses or coords plus times
 # UTC-vs-local format bugs and raw-enum/empty output bugs.
 - extendedWaitUntil:
     visible:
-      text: ".*At \\d.*"
+      text: ".*\\d+:\\d\\d.*"
     timeout: 25000
 # Time format must match exactly two digits, colon, two digits — no seconds,
 # no AM/PM mixed in (the formatLocalTime is HH:MM 24-hour locally formatted).
 - extendedWaitUntil:
     visible:
-      text: ".*At \\d.*"
+      text: ".*\\d+:\\d\\d.*"
     timeout: 25000
 
 # Three points today seeded — items 0, 1, 2 all present.
@@ -66,7 +66,7 @@ name: History — expanded list shows item addresses or coords plus times
     timeout: 25000
 - extendedWaitUntil:
     visible:
-      text: ".*At \\d.*"
+      text: ".*\\d+:\\d\\d.*"
     timeout: 25000
 # Yesterday for Car Keys has 2 points — items 0 and 1 visible.
 - extendedWaitUntil:
@@ -88,7 +88,7 @@ name: History — expanded list shows item addresses or coords plus times
     timeout: 25000
 - extendedWaitUntil:
     visible:
-      text: ".*At \\d.*"
+      text: ".*\\d+:\\d\\d.*"
     timeout: 25000
 
 - back
