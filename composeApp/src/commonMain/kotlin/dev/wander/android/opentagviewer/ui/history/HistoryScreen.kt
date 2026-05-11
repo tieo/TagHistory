@@ -2,6 +2,8 @@ package io.github.tieo.taghistory.ui.history
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -9,6 +11,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -22,7 +25,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
-import androidx.compose.material.icons.automirrored.filled.TrendingFlat
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
@@ -287,23 +289,10 @@ fun HistoryScreen(
             shadowElevation = 6.dp,
         ) {
             Column(modifier = Modifier.fillMaxSize()) {
-                // Decorative pill at top — not draggable, but kept for
-                // visual continuity with the previous M3 sheet so
-                // existing screenshots / docs still look familiar.
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 8.dp, bottom = 4.dp),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .width(36.dp)
-                            .height(4.dp)
-                            .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.outlineVariant),
-                    )
-                }
+                // No drag pill — sheet is a fixed division, not a
+                // draggable surface. A tiny top spacer keeps the date
+                // row clear of the rounded-corner curve.
+                Spacer(Modifier.height(8.dp))
                 SheetContent(
                     days = days,
                     dayIdx = dayIdx,
@@ -626,103 +615,50 @@ private fun StopRow(
     var expanded by remember { mutableStateOf(false) }
     val nodeColor = if (isSelected) MaterialTheme.colorScheme.primary
                     else MaterialTheme.colorScheme.tertiary
-    val railColor = MaterialTheme.colorScheme.outlineVariant
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .then(if (testTag != null) Modifier.testTag(testTag) else Modifier),
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable { onSelect() },
-            verticalAlignment = Alignment.Top,
-        ) {
-            // Vertical rail with filled-pin node.
-            Box(
-                modifier = Modifier
-                    .width(40.dp)
-                    .height(72.dp),
-                contentAlignment = Alignment.Center,
-            ) {
-                if (!isFirst) {
-                    Box(
-                        modifier = Modifier
-                            .width(2.dp)
-                            .height(36.dp)
-                            .align(Alignment.TopCenter)
-                            .background(railColor),
-                    )
-                }
-                if (!isLast) {
-                    Box(
-                        modifier = Modifier
-                            .width(2.dp)
-                            .height(36.dp)
-                            .align(Alignment.BottomCenter)
-                            .background(railColor),
-                    )
-                }
-                Box(
-                    modifier = Modifier
-                        .size(if (isSelected) 24.dp else 20.dp)
-                        .clip(CircleShape)
-                        .background(nodeColor),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Icon(
-                        Icons.Filled.Place,
-                        contentDescription = null,
-                        modifier = Modifier.size(if (isSelected) 16.dp else 14.dp),
-                        tint = MaterialTheme.colorScheme.surface,
-                    )
-                }
-            }
-            Column(
-                modifier = Modifier
-                    .weight(1f)
-                    .padding(end = 8.dp, top = 12.dp, bottom = 12.dp),
-            ) {
-                Text(
-                    entry.anchor.address
-                        ?: "%.5f, %.5f".format(entry.anchor.latitude, entry.anchor.longitude),
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = if (isSelected) MaterialTheme.colorScheme.primary
-                            else MaterialTheme.colorScheme.onSurface,
-                    maxLines = 2,
-                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
-                )
+        TimelineEntryRow(
+            time = formatLocalTime(entry.anchor.timestampMs),
+            address = stripCountry(
+                entry.anchor.address
+                    ?: "%.5f, %.5f".format(entry.anchor.latitude, entry.anchor.longitude),
+            ),
+            subline = run {
                 val arrival = formatLocalTime(entry.arrivalMs)
                 val departure = formatLocalTime(entry.departureMs)
-                val durationLabel = formatDuration(entry.dwellMs)
-                Text(
-                    if (entry.dwellMs <= 0L) "At $arrival"
-                    else "$arrival → $departure  ·  $durationLabel",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.outline,
-                )
-            }
-            // Expand caret only if there are multiple constituents.
-            if (entry.members.size > 1) {
-                IconButton(
-                    onClick = { expanded = !expanded },
-                    modifier = Modifier.size(40.dp),
-                ) {
-                    Icon(
-                        imageVector = if (expanded) Icons.Filled.ExpandLess
-                                      else Icons.Filled.ExpandMore,
-                        contentDescription = if (expanded) "Collapse" else "Expand",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
+                if (entry.dwellMs > 0L)
+                    "$arrival → $departure  ·  ${formatDuration(entry.dwellMs)}"
+                else
+                    "±${entry.anchor.horizontalAccuracy} m"
+            },
+            isFirst = isFirst,
+            isLast = isLast,
+            isSelected = isSelected,
+            isStop = true,
+            nodeColor = nodeColor,
+            trailing = if (entry.members.size > 1) {
+                {
+                    IconButton(
+                        onClick = { expanded = !expanded },
+                        modifier = Modifier.size(40.dp),
+                    ) {
+                        Icon(
+                            imageVector = if (expanded) Icons.Filled.ExpandLess
+                                          else Icons.Filled.ExpandMore,
+                            contentDescription = if (expanded) "Collapse" else "Expand",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
                 }
-            } else {
-                Spacer(Modifier.width(40.dp))
-            }
-        }
+            } else null,
+            onClick = onSelect,
+        )
         AnimatedVisibility(visible = expanded) {
             Column(
-                modifier = Modifier.padding(start = 56.dp, end = 16.dp, bottom = 8.dp),
+                modifier = Modifier.padding(start = 124.dp, end = 16.dp, bottom = 8.dp),
             ) {
                 entry.members.asReversed().forEach { p ->
                     Row(
@@ -740,7 +676,7 @@ private fun StopRow(
                         )
                         Spacer(Modifier.width(12.dp))
                         Text(
-                            "At ${formatLocalTime(p.timestampMs)}  ·  ±${p.horizontalAccuracy} m",
+                            "${formatLocalTime(p.timestampMs)}  ·  ±${p.horizontalAccuracy} m",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -761,83 +697,185 @@ private fun MoveRow(
     testTag: String? = null,
     onSelect: () -> Unit,
 ) {
-    val railColor = MaterialTheme.colorScheme.outlineVariant
-    val ringColor = if (isSelected) MaterialTheme.colorScheme.primary
+    val nodeColor = if (isSelected) MaterialTheme.colorScheme.primary
                     else MaterialTheme.colorScheme.onSurfaceVariant
+    val subline = buildString {
+        if (entry.fromPrevMeters > 0.0 && entry.durationFromPrevMs > 0L) {
+            append(formatDistance(entry.fromPrevMeters))
+            append(" · ")
+            append(formatDuration(entry.durationFromPrevMs))
+            append(" · ")
+        }
+        append("±${entry.point.horizontalAccuracy} m")
+    }
+    TimelineEntryRow(
+        time = formatLocalTime(entry.point.timestampMs),
+        address = stripCountry(
+            entry.point.address
+                ?: "%.5f, %.5f".format(entry.point.latitude, entry.point.longitude),
+        ),
+        subline = subline,
+        isFirst = isFirst,
+        isLast = isLast,
+        isSelected = isSelected,
+        isStop = false,
+        nodeColor = nodeColor,
+        trailing = null,
+        onClick = onSelect,
+        testTag = testTag,
+    )
+}
+
+/**
+ * Shared row layout for both Stop and Move entries:
+ *
+ *   [ rail (full-height bar with node) | time (big, fixed width) | address column | trailing ]
+ *
+ * The rail uses `Modifier.height(IntrinsicSize.Max)` on the parent Row so
+ * its `fillMaxHeight()` matches the actual rendered row height — which
+ * means consecutive rows' rails always touch even if the content height
+ * varies between Stop (taller, two text lines) and Move (shorter).
+ */
+@Composable
+private fun TimelineEntryRow(
+    time: String,
+    address: String,
+    subline: String,
+    isFirst: Boolean,
+    isLast: Boolean,
+    isSelected: Boolean,
+    isStop: Boolean,
+    nodeColor: androidx.compose.ui.graphics.Color,
+    trailing: (@Composable () -> Unit)?,
+    onClick: () -> Unit,
+    testTag: String? = null,
+) {
+    val railColor = MaterialTheme.colorScheme.outlineVariant
+    val surfaceColor = MaterialTheme.colorScheme.surface
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { onSelect() }
+            .height(IntrinsicSize.Min)
+            .clickable { onClick() }
             .then(if (testTag != null) Modifier.testTag(testTag) else Modifier),
-        verticalAlignment = Alignment.Top,
+        verticalAlignment = Alignment.CenterVertically,
     ) {
+        // Rail column: full-height bar, half-height covers on first/last
+        // so the rail visually starts/ends at the row's center instead
+        // of running off-screen.
         Box(
             modifier = Modifier
-                .width(40.dp)
-                .height(60.dp),
-            contentAlignment = Alignment.Center,
+                .width(36.dp)
+                .fillMaxHeight(),
         ) {
-            if (!isFirst) {
+            Box(
+                modifier = Modifier
+                    .width(2.dp)
+                    .fillMaxHeight()
+                    .align(Alignment.Center)
+                    .background(railColor),
+            )
+            if (isFirst) {
                 Box(
                     modifier = Modifier
-                        .width(2.dp)
-                        .height(30.dp)
+                        .width(4.dp)
+                        .fillMaxHeight(0.5f)
                         .align(Alignment.TopCenter)
-                        .background(railColor),
+                        .background(surfaceColor),
                 )
             }
-            if (!isLast) {
+            if (isLast) {
                 Box(
                     modifier = Modifier
-                        .width(2.dp)
-                        .height(30.dp)
+                        .width(4.dp)
+                        .fillMaxHeight(0.5f)
                         .align(Alignment.BottomCenter)
-                        .background(railColor),
+                        .background(surfaceColor),
                 )
+            }
+            // Node — filled circle for stops, hollow ring for moves.
+            // Slightly larger when selected so the user can see which
+            // map dot the list row corresponds to at a glance.
+            val nodeSize = when {
+                isSelected -> 22.dp
+                isStop -> 18.dp
+                else -> 14.dp
             }
             Box(
                 modifier = Modifier
-                    .size(if (isSelected) 18.dp else 14.dp)
+                    .size(nodeSize)
                     .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.surface),
+                    .background(if (isStop) nodeColor else surfaceColor)
+                    .border(
+                        width = if (isStop) 0.dp else 2.dp,
+                        color = if (isStop) androidx.compose.ui.graphics.Color.Transparent
+                                else nodeColor,
+                        shape = CircleShape,
+                    )
+                    .align(Alignment.Center),
                 contentAlignment = Alignment.Center,
             ) {
-                Icon(
-                    Icons.AutoMirrored.Filled.TrendingFlat,
-                    contentDescription = null,
-                    modifier = Modifier.size(if (isSelected) 14.dp else 10.dp),
-                    tint = ringColor,
-                )
+                if (isStop) {
+                    Icon(
+                        Icons.Filled.Place,
+                        contentDescription = null,
+                        modifier = Modifier.size(if (isSelected) 14.dp else 12.dp),
+                        tint = surfaceColor,
+                    )
+                }
             }
         }
+        // Time — bigger, fixed-width column on the left of the info.
+        Text(
+            text = time,
+            modifier = Modifier
+                .width(76.dp)
+                .padding(start = 4.dp, end = 8.dp),
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.SemiBold,
+            color = if (isSelected) MaterialTheme.colorScheme.primary
+                    else MaterialTheme.colorScheme.onSurface,
+            maxLines = 1,
+            overflow = androidx.compose.ui.text.style.TextOverflow.Visible,
+        )
+        // Address + subline.
         Column(
             modifier = Modifier
                 .weight(1f)
-                .padding(end = 16.dp, top = 10.dp, bottom = 10.dp),
+                .padding(end = 8.dp, top = 10.dp, bottom = 10.dp),
         ) {
-            // Show the distance / duration line only when the VM
-            // actually populated both — buildEntries zeros them out
-            // for the chronologically-first move of a day so we never
-            // show the cross-day gap as if it were a continuous trip.
-            // No speed badge: with ~10 min sampling the per-leg km/h
-            // is mostly noise.
-            if (entry.fromPrevMeters > 0.0 && entry.durationFromPrevMs > 0L) {
-                val distLabel = formatDistance(entry.fromPrevMeters)
-                val durLabel = formatDuration(entry.durationFromPrevMs)
-                Text(
-                    "$distLabel · $durLabel",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = if (isSelected) MaterialTheme.colorScheme.primary
-                            else MaterialTheme.colorScheme.onSurface,
-                )
-            }
             Text(
-                "At ${formatLocalTime(entry.point.timestampMs)}  ·  ±${entry.point.horizontalAccuracy} m",
+                address,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = if (isStop) FontWeight.SemiBold else FontWeight.Normal,
+                color = if (isSelected) MaterialTheme.colorScheme.primary
+                        else MaterialTheme.colorScheme.onSurface,
+                maxLines = 2,
+                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+            )
+            Text(
+                subline,
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.outline,
+                maxLines = 1,
+                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
             )
         }
+        if (trailing != null) trailing()
+        else Spacer(Modifier.width(8.dp))
     }
+}
+
+/**
+ * Drops the last comma-separated segment of an address line, which is
+ * almost always the country ("Germany" / "USA" / …). The remaining
+ * tokens carry the street + postal code + locality which is all the
+ * user actually wants on a small list row.
+ */
+private fun stripCountry(address: String): String {
+    val parts = address.split(", ").map { it.trim() }.filter { it.isNotEmpty() }
+    if (parts.size <= 1) return address
+    return parts.dropLast(1).joinToString(", ")
 }
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalTime::class)

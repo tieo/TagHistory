@@ -33,26 +33,38 @@ import org.maplibre.android.style.layers.CircleLayer
 import org.maplibre.android.style.layers.LineLayer
 import org.maplibre.android.style.layers.Property
 import org.maplibre.android.style.layers.PropertyFactory
+import org.maplibre.android.style.layers.FillLayer
 import org.maplibre.android.style.layers.SymbolLayer
 import org.maplibre.android.style.sources.GeoJsonSource
 import org.maplibre.geojson.Feature
 import org.maplibre.geojson.FeatureCollection
 import org.maplibre.geojson.LineString
 import org.maplibre.geojson.Point
+import org.maplibre.geojson.Polygon
+import kotlin.math.PI
+import kotlin.math.asin
+import kotlin.math.atan2
+import kotlin.math.cos
+import kotlin.math.sin
 
-private const val POLYLINE_WIDTH_DP = 6f
+private const val POLYLINE_WIDTH_DP = 4f
 private const val BOUNDS_PADDING_PX = 140
 
 private const val PATH_SOURCE = "history-path"
 private const val PATH_LAYER = "history-path-line"
 private const val ENDPOINTS_SOURCE = "history-endpoints"
 private const val ENDPOINTS_LAYER = "history-endpoints-circle"
+private const val ENDPOINTS_INNER_LAYER = "history-endpoints-inner"
 private const val SELECTED_SOURCE = "history-selected"
 private const val SELECTED_LAYER = "history-selected-circle"
+private const val SELECTED_HALO_LAYER = "history-selected-halo"
 private const val LABELS_SOURCE = "history-labels"
 private const val LABELS_LAYER = "history-labels-symbol"
 private const val ALL_DOTS_SOURCE = "history-all-dots"
 private const val ALL_DOTS_LAYER = "history-all-dots-hit"
+private const val ACCURACY_SOURCE = "history-accuracy"
+private const val ACCURACY_LAYER = "history-accuracy-fill"
+private const val ACCURACY_STROKE_LAYER = "history-accuracy-stroke"
 private const val PROP_ROLE = "role"
 private const val PROP_LABEL = "label"
 private const val PROP_POINT_ID = "point_id"
@@ -82,7 +94,11 @@ actual fun HistoryMapView(
     val currentTopInset = rememberUpdatedState(topInsetPx)
     val currentBottomInset = rememberUpdatedState(bottomInsetPx)
     val currentOnPointSelected = rememberUpdatedState(onPointSelected)
-    val lineColor = MaterialTheme.colorScheme.primary.toArgb()
+    // Basemap-aware line color: the MapLibre style swaps from light
+    // streets to dark matter to satellite, and a single material
+    // primary doesn't read against all three. Pick a tone that
+    // contrasts with the underlying tile palette explicitly.
+    val lineColor = colorForBasemap(effectiveBasemap)
     val selectedColor = MaterialTheme.colorScheme.tertiary.toArgb()
     val onSurfaceColor = MaterialTheme.colorScheme.onSurface.toArgb()
     val surfaceColor = MaterialTheme.colorScheme.surface.toArgb()
@@ -265,24 +281,63 @@ private fun installLayers(
     }
     if (style.getSource(ENDPOINTS_SOURCE) == null) {
         style.addSource(GeoJsonSource(ENDPOINTS_SOURCE, FeatureCollection.fromFeatures(emptyList())))
+        // Two-tone endpoint dots: outer ring in the path color, inner
+        // bright surface fill. Reads as a target reticle rather than a
+        // flat dot, which is what the user asked for ("more creative
+        // and sophisticated").
         style.addLayer(
             CircleLayer(ENDPOINTS_LAYER, ENDPOINTS_SOURCE).withProperties(
-                PropertyFactory.circleRadius(6f),
+                PropertyFactory.circleRadius(7f),
                 PropertyFactory.circleColor(lineColorArgb),
                 PropertyFactory.circleStrokeWidth(2f),
                 PropertyFactory.circleStrokeColor(Color.WHITE),
-            )
+            ),
+        )
+        style.addLayer(
+            CircleLayer(ENDPOINTS_INNER_LAYER, ENDPOINTS_SOURCE).withProperties(
+                PropertyFactory.circleRadius(3f),
+                PropertyFactory.circleColor(Color.WHITE),
+            ),
+        )
+    }
+    if (style.getSource(ACCURACY_SOURCE) == null) {
+        style.addSource(GeoJsonSource(ACCURACY_SOURCE, FeatureCollection.fromFeatures(emptyList())))
+        // True-to-scale accuracy circle for the selected point.
+        // FillLayer with a 32-vertex circle polygon emitted in actual
+        // lat/lon — using meters-to-degrees math so the radius zooms
+        // with the map instead of staying a fixed pixel blob.
+        style.addLayer(
+            FillLayer(ACCURACY_LAYER, ACCURACY_SOURCE).withProperties(
+                PropertyFactory.fillColor(selectedColorArgb),
+                PropertyFactory.fillOpacity(0.12f),
+            ),
+        )
+        style.addLayer(
+            LineLayer(ACCURACY_STROKE_LAYER, ACCURACY_SOURCE).withProperties(
+                PropertyFactory.lineColor(selectedColorArgb),
+                PropertyFactory.lineWidth(1.5f),
+                PropertyFactory.lineOpacity(0.6f),
+            ),
         )
     }
     if (style.getSource(SELECTED_SOURCE) == null) {
         style.addSource(GeoJsonSource(SELECTED_SOURCE, FeatureCollection.fromFeatures(emptyList())))
+        // Halo + core for the selected dot. Halo is a wider, lower-
+        // opacity ring; core is the bright filled bullseye.
+        style.addLayer(
+            CircleLayer(SELECTED_HALO_LAYER, SELECTED_SOURCE).withProperties(
+                PropertyFactory.circleRadius(18f),
+                PropertyFactory.circleColor(selectedColorArgb),
+                PropertyFactory.circleOpacity(0.18f),
+            ),
+        )
         style.addLayer(
             CircleLayer(SELECTED_LAYER, SELECTED_SOURCE).withProperties(
-                PropertyFactory.circleRadius(10f),
+                PropertyFactory.circleRadius(8f),
                 PropertyFactory.circleColor(selectedColorArgb),
                 PropertyFactory.circleStrokeWidth(3f),
                 PropertyFactory.circleStrokeColor(Color.WHITE),
-            )
+            ),
         )
     }
     if (style.getSource(ALL_DOTS_SOURCE) == null) {
@@ -384,17 +439,71 @@ private fun renderSelectedPoint(
     panCamera: Boolean,
 ) {
     val source = style.getSourceAs<GeoJsonSource>(SELECTED_SOURCE) ?: return
+    val accuracySource = style.getSourceAs<GeoJsonSource>(ACCURACY_SOURCE)
     val pt = selectedIdx?.let { orderedPoints.getOrNull(it) }
     if (pt == null) {
         source.setGeoJson(FeatureCollection.fromFeatures(emptyList()))
+        accuracySource?.setGeoJson(FeatureCollection.fromFeatures(emptyList()))
         return
     }
     val geoPoint = Point.fromLngLat(pt.longitude, pt.latitude)
     source.setGeoJson(Feature.fromGeometry(geoPoint))
+    // True-to-scale accuracy circle. horizontalAccuracy is meters per
+    // the FindMy report; we emit a 32-vertex polygon centered on the
+    // point with that radius and let MapLibre handle the projection.
+    if (accuracySource != null) {
+        val radiusM = pt.horizontalAccuracy.coerceAtLeast(0L).toDouble()
+        if (radiusM > 0.0) {
+            val ring = circlePolygonLatLng(pt.latitude, pt.longitude, radiusM, segments = 48)
+            accuracySource.setGeoJson(
+                Feature.fromGeometry(Polygon.fromLngLats(listOf(ring))),
+            )
+        } else {
+            accuracySource.setGeoJson(FeatureCollection.fromFeatures(emptyList()))
+        }
+    }
     if (panCamera) {
         val zoom = map.cameraPosition.zoom.coerceAtLeast(13.0)
         map.animateCamera(CameraUpdateFactory.newLatLngZoom(LatLng(pt.latitude, pt.longitude), zoom))
     }
+}
+
+/**
+ * Picks a polyline color that reads well against the active basemap.
+ * Hand-tuned: a dark royal blue on the light street map, bright
+ * cyan on the dark / satellite styles.
+ */
+private fun colorForBasemap(basemap: MapBasemap): Int = when (basemap) {
+    MapBasemap.LIGHT -> 0xFF1F4DA0.toInt()
+    MapBasemap.DARK -> 0xFF6FF4EC.toInt()
+    MapBasemap.SATELLITE -> 0xFFFFD24A.toInt()
+}
+
+/** Emit a closed lat/lon ring approximating a circle in true meters. */
+private fun circlePolygonLatLng(
+    centerLat: Double,
+    centerLon: Double,
+    radiusM: Double,
+    segments: Int,
+): List<Point> {
+    val earthR = 6_371_000.0
+    val lat0 = centerLat * PI / 180.0
+    val lon0 = centerLon * PI / 180.0
+    val angularDist = radiusM / earthR
+    val out = ArrayList<Point>(segments + 1)
+    for (i in 0..segments) {
+        val bearing = 2.0 * PI * i / segments
+        val newLat = asin(
+            sin(lat0) * cos(angularDist) +
+                cos(lat0) * sin(angularDist) * cos(bearing),
+        )
+        val newLon = lon0 + atan2(
+            sin(bearing) * sin(angularDist) * cos(lat0),
+            cos(angularDist) - sin(lat0) * sin(newLat),
+        )
+        out += Point.fromLngLat(newLon * 180.0 / PI, newLat * 180.0 / PI)
+    }
+    return out
 }
 
 /**
