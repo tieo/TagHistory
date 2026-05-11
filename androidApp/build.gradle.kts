@@ -17,8 +17,8 @@ android {
         applicationId = "io.github.tieo.taghistory"
         minSdk = 24
         targetSdk = 36
-        versionCode = 6
-        versionName = "1.0.8"
+        versionCode = 7
+        versionName = "1.0.9"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         ndk {
             abiFilters += listOf("arm64-v8a", "x86_64")
