@@ -70,13 +70,41 @@ class HistoryViewModel(
 
     private val runScope: CoroutineScope get() = scope ?: viewModelScope
 
+    private var observeJob: kotlinx.coroutines.Job? = null
+
+    /**
+     * Cancel the DB-flow subscription started by [load]. Production
+     * relies on the parent scope's cancellation (via [ViewModel.onCleared]);
+     * tests that pass an external [scope] cancel manually so `runTest`
+     * doesn't trip its "active child jobs" detector.
+     */
+    fun stopObserving() {
+        observeJob?.cancel()
+        observeJob = null
+    }
+
     fun load(startUnixMs: Long, endUnixMs: Long) {
         PerfTrace.mark("vm.load() called")
         _state.update { it.copy(rangeStartMs = startUnixMs, rangeEndMs = endUnixMs) }
-        runScope.launch {
+        // First do a one-shot DB read so the screen has data on the
+        // first frame, then subscribe to the DB query Flow so any new
+        // point landing in LocationReport (from the map screen's
+        // periodic refresh, the manual refresh, the background worker)
+        // re-emits into the history list automatically. The
+        // subscription is dropped one emission because asFlow re-fires
+        // the same initial snapshot we just read.
+        observeJob?.cancel()
+        observeJob = runScope.launch {
             emitPoints()
-            PerfTrace.mark("vm.load() emitted")
             kickoffGeocoding()
+            var first = true
+            beaconRepo.observeLocationsFor(beaconId, startUnixMs, endUnixMs, ioDispatcher)
+                .collect { rows ->
+                    if (first) { first = false; return@collect }
+                    PerfTrace.mark("observeLocationsFor emitted rows=${rows.size}")
+                    onRowsChanged(rows)
+                    kickoffGeocoding()
+                }
         }
     }
 
@@ -147,6 +175,26 @@ class HistoryViewModel(
                 entries = buildEntries(it.points, newFilters),
             )
         }
+    }
+
+    /**
+     * Shared "build the visible state from raw DB rows" pipeline.
+     * Called both by the SQLDelight Flow subscription (live updates)
+     * and by [emitPoints] on demand.
+     */
+    private suspend fun onRowsChanged(rows: List<BeaconLocationReport>) {
+        val (points, entries) = withContext(ioDispatcher) {
+            val sorted = rows.sortedBy { it.timestamp }
+            val cache = geocodeCache
+            val cached: Map<String, String> = if (cache != null) {
+                cache.getMany(sorted.map { it.latitude to it.longitude })
+            } else emptyMap()
+            val mapped = sorted.map { it.toUi(cached, cache) }
+            val classified = classify(mapped.sortedByDescending { it.timestampMs })
+            val entries = buildEntries(classified, _state.value.filters)
+            classified to entries
+        }
+        _state.update { it.copy(points = points, entries = entries) }
     }
 
     private suspend fun emitPoints() {

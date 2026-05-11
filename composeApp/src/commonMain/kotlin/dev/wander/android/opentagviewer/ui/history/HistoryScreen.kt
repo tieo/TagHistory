@@ -26,13 +26,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.Directions
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
-import androidx.compose.material.icons.filled.Place
-import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Timeline
-import androidx.compose.material.icons.filled.Visibility
-import androidx.compose.material.icons.filled.VisibilityOff
 import io.github.tieo.taghistory.ui.util.AlwaysSpinningIndicator
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDefaults
@@ -111,6 +108,14 @@ fun HistoryScreen(
      * fire ACTION_SEND. No-op by default.
      */
     onShareGpx: ((title: String, dayLabel: String, points: List<HistoryPoint>) -> Unit)? = null,
+    /**
+     * Platform "navigate to coordinates" handler. Same lambda the
+     * map screen uses for the card's Route action — typically fires
+     * a `geo:lat,lon?q=lat,lon(label)` chooser. Default is a no-op
+     * so the History route button greys out on hosts that don't
+     * wire one through.
+     */
+    onRoute: (lat: Double, lon: Double, label: String) -> Unit = noopRoute,
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
 
@@ -145,6 +150,11 @@ fun HistoryScreen(
             localDayStart(e.timestampMs) == selectedDay.key
         }
     }
+    // Hide the per-row city when every entry in the day resolved to
+    // the same city — the day header already establishes location.
+    // If cities differ within a day, each row shows its own city on
+    // a second line (not comma-appended to the street).
+    val hideCity = remember(dayEntries) { commonCityOrNull(dayEntries) != null }
 
     var selectedPointId by remember { mutableStateOf<String?>(null) }
     val selectedPointIdx = remember(chronological, selectedPointId) {
@@ -158,8 +168,6 @@ fun HistoryScreen(
 
     val themeDefault = defaultBasemap()
     var basemap by remember(themeDefault) { mutableStateOf(themeDefault) }
-
-    var routeVisible by remember { mutableStateOf(true) }
 
     var lastRenderedCount by remember { mutableIntStateOf(-1) }
 
@@ -219,7 +227,7 @@ fun HistoryScreen(
             points = chronological,
             selectedPointIndex = selectedPointIdx,
             basemap = basemap,
-            routeVisible = routeVisible,
+            routeVisible = true,
             topInsetPx = topInsetPx,
             bottomInsetPx = sheetPeekPx,
             onPointSelected = { id -> selectedPointId = id },
@@ -248,18 +256,28 @@ fun HistoryScreen(
                 .padding(end = 12.dp, top = 12.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
+            // Route button — fires the platform's geo: intent with
+            // the currently selected point's coords, so the user
+            // gets a chooser across every nav app installed (Google
+            // Maps, Waze, OsmAnd, Organic Maps, …). Disabled when
+            // no point is selected.
+            val selectedPoint = chronological.getOrNull(selectedPointIdx)
             FilledIconButton(
-                onClick = { routeVisible = !routeVisible },
+                onClick = {
+                    selectedPoint?.let { p ->
+                        onRoute(p.latitude, p.longitude, title)
+                    }
+                },
+                enabled = selectedPoint != null && onRoute != noopRoute,
                 colors = IconButtonDefaults.filledIconButtonColors(
                     containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.92f),
                     contentColor = MaterialTheme.colorScheme.onSurface,
                 ),
-                modifier = Modifier.testTag("btn_route_visibility"),
+                modifier = Modifier.testTag("btn_route_to_selected"),
             ) {
                 Icon(
-                    imageVector = if (routeVisible) Icons.Filled.Visibility
-                                  else Icons.Filled.VisibilityOff,
-                    contentDescription = if (routeVisible) "Hide route" else "Show route",
+                    imageVector = Icons.Filled.Directions,
+                    contentDescription = "Route to selected point",
                 )
             }
             BasemapCycleButton(
@@ -302,6 +320,7 @@ fun HistoryScreen(
                     summary = summary,
                     isLoading = state.isLoading,
                     error = state.error,
+                    hideCity = hideCity,
                     listState = listState,
                     lastRenderedCount = lastRenderedCount,
                     onDayPrev = {
@@ -368,6 +387,7 @@ private fun SheetContent(
     summary: DaySummary,
     isLoading: Boolean,
     error: String?,
+    hideCity: Boolean,
     listState: androidx.compose.foundation.lazy.LazyListState,
     lastRenderedCount: Int,
     onDayPrev: () -> Unit,
@@ -451,19 +471,19 @@ private fun SheetContent(
             ) {
                 Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = "Next day")
             }
-            IconButton(
-                onClick = onRefresh,
-                enabled = !isLoading,
-                modifier = Modifier.testTag("btn_history_refresh"),
-            ) {
-                if (isLoading) {
+            // Refresh button removed. The view now subscribes to the
+            // LocationReport table via SQLDelight's Flow, so any new
+            // fix landing in the DB (from the map screen's periodic
+            // refresh, the background worker, the manual refresh-now
+            // button in Settings) shows up in this list automatically
+            // — no manual reload needed.
+            if (isLoading) {
+                Box(modifier = Modifier.size(40.dp), contentAlignment = Alignment.Center) {
                     AlwaysSpinningIndicator(
                         modifier = Modifier.size(18.dp),
                         strokeWidth = 2.dp,
                         color = MaterialTheme.colorScheme.primary,
                     )
-                } else {
-                    Icon(Icons.Filled.Refresh, contentDescription = "Refresh")
                 }
             }
         }
@@ -486,6 +506,7 @@ private fun SheetContent(
             entries = dayEntries,
             listState = listState,
             selectedPointId = chronological.getOrNull(selectedPointIdx)?.id,
+            hideCity = hideCity,
             onSelectPoint = onSelectPoint,
             // weight(1f) gives the LazyColumn a bounded height inside
             // the Column. fillMaxSize alone left the list with the
@@ -564,6 +585,7 @@ private fun EntriesList(
     entries: List<HistoryEntry>,
     listState: androidx.compose.foundation.lazy.LazyListState,
     selectedPointId: String?,
+    hideCity: Boolean,
     onSelectPoint: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -572,11 +594,6 @@ private fun EntriesList(
         modifier = modifier,
     ) {
         itemsIndexed(entries, key = { _, e -> e.id }) { idx, entry ->
-            // Stable test-tag tied to list position (used by Maestro
-            // tests that scroll the list and assert which row remains
-            // visible). Re-introduced after the Stop/Move rewrite
-            // accidentally dropped the original `history_item_X` tag
-            // which existed on the previous flat HistoryListItem.
             val tag = "history_item_$idx"
             when (entry) {
                 is HistoryEntry.Stop -> StopRow(
@@ -584,6 +601,7 @@ private fun EntriesList(
                     isFirst = idx == 0,
                     isLast = idx == entries.lastIndex,
                     isSelected = entry.members.any { it.id == selectedPointId },
+                    hideCity = hideCity,
                     testTag = tag,
                     onSelect = { onSelectPoint(entry.anchor.id) },
                     onSelectMember = { p -> onSelectPoint(p.id) },
@@ -593,6 +611,7 @@ private fun EntriesList(
                     isFirst = idx == 0,
                     isLast = idx == entries.lastIndex,
                     isSelected = entry.point.id == selectedPointId,
+                    hideCity = hideCity,
                     testTag = tag,
                     onSelect = { onSelectPoint(entry.point.id) },
                 )
@@ -608,6 +627,7 @@ private fun StopRow(
     isFirst: Boolean,
     isLast: Boolean,
     isSelected: Boolean,
+    hideCity: Boolean,
     testTag: String? = null,
     onSelect: () -> Unit,
     onSelectMember: (HistoryPoint) -> Unit,
@@ -615,6 +635,11 @@ private fun StopRow(
     var expanded by remember { mutableStateOf(false) }
     val nodeColor = if (isSelected) MaterialTheme.colorScheme.primary
                     else MaterialTheme.colorScheme.tertiary
+    val parsed = entry.anchor.address?.let { parseAddress(it) }
+        ?: ParsedAddress(
+            "%.5f, %.5f".format(entry.anchor.latitude, entry.anchor.longitude),
+            null,
+        )
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -622,10 +647,8 @@ private fun StopRow(
     ) {
         TimelineEntryRow(
             time = formatLocalTime(entry.anchor.timestampMs),
-            address = stripCountry(
-                entry.anchor.address
-                    ?: "%.5f, %.5f".format(entry.anchor.latitude, entry.anchor.longitude),
-            ),
+            street = parsed.street,
+            city = if (hideCity) null else parsed.city,
             subline = run {
                 val arrival = formatLocalTime(entry.arrivalMs)
                 val departure = formatLocalTime(entry.departureMs)
@@ -694,26 +717,34 @@ private fun MoveRow(
     isFirst: Boolean,
     isLast: Boolean,
     isSelected: Boolean,
+    hideCity: Boolean,
     testTag: String? = null,
     onSelect: () -> Unit,
 ) {
     val nodeColor = if (isSelected) MaterialTheme.colorScheme.primary
                     else MaterialTheme.colorScheme.onSurfaceVariant
     val subline = buildString {
-        if (entry.fromPrevMeters > 0.0 && entry.durationFromPrevMs > 0L) {
-            append(formatDistance(entry.fromPrevMeters))
+        val d = entry.fromPrevMeters
+        val dt = entry.durationFromPrevMs
+        val speedKmh = if (dt > 0) (d / 1000.0) / (dt / 3_600_000.0) else 0.0
+        val isRealMove = d >= MIN_MOVE_METERS && speedKmh >= MIN_MOVE_KMH
+        if (isRealMove) {
+            append(formatDistance(d))
             append(" · ")
-            append(formatDuration(entry.durationFromPrevMs))
+            append(formatDuration(dt))
             append(" · ")
         }
         append("±${entry.point.horizontalAccuracy} m")
     }
+    val parsed = entry.point.address?.let { parseAddress(it) }
+        ?: ParsedAddress(
+            "%.5f, %.5f".format(entry.point.latitude, entry.point.longitude),
+            null,
+        )
     TimelineEntryRow(
         time = formatLocalTime(entry.point.timestampMs),
-        address = stripCountry(
-            entry.point.address
-                ?: "%.5f, %.5f".format(entry.point.latitude, entry.point.longitude),
-        ),
+        street = parsed.street,
+        city = if (hideCity) null else parsed.city,
         subline = subline,
         isFirst = isFirst,
         isLast = isLast,
@@ -739,7 +770,8 @@ private fun MoveRow(
 @Composable
 private fun TimelineEntryRow(
     time: String,
-    address: String,
+    street: String,
+    city: String?,
     subline: String,
     isFirst: Boolean,
     isLast: Boolean,
@@ -801,6 +833,10 @@ private fun TimelineEntryRow(
                 isStop -> 18.dp
                 else -> 14.dp
             }
+            // No pin icon — that glyph reads as "you are here" /
+            // current location, which a year-old stop fix isn't.
+            // Just the filled circle for stops, hollow ring for
+            // moves. Differentiation is shape alone, no glyph.
             Box(
                 modifier = Modifier
                     .size(nodeSize)
@@ -813,17 +849,7 @@ private fun TimelineEntryRow(
                         shape = CircleShape,
                     )
                     .align(Alignment.Center),
-                contentAlignment = Alignment.Center,
-            ) {
-                if (isStop) {
-                    Icon(
-                        Icons.Filled.Place,
-                        contentDescription = null,
-                        modifier = Modifier.size(if (isSelected) 14.dp else 12.dp),
-                        tint = surfaceColor,
-                    )
-                }
-            }
+            )
         }
         // Time — bigger, fixed-width column on the left of the info.
         Text(
@@ -838,21 +864,31 @@ private fun TimelineEntryRow(
             maxLines = 1,
             overflow = androidx.compose.ui.text.style.TextOverflow.Visible,
         )
-        // Address + subline.
+        // Address + optional city line + subline.
         Column(
             modifier = Modifier
                 .weight(1f)
                 .padding(end = 8.dp, top = 10.dp, bottom = 10.dp),
         ) {
             Text(
-                address,
+                street,
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = if (isStop) FontWeight.SemiBold else FontWeight.Normal,
                 color = if (isSelected) MaterialTheme.colorScheme.primary
                         else MaterialTheme.colorScheme.onSurface,
-                maxLines = 2,
+                maxLines = 1,
                 overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
             )
+            if (city != null) {
+                Text(
+                    city,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = if (isSelected) MaterialTheme.colorScheme.primary
+                            else MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                )
+            }
             Text(
                 subline,
                 style = MaterialTheme.typography.bodySmall,
@@ -866,16 +902,45 @@ private fun TimelineEntryRow(
     }
 }
 
+private data class ParsedAddress(val street: String, val city: String?)
+
 /**
- * Drops the last comma-separated segment of an address line, which is
- * almost always the country ("Germany" / "USA" / …). The remaining
- * tokens carry the street + postal code + locality which is all the
- * user actually wants on a small list row.
+ * Split a geocoded address into street + city portions, always
+ * dropping the trailing country segment. Geocoder.getAddressLine(0)
+ * is typically `"Tulpenweg 44, 89584 Ehingen, Germany"`; we split on
+ * commas, drop the last segment as country, and treat the rest as
+ * street (first) + city (middle). The history list then either hides
+ * the city (if a whole day is in one city) or renders it on a second
+ * line beneath the street — never comma-appended, since that read
+ * like a single overlong address line.
  */
-private fun stripCountry(address: String): String {
-    val parts = address.split(", ").map { it.trim() }.filter { it.isNotEmpty() }
-    if (parts.size <= 1) return address
-    return parts.dropLast(1).joinToString(", ")
+private fun parseAddress(full: String): ParsedAddress {
+    val parts = full.split(",").map { it.trim() }.filter { it.isNotEmpty() }
+    if (parts.isEmpty()) return ParsedAddress(full, null)
+    val street = parts[0]
+    if (parts.size <= 1) return ParsedAddress(street, null)
+    val cityParts = parts.drop(1).dropLast(1)
+    return ParsedAddress(street, cityParts.joinToString(", ").ifBlank { null })
+}
+
+/**
+ * If every entry in this day's address list resolves to the same
+ * city, return that city — the history header already shows the day
+ * so repeating "Ehingen" on every row is noise. If addresses span
+ * multiple cities (or none have been geocoded yet) returns null and
+ * the row renderer falls back to showing the city on each line.
+ */
+private fun commonCityOrNull(entries: List<HistoryEntry>): String? {
+    val cities = entries.mapNotNull { e ->
+        val raw = when (e) {
+            is HistoryEntry.Stop -> e.anchor.address
+            is HistoryEntry.Move -> e.point.address
+        }
+        raw?.let { parseAddress(it).city }
+    }
+    if (cities.isEmpty()) return null
+    val first = cities.first()
+    return if (cities.all { it == first }) first else null
 }
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalTime::class)
@@ -987,16 +1052,25 @@ private fun buildDaySummary(points: List<HistoryPoint>): DaySummary {
         }
         if (i == 0) continue
         val prev = points[i - 1]
-        distance += haversineMeters(
-            prev.latitude, prev.longitude,
-            p.latitude, p.longitude,
-        )
-        if (prev.kind != HistoryPointKind.STOP || p.kind != HistoryPointKind.STOP) {
-            movingMs += (p.timestampMs - prev.timestampMs).coerceAtLeast(0L)
+        val d = haversineMeters(prev.latitude, prev.longitude, p.latitude, p.longitude)
+        val dt = (p.timestampMs - prev.timestampMs).coerceAtLeast(0L)
+        // Only credit movement when the leg passes both a distance
+        // floor (20 m) AND a speed floor (~3 km/h). GPS jitter on a
+        // tag sitting still routinely produces 5–15 m of noise across
+        // back-to-back reports, which used to inflate "260 m distance"
+        // summaries for days the tag never actually left a room.
+        val speedKmh = if (dt > 0) (d / 1000.0) / (dt / 3_600_000.0) else 0.0
+        val isRealMove = d >= MIN_MOVE_METERS && speedKmh >= MIN_MOVE_KMH
+        if (isRealMove) {
+            distance += d
+            movingMs += dt
         }
     }
     return DaySummary(distance, movingMs, stops)
 }
+
+private const val MIN_MOVE_METERS = 20.0
+private const val MIN_MOVE_KMH = 3.0
 
 private fun haversineMeters(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Double {
     val r = 6_371_000.0
@@ -1047,3 +1121,6 @@ private data class DayBucket(
 )
 
 private const val DAY_MS: Long = 24L * 60L * 60L * 1000L
+
+/** Sentinel for HistoryScreen's onRoute default. Compared by identity. */
+private val noopRoute: (Double, Double, String) -> Unit = { _, _, _ -> }

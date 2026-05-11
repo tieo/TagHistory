@@ -51,6 +51,10 @@ class HistoryViewModelTest {
         advanceUntilIdle()
         val points = vm.state.value.points.map { it.timestampMs }
         assertEquals(listOf(300L, 200L, 100L), points)
+        // load() leaves a forever-running Flow collector on the scope;
+        // cancel it so runTest doesn't trip its "active child jobs"
+        // check at the end of the test body.
+        vm.stopObserving()
     }
 
     @Test
@@ -68,6 +72,7 @@ class HistoryViewModelTest {
         vm.loadLast24h()
         advanceUntilIdle()
         assertEquals(1, vm.state.value.points.size)
+        vm.stopObserving()
     }
 
     @Test

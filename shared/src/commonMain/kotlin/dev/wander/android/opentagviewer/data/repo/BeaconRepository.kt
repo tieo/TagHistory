@@ -11,6 +11,12 @@ import io.github.tieo.taghistory.db.TagHistoryDatabase
 import io.github.tieo.taghistory.db.UserBeaconOptions
 import io.github.tieo.taghistory.util.BeaconCombinerUtil
 import io.github.tieo.taghistory.util.BeaconLocationReportHasher
+import app.cash.sqldelight.coroutines.asFlow
+import app.cash.sqldelight.coroutines.mapToList
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
+import kotlin.coroutines.CoroutineContext
 import kotlin.time.Clock
 import kotlin.time.ExperimentalTime
 
@@ -194,6 +200,38 @@ class BeaconRepository(
                     status = r.status,
                     hashId = r.hash_id,
                 )
+            }
+
+    /**
+     * Live stream of reports for [beaconId] in [startUnixMs, endUnixMs).
+     * Re-emits any time the underlying LocationReport table changes for
+     * that beacon — so the history screen picks up new fixes that the
+     * map's periodic refresh writes without the user having to tap
+     * Refresh.
+     */
+    fun observeLocationsFor(
+        beaconId: String,
+        startUnixMs: Long,
+        endUnixMs: Long,
+        context: CoroutineContext = Dispatchers.Default,
+    ): Flow<List<BeaconLocationReport>> =
+        db.locationReportQueries.getInTimeRange(beaconId, startUnixMs, endUnixMs)
+            .asFlow()
+            .mapToList(context)
+            .map { rows ->
+                rows.map { r ->
+                    BeaconLocationReport(
+                        publishedAt = r.published_at,
+                        description = r.description.orEmpty(),
+                        timestamp = r.timestamp,
+                        confidence = r.confidence,
+                        latitude = r.latitude,
+                        longitude = r.longitude,
+                        horizontalAccuracy = r.horizontal_accuracy,
+                        status = r.status,
+                        hashId = r.hash_id,
+                    )
+                }
             }
 
     fun storeHistoryRecords(vararg records: DailyHistoryFetchRecord): List<DailyHistoryFetchRecord> {

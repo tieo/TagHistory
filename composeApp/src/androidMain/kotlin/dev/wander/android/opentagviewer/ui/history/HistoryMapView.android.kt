@@ -28,13 +28,11 @@ import org.maplibre.android.geometry.LatLngBounds
 import org.maplibre.android.maps.MapLibreMap
 import org.maplibre.android.maps.MapView
 import org.maplibre.android.maps.Style
-import org.maplibre.android.style.expressions.Expression
 import org.maplibre.android.style.layers.CircleLayer
 import org.maplibre.android.style.layers.LineLayer
 import org.maplibre.android.style.layers.Property
 import org.maplibre.android.style.layers.PropertyFactory
 import org.maplibre.android.style.layers.FillLayer
-import org.maplibre.android.style.layers.SymbolLayer
 import org.maplibre.android.style.sources.GeoJsonSource
 import org.maplibre.geojson.Feature
 import org.maplibre.geojson.FeatureCollection
@@ -99,7 +97,7 @@ actual fun HistoryMapView(
     // primary doesn't read against all three. Pick a tone that
     // contrasts with the underlying tile palette explicitly.
     val lineColor = colorForBasemap(effectiveBasemap)
-    val selectedColor = MaterialTheme.colorScheme.tertiary.toArgb()
+    val selectedColor = selectedColorForBasemap(effectiveBasemap)
     val onSurfaceColor = MaterialTheme.colorScheme.onSurface.toArgb()
     val surfaceColor = MaterialTheme.colorScheme.surface.toArgb()
     // Tap-test radius in pixels — generous because dots are 12 dp.
@@ -149,7 +147,7 @@ actual fun HistoryMapView(
                 val ordered = currentPoints.value.sortedBy { it.timestampMs }
                 renderPath(map, style, ordered, fitCamera = false, topInsetPx = currentTopInset.value, bottomInsetPx = currentBottomInset.value)
                 renderSelectedPoint(map, style, ordered, currentSelectedIdx.value, panCamera = false)
-                renderLabels(style, ordered, currentSelectedIdx.value)
+                // labels removed
                 renderAllDots(style, ordered)
             }
         }
@@ -215,7 +213,7 @@ actual fun HistoryMapView(
                     val key = ordered.map { it.timestampMs }
                     renderPath(map, style, ordered, fitCamera = true, topInsetPx = currentTopInset.value, bottomInsetPx = currentBottomInset.value)
                     renderSelectedPoint(map, style, ordered, currentSelectedIdx.value, panCamera = false)
-                    renderLabels(style, ordered, currentSelectedIdx.value)
+                    // labels removed
                     renderAllDots(style, ordered)
                     onRendered(key)
                     PerfTrace.mark("first renderPath done points=${ordered.size}")
@@ -249,7 +247,7 @@ actual fun HistoryMapView(
                     renderAllDots(style, ordered)
                 }
                 renderSelectedPoint(map, style, ordered, sel, panCamera = !pointsChanged)
-                renderLabels(style, ordered, sel)
+                // labels removed
                 style.getLayer(PATH_LAYER)?.setProperties(
                     PropertyFactory.visibility(
                         if (visible) Property.VISIBLE else Property.NONE,
@@ -354,23 +352,10 @@ private fun installLayers(
             )
         )
     }
-    if (style.getSource(LABELS_SOURCE) == null) {
-        style.addSource(GeoJsonSource(LABELS_SOURCE, FeatureCollection.fromFeatures(emptyList())))
-        style.addLayer(
-            SymbolLayer(LABELS_LAYER, LABELS_SOURCE).withProperties(
-                PropertyFactory.textField(Expression.get(PROP_LABEL)),
-                PropertyFactory.textSize(11f),
-                PropertyFactory.textColor(labelColorArgb),
-                PropertyFactory.textHaloColor(labelHaloArgb),
-                PropertyFactory.textHaloWidth(1.5f),
-                PropertyFactory.textOffset(arrayOf(0f, -1.4f)),
-                PropertyFactory.textAnchor(Property.TEXT_ANCHOR_BOTTOM),
-                PropertyFactory.textAllowOverlap(true),
-                PropertyFactory.textIgnorePlacement(false),
-                PropertyFactory.textPadding(2f),
-            )
-        )
-    }
+    // Labels above the dots used to float the address. They cluttered
+    // the map, occluded the route, and the user explicitly asked for
+    // them gone — the address is already in the list row, no need to
+    // duplicate it on the canvas.
 }
 
 private fun renderPath(
@@ -469,14 +454,31 @@ private fun renderSelectedPoint(
 }
 
 /**
- * Picks a polyline color that reads well against the active basemap.
- * Hand-tuned: a dark royal blue on the light street map, bright
- * cyan on the dark / satellite styles.
+ * Polyline + accent color, hand-tuned for each basemap. Deeper /
+ * richer than the previous palette which the user called ugly.
+ *
+ *  - LIGHT: deep teal that sits well against the carto.streets
+ *    pastel beige + green palette without clashing.
+ *  - DARK: warm coral for high contrast on the dark-matter near-
+ *    black background — reads as the focal element instantly.
+ *  - SATELLITE: hot magenta so the line cuts through busy
+ *    aerial textures without being washed out.
  */
 private fun colorForBasemap(basemap: MapBasemap): Int = when (basemap) {
-    MapBasemap.LIGHT -> 0xFF1F4DA0.toInt()
-    MapBasemap.DARK -> 0xFF6FF4EC.toInt()
-    MapBasemap.SATELLITE -> 0xFFFFD24A.toInt()
+    MapBasemap.LIGHT -> 0xFF0F766E.toInt()
+    MapBasemap.DARK -> 0xFFFB923C.toInt()
+    MapBasemap.SATELLITE -> 0xFFEC4899.toInt()
+}
+
+/**
+ * Accent for the selected point's halo + accuracy fill, paired
+ * with the line color so they read as one styled scheme rather
+ * than two unrelated tones.
+ */
+private fun selectedColorForBasemap(basemap: MapBasemap): Int = when (basemap) {
+    MapBasemap.LIGHT -> 0xFFB45309.toInt()
+    MapBasemap.DARK -> 0xFFFCD34D.toInt()
+    MapBasemap.SATELLITE -> 0xFF38BDF8.toInt()
 }
 
 /** Emit a closed lat/lon ring approximating a circle in true meters. */
@@ -506,46 +508,15 @@ private fun circlePolygonLatLng(
     return out
 }
 
-/**
- * Floats a small text label over the start, end, and currently
- * selected point. Uses the resolved address when available, falling
- * back to a "HH:mm" timestamp so empty caches still get something
- * useful.
- */
+// renderLabels removed — no floating address text on the map.
+@Suppress("UNUSED_PARAMETER")
 private fun renderLabels(
     style: Style,
     orderedPoints: List<HistoryPoint>,
     selectedIdx: Int?,
 ) {
-    val source = style.getSourceAs<GeoJsonSource>(LABELS_SOURCE) ?: return
-    if (orderedPoints.isEmpty()) {
-        source.setGeoJson(FeatureCollection.fromFeatures(emptyList()))
-        return
-    }
-    val first = orderedPoints.first()
-    val last = orderedPoints.last()
-    val selected = selectedIdx?.let { orderedPoints.getOrNull(it) }
-
-    val features = buildList {
-        add(first.toLabelFeature(role = ROLE_START))
-        if (orderedPoints.size > 1) {
-            add(last.toLabelFeature(role = ROLE_END))
-        }
-        if (selected != null && selected.id != first.id && selected.id != last.id) {
-            add(selected.toLabelFeature(role = ROLE_SELECTED))
-        }
-    }
-    source.setGeoJson(FeatureCollection.fromFeatures(features))
-}
-
-private fun HistoryPoint.toLabelFeature(role: String): Feature {
-    val rawLabel = address ?: formatLocalTime(timestampMs)
-    val truncated = if (rawLabel.length <= MAX_LABEL_CHARS) rawLabel
-                    else rawLabel.take(MAX_LABEL_CHARS - 1) + "…"
-    return Feature.fromGeometry(Point.fromLngLat(longitude, latitude)).apply {
-        addStringProperty(PROP_LABEL, truncated)
-        addStringProperty(PROP_ROLE, role)
-    }
+    // Intentionally empty. Kept as a no-op so the existing call
+    // sites compile until they're swept out.
 }
 
 /**

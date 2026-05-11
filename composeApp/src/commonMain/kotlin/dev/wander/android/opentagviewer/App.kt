@@ -248,6 +248,7 @@ private fun AuthedNav(
                         onBack = { nav = nav.pop() },
                         reverseGeocode = factories.reverseGeocode,
                         onShareGpx = factories.onShareGpx,
+                        onRoute = factories.routeTo,
                     )
                 }
             }
