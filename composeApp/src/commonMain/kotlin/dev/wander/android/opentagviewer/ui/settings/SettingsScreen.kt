@@ -51,9 +51,6 @@ import io.github.tieo.taghistory.sync.SyncLog
 import io.github.tieo.taghistory.ui.history.formatLocalTimeWithSeconds
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import org.jetbrains.compose.resources.stringResource
-import taghistory.composeapp.generated.resources.Res
-import taghistory.composeapp.generated.resources.*
 
 @Composable
 fun SettingsScreen(
@@ -81,15 +78,15 @@ fun SettingsScreen(
         verticalArrangement = Arrangement.spacedBy(20.dp),
     ) {
         Text(
-            stringResource(Res.string.settings),
+            "Settings",
             style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.SemiBold,
         )
 
         // ---------- Appearance ----------
-        SettingsSection(stringResource(Res.string.settings_appearance)) {
+        SettingsSection("Appearance") {
             Text(
-                stringResource(Res.string.settings_theme),
+                "Theme",
                 style = MaterialTheme.typography.labelLarge,
                 modifier = Modifier.padding(bottom = 8.dp),
             )
@@ -100,10 +97,10 @@ fun SettingsScreen(
         }
 
         // ---------- Background sync ----------
-        SettingsSection(stringResource(Res.string.settings_bg_sync)) {
+        SettingsSection("Background sync") {
             SwitchRow(
-                label = stringResource(Res.string.settings_auto_refresh_label),
-                subtitle = stringResource(Res.string.settings_auto_refresh_sub),
+                label = "Auto-refresh when in background",
+                subtitle = "Sync beacon reports without opening the app",
                 checked = state.current.backgroundSyncEnabled == true,
                 onChange = viewModel::setBackgroundSyncEnabled,
                 tag = "toggle_background_sync",
@@ -118,10 +115,10 @@ fun SettingsScreen(
         }
 
         // ---------- Advanced ----------
-        SettingsSection(stringResource(Res.string.settings_advanced)) {
+        SettingsSection("Advanced") {
             SwitchRow(
-                label = stringResource(Res.string.settings_debug_label),
-                subtitle = stringResource(Res.string.settings_debug_sub),
+                label = "Show debug data",
+                subtitle = "Show recent sync activity below",
                 checked = state.current.enableDebugData == true,
                 onChange = viewModel::setEnableDebugData,
             )
@@ -132,10 +129,7 @@ fun SettingsScreen(
         }
 
         // ---------- Data ----------
-        val refreshCompleteText = stringResource(Res.string.settings_refresh_complete)
-        val refreshUnknownErrText = stringResource(Res.string.settings_refresh_unknown_error)
-        val refreshFailedFmt = stringResource(Res.string.settings_refresh_failed, "%1\$s")
-        SettingsSection(stringResource(Res.string.settings_data)) {
+        SettingsSection("Data") {
             if (onRefreshNow != null) {
                 Button(
                     onClick = {
@@ -143,9 +137,9 @@ fun SettingsScreen(
                         refreshInFlight = true
                         scope.launch {
                             val msg = try {
-                                onRefreshNow.invoke() ?: refreshCompleteText
+                                onRefreshNow.invoke() ?: "Refresh complete"
                             } catch (e: Exception) {
-                                refreshFailedFmt.replace("%1\$s", e.message ?: refreshUnknownErrText)
+                                "Refresh failed: ${e.message ?: "unknown error"}"
                             }
                             refreshMessage = msg
                             refreshInFlight = false
@@ -159,14 +153,14 @@ fun SettingsScreen(
                             modifier = Modifier.padding(end = 8.dp).size(18.dp),
                             strokeWidth = 2.dp,
                         )
-                        Text(stringResource(Res.string.settings_refreshing))
+                        Text("Refreshing…")
                     } else {
                         Icon(
                             imageVector = Icons.Filled.Refresh,
                             contentDescription = null,
                             modifier = Modifier.size(18.dp),
                         )
-                        Text(" " + stringResource(Res.string.settings_refresh_now))
+                        Text(" " + "Refresh now")
                     }
                 }
             }
@@ -199,7 +193,7 @@ fun SettingsScreen(
                         contentDescription = null,
                         modifier = Modifier.size(18.dp),
                     )
-                    Text(" " + stringResource(Res.string.settings_import_button))
+                    Text(" " + "Import tags from FindMy export…")
                 }
             }
             val msg = importMessage
@@ -217,7 +211,7 @@ fun SettingsScreen(
         }
 
         // ---------- Account ----------
-        SettingsSection(stringResource(Res.string.settings_account)) {
+        SettingsSection("Account") {
             FilledTonalButton(
                 onClick = { confirmingSignOut = true },
                 modifier = Modifier.fillMaxWidth().testTag("btn_sign_out"),
@@ -231,7 +225,7 @@ fun SettingsScreen(
                     contentDescription = null,
                     modifier = Modifier.size(18.dp),
                 )
-                Text(" " + stringResource(Res.string.settings_sign_out_button))
+                Text(" " + "Sign out of Apple ID")
             }
         }
 
@@ -246,14 +240,14 @@ fun SettingsScreen(
         }
 
         // ---------- About ----------
-        SettingsSection(stringResource(Res.string.settings_about_section)) {
+        SettingsSection("About") {
             OutlinedButton(onClick = onOpenInformation, modifier = Modifier.fillMaxWidth().testTag("btn_about")) {
                 Icon(
                     imageVector = Icons.Filled.Info,
                     contentDescription = null,
                     modifier = Modifier.size(18.dp),
                 )
-                Text(" " + stringResource(Res.string.settings_about_button))
+                Text(" " + "About TagHistory")
             }
         }
     }
@@ -261,19 +255,19 @@ fun SettingsScreen(
     if (confirmingSignOut) {
         AlertDialog(
             onDismissRequest = { confirmingSignOut = false },
-            title = { Text(stringResource(Res.string.settings_sign_out_title)) },
-            text = { Text(stringResource(Res.string.settings_sign_out_body)) },
+            title = { Text("Sign out?") },
+            text = { Text("Your Apple account credentials will be removed from this device. Background sync will stop until you sign in again.") },
             confirmButton = {
                 TextButton(onClick = {
                     confirmingSignOut = false
                     viewModel.signOut()
                 }, modifier = Modifier.testTag("btn_sign_out_confirm")) {
-                    Text(stringResource(Res.string.settings_sign_out_action))
+                    Text("Sign out")
                 }
             },
             dismissButton = {
                 TextButton(onClick = { confirmingSignOut = false }, modifier = Modifier.testTag("btn_sign_out_cancel")) {
-                    Text(stringResource(Res.string.cancel))
+                    Text("Cancel")
                 }
             },
         )
@@ -311,7 +305,7 @@ private fun SyncIntervalSlider(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
-            Text(stringResource(Res.string.settings_interval), style = MaterialTheme.typography.labelLarge)
+            Text("Interval", style = MaterialTheme.typography.labelLarge)
             Text(formatInterval(snapped), style = MaterialTheme.typography.labelLarge)
         }
         Slider(
@@ -324,7 +318,7 @@ private fun SyncIntervalSlider(
             steps = INTERVAL_STEPS.size - 2, // endpoints are not counted
         )
         Text(
-            stringResource(Res.string.settings_interval_battery_hint),
+            "Shorter intervals use more battery.",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -368,19 +362,19 @@ private fun ThemeModeSelector(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         ThemeChoice(
-            label = stringResource(Res.string.settings_theme_system),
+            label = "System",
             selected = current == null,
             onClick = { onChange(null) },
             modifier = Modifier.weight(1f).testTag("btn_theme_system"),
         )
         ThemeChoice(
-            label = stringResource(Res.string.settings_theme_light),
+            label = "Light",
             selected = current == false,
             onClick = { onChange(false) },
             modifier = Modifier.weight(1f).testTag("btn_theme_light"),
         )
         ThemeChoice(
-            label = stringResource(Res.string.settings_theme_dark),
+            label = "Dark",
             selected = current == true,
             onClick = { onChange(true) },
             modifier = Modifier.weight(1f).testTag("btn_theme_dark"),
@@ -420,7 +414,7 @@ private fun SyncLogPanel() {
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                stringResource(Res.string.settings_sync_log),
+                "Sync log",
                 style = MaterialTheme.typography.titleSmall,
                 modifier = Modifier.testTag("sync_log_header"),
             )
@@ -436,7 +430,7 @@ private fun SyncLogPanel() {
                     },
                     modifier = Modifier.testTag("btn_copy_sync_log"),
                 ) {
-                    Text(if (copyAck) stringResource(Res.string.settings_copied) else stringResource(Res.string.settings_copy))
+                    Text(if (copyAck) "Copied" else "Copy")
                 }
                 LaunchedEffect(copyAck) {
                     if (copyAck) {
@@ -448,7 +442,7 @@ private fun SyncLogPanel() {
                     onClick = { SyncLog.clear() },
                     modifier = Modifier.testTag("btn_clear_sync_log"),
                 ) {
-                    Text(stringResource(Res.string.settings_clear))
+                    Text("Clear")
                 }
             }
         }
@@ -463,7 +457,7 @@ private fun SyncLogPanel() {
 
         if (events.isEmpty()) {
             Text(
-                stringResource(Res.string.settings_no_sync_events),
+                "No sync events yet — open the map to trigger a refresh.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
