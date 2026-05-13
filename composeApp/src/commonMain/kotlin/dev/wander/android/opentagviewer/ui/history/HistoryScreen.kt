@@ -92,6 +92,9 @@ import kotlin.math.sqrt
 import kotlin.time.Clock
 import kotlin.time.ExperimentalTime
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.stringResource
+import taghistory.composeapp.generated.resources.Res
+import taghistory.composeapp.generated.resources.*
 
 @OptIn(ExperimentalTime::class, ExperimentalMaterial3Api::class)
 @Composable
@@ -238,6 +241,9 @@ fun HistoryScreen(
 
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
+    val todayStr = stringResource(Res.string.history_today)
+    val yesterdayStr = stringResource(Res.string.history_yesterday)
+    val gpxUnavailableStr = stringResource(Res.string.history_gpx_unavailable)
 
     // Custom fixed-height bottom sheet. Replaces M3's
     // BottomSheetScaffold because the scaffold sized its sheet
@@ -282,7 +288,7 @@ fun HistoryScreen(
                     contentColor = MaterialTheme.colorScheme.onSurface,
                 ),
             ) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(Res.string.back))
             }
 
             // Title chip — shows current device (emoji + name).
@@ -327,7 +333,7 @@ fun HistoryScreen(
                         if (canSwitch) {
                             Icon(
                                 Icons.Filled.ExpandMore,
-                                contentDescription = "Switch device",
+                                contentDescription = stringResource(Res.string.history_switch_device_cd),
                                 modifier = Modifier.size(18.dp),
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
@@ -352,7 +358,7 @@ fun HistoryScreen(
             ) {
                 Icon(
                     imageVector = Icons.Filled.Directions,
-                    contentDescription = "Route to selected point",
+                    contentDescription = stringResource(Res.string.history_route_to_selected_cd),
                 )
             }
             BasemapCycleButton(
@@ -396,6 +402,8 @@ fun HistoryScreen(
                     isLoading = state.isLoading,
                     error = state.error,
                     hideCity = hideCity,
+                    todayStr = todayStr,
+                    yesterdayStr = yesterdayStr,
                     listState = listState,
                     lastRenderedCount = lastRenderedCount,
                     onDayPrev = {
@@ -413,12 +421,15 @@ fun HistoryScreen(
                     onDayTitleTap = { showDatePicker = true },
                     onDayTitleLongPress = {
                         selectedDay?.let { day ->
-                            val label = dayLabel(day.key, Clock.System.now().toEpochMilliseconds())
+                            val label = dayLabel(
+                                day.key,
+                                Clock.System.now().toEpochMilliseconds(),
+                                todayStr,
+                                yesterdayStr,
+                            )
                             onShareGpx?.invoke(title, label, chronological)
                                 ?: coroutineScope.launch {
-                                    snackbarHostState.showSnackbar(
-                                        "GPX export not available on this platform",
-                                    )
+                                    snackbarHostState.showSnackbar(gpxUnavailableStr)
                                 }
                         }
                     },
@@ -475,9 +486,9 @@ private fun DeviceSwitcherDialog(
     androidx.compose.material3.AlertDialog(
         onDismissRequest = onDismiss,
         confirmButton = {
-            TextButton(onClick = onDismiss) { Text("Cancel") }
+            TextButton(onClick = onDismiss) { Text(stringResource(Res.string.cancel)) }
         },
-        title = { Text("Switch device") },
+        title = { Text(stringResource(Res.string.history_switch_device)) },
         text = {
             LazyColumn(
                 modifier = Modifier.fillMaxWidth(),
@@ -508,7 +519,7 @@ private fun DeviceSwitcherDialog(
                         )
                         if (isCurrent) {
                             Text(
-                                "viewing",
+                                stringResource(Res.string.history_viewing),
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.primary,
                             )
@@ -532,6 +543,8 @@ private fun SheetContent(
     isLoading: Boolean,
     error: String?,
     hideCity: Boolean,
+    todayStr: String,
+    yesterdayStr: String,
     listState: androidx.compose.foundation.lazy.LazyListState,
     lastRenderedCount: Int,
     onDayPrev: () -> Unit,
@@ -581,7 +594,7 @@ private fun SheetContent(
                 enabled = dayIdx < days.size - 1,
                 modifier = Modifier.testTag("btn_day_prev"),
             ) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Previous day")
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(Res.string.history_previous_day_cd))
             }
             val now = Clock.System.now().toEpochMilliseconds()
             Row(
@@ -595,7 +608,9 @@ private fun SheetContent(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    text = days.getOrNull(dayIdx)?.key?.let { dayLabel(it, now) } ?: "No data",
+                    text = days.getOrNull(dayIdx)?.key?.let {
+                        dayLabel(it, now, todayStr, yesterdayStr)
+                    } ?: stringResource(Res.string.history_no_data),
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                     textAlign = androidx.compose.ui.text.style.TextAlign.Center,
@@ -603,7 +618,7 @@ private fun SheetContent(
                 Spacer(Modifier.width(4.dp))
                 Icon(
                     Icons.Filled.CalendarMonth,
-                    contentDescription = "Pick day",
+                    contentDescription = stringResource(Res.string.history_pick_day_cd),
                     modifier = Modifier.size(18.dp),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -613,7 +628,7 @@ private fun SheetContent(
                 enabled = dayIdx > 0,
                 modifier = Modifier.testTag("btn_day_next"),
             ) {
-                Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = "Next day")
+                Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = stringResource(Res.string.history_next_day_cd))
             }
             // Refresh button removed. The view now subscribes to the
             // LocationReport table via SQLDelight's Flow, so any new
@@ -679,15 +694,15 @@ private fun DaySummaryStrip(summary: DaySummary, totalPoints: Int) {
     ) {
         SummaryStat(
             label = formatDistance(summary.distanceMeters),
-            sub = "distance",
+            sub = stringResource(Res.string.history_distance),
         )
         SummaryStat(
             label = formatDuration(summary.movingMs),
-            sub = "moving",
+            sub = stringResource(Res.string.history_moving),
         )
         SummaryStat(
             label = "${summary.stopCount}",
-            sub = if (summary.stopCount == 1) "stop" else "stops",
+            sub = if (summary.stopCount == 1) stringResource(Res.string.history_stop) else stringResource(Res.string.history_stops),
         )
         Spacer(Modifier.weight(1f))
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -937,7 +952,7 @@ private fun StopRow(
                         Icon(
                             imageVector = if (expanded) Icons.Filled.ExpandLess
                                           else Icons.Filled.ExpandMore,
-                            contentDescription = if (expanded) "Collapse" else "Expand",
+                            contentDescription = if (expanded) stringResource(Res.string.history_collapse_cd) else stringResource(Res.string.history_expand_cd),
                             tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
@@ -1236,18 +1251,18 @@ private fun HistoryDatePickerDialog(
                     onPick(toLocalDayStart(utc))
                 },
             ) {
-                Text("Open")
+                Text(stringResource(Res.string.open))
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancel") }
+            TextButton(onClick = onDismiss) { Text(stringResource(Res.string.cancel)) }
         },
     ) {
         DatePicker(
             state = pickerState,
             title = {
                 Text(
-                    "Pick a day",
+                    stringResource(Res.string.history_pick_a_day),
                     modifier = Modifier.padding(start = 24.dp, top = 16.dp),
                     style = MaterialTheme.typography.titleMedium,
                 )
@@ -1275,7 +1290,7 @@ private fun ErrorBlock(message: String, onRetry: () -> Unit) {
             onClick = onRetry,
             modifier = Modifier.testTag("btn_history_retry"),
         ) {
-            Text("Retry")
+            Text(stringResource(Res.string.retry))
         }
     }
 }
@@ -1410,11 +1425,11 @@ private fun buildDayBuckets(points: List<HistoryPoint>): List<DayBucket> =
         .map { (k, v) -> DayBucket(key = k, points = v) }
 
 @OptIn(ExperimentalTime::class)
-private fun dayLabel(dayStartMs: Long, nowMs: Long): String {
+private fun dayLabel(dayStartMs: Long, nowMs: Long, todayStr: String, yesterdayStr: String): String {
     val nowStart = localDayStart(nowMs)
     return when {
-        dayStartMs == nowStart -> "Today"
-        dayStartMs == nowStart - DAY_MS -> "Yesterday"
+        dayStartMs == nowStart -> todayStr
+        dayStartMs == nowStart - DAY_MS -> yesterdayStr
         else -> formatLocalDate(dayStartMs)
     }
 }

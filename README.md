@@ -44,13 +44,14 @@ See the [upstream wiki](https://github.com/parawanderer/OpenTagViewer/wiki) for 
 
 ## Contributing
 
-PRs are welcome. Things that would be great to have:
+PRs are welcome. Things that would be great to have, with up-to-date status as of 2026-05:
 
-* [`🔴 BLOCKED`](https://github.com/malmeloo/FindMy.py/issues/118) Nearby AirTag detection via Bluetooth
-* [`🔴 BLOCKED`](https://github.com/malmeloo/FindMy.py/issues/88) "Ring" / Make Noise button
-* `🟡 Doable` Support for unofficial OpenHaystack tags
-* `🟠 Doable` Integrate Google's and Samsung's Find My network alongside Apple's
-* `🟢 Easy` Additional language translations. Add a new `strings.xml` under `composeApp/src/androidMain/res/values-<locale>/`.
+* `🟢 Doable` Nearby AirTag detection via Bluetooth. FindMy.py's key-rotation derivation was fixed in late 2025 ([issue #90](https://github.com/malmeloo/FindMy.py/issues/90)); the crypto path (HKDF + P-224) is a few hundred lines to port to pure Kotlin.
+* `🟢 Doable` "Ring" / Make Noise button. The BLE play-sound characteristic write is fully understood; an experimental ref impl landed in [FindMy.py PR #211](https://github.com/malmeloo/FindMy.py/pull/211) and [AirGuard](https://github.com/seemoo-lab/AirGuard) does it in production. Mostly Android BLE permissioning + GATT write.
+* `🟡 Medium` Support for [OpenHaystack](https://github.com/seemoo-lab/openhaystack) tags. Same P-224 ECIES decrypt path as AirTags, additional import flow for OH keys plus a [macless-haystack](https://github.com/dchristl/macless-haystack)-style relay endpoint.
+* `🟠 Larger` Integrate Google Find My Device. Protocol publicly RE'd in 2025 ([GoogleFindMyTools](https://github.com/leonboe1/GoogleFindMyTools), Python). Mostly auth + gRPC port.
+* `🟠 Larger` Integrate Samsung SmartTag. [uTag](https://github.com/KieronQuinn/uTag) already has the Kotlin network/crypto modules; adapting them into a library subproject is the lightest path.
+* `🟢 Easy` Additional language translations. Add a new `strings.xml` under `composeApp/src/commonMain/composeResources/values-<locale>/`. English baseline and German live there already.
 
 ## Credits
 

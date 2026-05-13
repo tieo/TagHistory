@@ -1,0 +1,139 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- App + chrome -->
+    <string name="app_name">TagHistory</string>
+    <string name="back">Back</string>
+    <string name="cancel">Cancel</string>
+    <string name="save">Save</string>
+    <string name="open">Open</string>
+    <string name="retry">Retry</string>
+    <string name="settings">Settings</string>
+
+    <!-- Login -->
+    <string name="login_welcome">Welcome to TagHistory</string>
+    <string name="login_subtitle">Sign in with your Apple ID to fetch AirTag locations.</string>
+    <string name="login_email_label">Apple ID email or phone</string>
+    <string name="login_password_label">Password</string>
+    <string name="login_log_in">Log in</string>
+    <string name="login_verify_title">Verify your identity</string>
+    <string name="login_verify_subtitle">Pick how Apple should send your 6-digit code.</string>
+    <string name="login_code_title">Enter verification code</string>
+    <string name="login_code_sent_via">Sent via %1$s</string>
+    <string name="login_paste_clipboard">Paste from clipboard</string>
+    <string name="login_start_over">Start over</string>
+
+    <!-- Map -->
+    <string name="map_no_airtags">No AirTags yet</string>
+    <string name="map_import_hint">Import your Find My export zip to start tracking.</string>
+    <string name="map_import_zip">Import zip</string>
+    <string name="map_card_history">History</string>
+    <string name="map_card_details">Details</string>
+    <string name="map_card_route">Route</string>
+    <string name="map_no_recent_location">No recent location</string>
+    <string name="map_locating">Locating…</string>
+    <string name="map_not_yet_reported">Not yet reported</string>
+    <string name="map_updated_just_now">Updated just now</string>
+    <string name="map_updated_minutes">Updated %1$d min ago</string>
+    <string name="map_updated_hours">Updated %1$d h ago</string>
+    <string name="map_updated_days">Updated %1$d d ago</string>
+    <string name="map_basemap_cd">Basemap: %1$s</string>
+
+    <!-- Device info -->
+    <string name="device_view_history">View history</string>
+    <string name="device_rename">Rename</string>
+    <string name="device_remove">Remove device</string>
+    <string name="device_remove_title">Remove device?</string>
+    <string name="device_remove_body">"%1$s" will be hidden from the app. The tag is not unpaired from iCloud.</string>
+    <string name="device_rename_title">Rename device</string>
+    <string name="device_rename_name_label">Name</string>
+    <string name="device_rename_emoji_label">Emoji (optional)</string>
+    <string name="device_last_seen">Last seen</string>
+    <string name="device_when">When</string>
+    <string name="device_accuracy">Accuracy</string>
+    <string name="device_confidence">Confidence</string>
+    <string name="device_hardware">Hardware</string>
+    <string name="device_model">Model</string>
+    <string name="device_firmware">Firmware</string>
+    <string name="device_product_id">Product ID</string>
+    <string name="device_vendor_id">Vendor ID</string>
+    <string name="device_paired">Paired</string>
+    <string name="device_private_key">Private key</string>
+    <string name="device_key_stored">stored</string>
+    <string name="device_key_missing">missing</string>
+    <string name="device_identifiers">Identifiers</string>
+    <string name="device_beacon_id">Beacon ID</string>
+    <string name="device_stable_id">Stable ID</string>
+    <string name="device_naming_record">Naming record</string>
+
+    <!-- Settings -->
+    <string name="settings_appearance">Appearance</string>
+    <string name="settings_theme">Theme</string>
+    <string name="settings_bg_sync">Background sync</string>
+    <string name="settings_auto_refresh_label">Auto-refresh when in background</string>
+    <string name="settings_auto_refresh_sub">Sync beacon reports without opening the app</string>
+    <string name="settings_advanced">Advanced</string>
+    <string name="settings_debug_label">Show debug data</string>
+    <string name="settings_debug_sub">Show recent sync activity below</string>
+    <string name="settings_data">Data</string>
+    <string name="settings_refreshing">Refreshing…</string>
+    <string name="settings_refresh_now">Refresh now</string>
+    <string name="settings_refresh_complete">Refresh complete</string>
+    <string name="settings_refresh_failed">Refresh failed: %1$s</string>
+    <string name="settings_refresh_unknown_error">unknown error</string>
+    <string name="settings_import_button">Import tags from FindMy export…</string>
+    <string name="settings_account">Account</string>
+    <string name="settings_sign_out_button">Sign out of Apple ID</string>
+    <string name="settings_about_section">About</string>
+    <string name="settings_about_button">About TagHistory</string>
+    <string name="settings_sign_out_title">Sign out?</string>
+    <string name="settings_sign_out_body">Your Apple account credentials will be removed from this device. Background sync will stop until you sign in again.</string>
+    <string name="settings_sign_out_action">Sign out</string>
+    <string name="settings_interval">Interval</string>
+    <string name="settings_interval_battery_hint">Shorter intervals use more battery.</string>
+    <string name="settings_theme_system">System</string>
+    <string name="settings_theme_light">Light</string>
+    <string name="settings_theme_dark">Dark</string>
+    <string name="settings_sync_log">Sync log</string>
+    <string name="settings_copy">Copy</string>
+    <string name="settings_copied">Copied</string>
+    <string name="settings_clear">Clear</string>
+    <string name="settings_no_sync_events">No sync events yet — open the map to trigger a refresh.</string>
+    <string name="settings_refresh_started">Refresh started</string>
+
+    <!-- History -->
+    <string name="history_today">Today</string>
+    <string name="history_yesterday">Yesterday</string>
+    <string name="history_no_data">No data</string>
+    <string name="history_switch_device">Switch device</string>
+    <string name="history_switch_device_cd">Switch device</string>
+    <string name="history_route_to_selected_cd">Route to selected point</string>
+    <string name="history_previous_day_cd">Previous day</string>
+    <string name="history_next_day_cd">Next day</string>
+    <string name="history_pick_day_cd">Pick day</string>
+    <string name="history_pick_a_day">Pick a day</string>
+    <string name="history_expand_cd">Expand</string>
+    <string name="history_collapse_cd">Collapse</string>
+    <string name="history_distance">distance</string>
+    <string name="history_moving">moving</string>
+    <string name="history_stop">stop</string>
+    <string name="history_stops">stops</string>
+    <string name="history_viewing">viewing</string>
+    <string name="history_gpx_unavailable">GPX export not available on this platform</string>
+
+    <!-- About -->
+    <string name="about_title">About</string>
+    <string name="about_version">Version %1$s</string>
+    <string name="about_description">Uses an on-device anisette bridge and your Apple account to fetch AirTag locations from Apple\'s Find My network.</string>
+    <string name="about_links">Links</string>
+    <string name="about_developer_website">Developer website</string>
+    <string name="about_source_code">Source code</string>
+    <string name="about_license">License</string>
+    <string name="about_attributions">Map attributions</string>
+    <string name="about_basemap_light">Light basemap: CartoDB Voyager, © CARTO, © OpenStreetMap contributors (ODbL).</string>
+    <string name="about_basemap_dark">Dark basemap: CartoDB Dark Matter, © CARTO, © OpenStreetMap contributors.</string>
+    <string name="about_basemap_satellite">Satellite basemap: © Esri, Maxar, Earthstar Geographics, GIS User Community.</string>
+    <string name="about_maplibre">Rendered with MapLibre GL.</string>
+
+    <!-- Common labels -->
+    <string name="accuracy_meters">±%1$d m</string>
+</resources>
