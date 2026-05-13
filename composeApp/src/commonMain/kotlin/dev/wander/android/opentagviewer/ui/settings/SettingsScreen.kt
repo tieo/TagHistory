@@ -59,6 +59,7 @@ import taghistory.composeapp.generated.resources.*
 fun SettingsScreen(
     viewModel: SettingsViewModel,
     onOpenInformation: () -> Unit,
+    onOpenNearby: (() -> Unit)? = null,
     onImport: (suspend () -> String?)? = null,
     onRefreshNow: (suspend () -> String?)? = null,
     modifier: Modifier = Modifier,
@@ -231,6 +232,16 @@ fun SettingsScreen(
                     modifier = Modifier.size(18.dp),
                 )
                 Text(" " + stringResource(Res.string.settings_sign_out_button))
+            }
+        }
+
+        // ---------- Nearby ----------
+        if (onOpenNearby != null) {
+            SettingsSection("Nearby") {
+                OutlinedButton(
+                    onClick = onOpenNearby,
+                    modifier = Modifier.fillMaxWidth().testTag("btn_open_nearby"),
+                ) { Text("Scan for nearby tags") }
             }
         }
 

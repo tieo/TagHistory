@@ -15,6 +15,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -31,6 +32,8 @@ import io.github.tieo.taghistory.ui.deviceinfo.DeviceInfoScreen
 import io.github.tieo.taghistory.ui.deviceinfo.DeviceInfoViewModel
 import io.github.tieo.taghistory.ui.history.HistoryScreen
 import io.github.tieo.taghistory.ui.history.HistoryViewModel
+import io.github.tieo.taghistory.ui.nearby.NearbyScreen
+import io.github.tieo.taghistory.ui.nearby.NearbyViewModel
 import io.github.tieo.taghistory.ui.information.InformationScreen
 import io.github.tieo.taghistory.ui.login.AppleLoginViewModel
 import io.github.tieo.taghistory.ui.login.LoginScreen
@@ -58,6 +61,8 @@ data class AppHostFactories(
     val createSettings: () -> SettingsViewModel,
     val createDeviceInfo: (String) -> DeviceInfoViewModel,
     val createHistory: (String) -> HistoryViewModel,
+    /** Nullable: hosts without BLE support (desktop/iOS stub) return null. */
+    val createNearby: () -> NearbyViewModel? = { null },
     val appVersion: String,
     val openUrl: (String) -> Unit,
     /**
@@ -218,6 +223,7 @@ private fun AuthedNav(
                     SettingsScreen(
                         viewModel = settingsVm,
                         onOpenInformation = { nav = nav.push(Screen.Information) },
+                        onOpenNearby = { nav = nav.push(Screen.Nearby) },
                         onImport = onImport,
                         onRefreshNow = refreshNow,
                     )
@@ -239,6 +245,14 @@ private fun AuthedNav(
                             nav = nav.push(Screen.History(id, title))
                         },
                     )
+                }
+                is Screen.Nearby -> {
+                    val vm = remember { factories.createNearby() }
+                    if (vm == null) {
+                        Text("Nearby scanning is not available on this platform.")
+                    } else {
+                        NearbyScreen(viewModel = vm)
+                    }
                 }
                 is Screen.History -> {
                     val vm = remember(screen.beaconId) { factories.createHistory(screen.beaconId) }

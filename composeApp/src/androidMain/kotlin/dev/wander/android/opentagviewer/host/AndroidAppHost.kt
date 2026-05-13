@@ -36,6 +36,8 @@ import java.util.Locale
 import kotlin.time.ExperimentalTime
 import kotlin.time.Instant
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 /**
@@ -250,6 +252,53 @@ class AndroidAppHost private constructor(
         }
     }
 
+    fun createNearbyViewModel(): io.github.tieo.taghistory.ui.nearby.NearbyViewModel? {
+        val beacons = beaconRepo.getAllBeaconInformation().keys
+            .mapNotNull { beaconRepo.getById(it) }
+        if (beacons.isEmpty()) return null
+        val accessories = loadAccessoriesVerbose(
+            beacons.associate { it.beaconId to it.ownedBeaconInfo },
+        )
+        if (accessories.isEmpty()) return null
+        val matcher = io.github.tieo.taghistory.nearby.NearbyMatcher(accessories)
+        val scanner = io.github.tieo.taghistory.nearby.BleNearbyScanner(context, matcher)
+        return io.github.tieo.taghistory.ui.nearby.NearbyViewModel(
+            beaconRepo = beaconRepo,
+            loadOwnedTags = {
+                val info = beaconRepo.getAllBeaconInformation()
+                info.values.map {
+                    io.github.tieo.taghistory.ui.nearby.OwnedTagInfo(
+                        beaconId = it.beaconId,
+                        displayName = it.displayName,
+                        emoji = it.displayEmoji,
+                    )
+                }
+            },
+            startBleScan = { scope, onEvent ->
+                scope.launch {
+                    scanner.observe().collect { ev ->
+                            onEvent(
+                                when (ev) {
+                                    is io.github.tieo.taghistory.nearby.BleNearbyScanner.Event.Hit ->
+                                        io.github.tieo.taghistory.ui.nearby.NearbyScanEvent.Hit(
+                                            beaconId = ev.beaconId,
+                                            keyType = ev.keyType,
+                                            rssi = ev.rssi,
+                                        )
+                                    is io.github.tieo.taghistory.nearby.BleNearbyScanner.Event.MissingPermission ->
+                                        io.github.tieo.taghistory.ui.nearby.NearbyScanEvent.MissingPermission
+                                    is io.github.tieo.taghistory.nearby.BleNearbyScanner.Event.BluetoothOff ->
+                                        io.github.tieo.taghistory.ui.nearby.NearbyScanEvent.BluetoothOff
+                                    is io.github.tieo.taghistory.nearby.BleNearbyScanner.Event.Stopped ->
+                                        io.github.tieo.taghistory.ui.nearby.NearbyScanEvent.Stopped
+                                }
+                            )
+                        }
+                    }
+            },
+        )
+    }
+
     fun createHistoryViewModel(beaconId: String): HistoryViewModel {
         val reportsClient = LocationReportsClient(http, anisette)
         return HistoryViewModel(
@@ -291,6 +340,7 @@ class AndroidAppHost private constructor(
         createSettings = { createSettingsViewModel() },
         createDeviceInfo = { beaconId -> createDeviceInfoViewModel(beaconId) },
         createHistory = { beaconId -> createHistoryViewModel(beaconId) },
+        createNearby = { createNearbyViewModel() },
         reverseGeocode = { lat, lon -> reverseGeocode(lat, lon) },
         appVersion = appVersion,
         openUrl = { url ->
