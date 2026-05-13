@@ -262,8 +262,10 @@ class AndroidAppHost private constructor(
         if (accessories.isEmpty()) return null
         val matcher = io.github.tieo.taghistory.nearby.NearbyMatcher(accessories)
         val scanner = io.github.tieo.taghistory.nearby.BleNearbyScanner(context, matcher)
+        val uwbAvailable = io.github.tieo.taghistory.nearby.UwbCapability.isAvailable(context)
         return io.github.tieo.taghistory.ui.nearby.NearbyViewModel(
             beaconRepo = beaconRepo,
+            uwbAvailable = uwbAvailable,
             loadOwnedTags = {
                 val info = beaconRepo.getAllBeaconInformation()
                 info.values.map {

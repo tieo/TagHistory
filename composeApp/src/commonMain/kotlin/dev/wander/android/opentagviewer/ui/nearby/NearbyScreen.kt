@@ -56,7 +56,7 @@ fun NearbyScreen(
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Header(state.scanState)
+        Header(state.scanState, state.uwbAvailable)
 
         if (state.tags.isEmpty()) {
             Text(
@@ -78,7 +78,7 @@ fun NearbyScreen(
 }
 
 @Composable
-private fun Header(state: ScanState) {
+private fun Header(state: ScanState, uwbAvailable: Boolean) {
     val (label, color) = when (state) {
         ScanState.IDLE -> "Idle" to MaterialTheme.colorScheme.onSurfaceVariant
         ScanState.STARTING -> "Starting scan…" to MaterialTheme.colorScheme.onSurfaceVariant
@@ -86,24 +86,31 @@ private fun Header(state: ScanState) {
         ScanState.PERMISSION_DENIED -> "Grant Nearby Devices permission" to MaterialTheme.colorScheme.error
         ScanState.BLUETOOTH_OFF -> "Turn Bluetooth on" to MaterialTheme.colorScheme.error
     }
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(
-            "Nearby",
-            style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.SemiBold,
-            modifier = Modifier.weight(1f),
-        )
-        Box(
-            modifier = Modifier
-                .size(10.dp)
-                .clip(RoundedCornerShape(50))
-                .background(color),
-        )
-        Spacer(Modifier.width(6.dp))
-        Text(label, style = MaterialTheme.typography.labelMedium, color = color)
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                "Nearby",
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.SemiBold,
+                modifier = Modifier.weight(1f),
+            )
+            Box(
+                modifier = Modifier
+                    .size(10.dp)
+                    .clip(RoundedCornerShape(50))
+                    .background(color),
+            )
+            Spacer(Modifier.width(6.dp))
+            Text(label, style = MaterialTheme.typography.labelMedium, color = color)
+        }
+        if (uwbAvailable) {
+            Spacer(Modifier.height(2.dp))
+            Text(
+                "UWB radio detected — precision finding will land in a future build.",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.tertiary,
+            )
+        }
     }
 }
 
@@ -137,7 +144,7 @@ private fun NearbyCard(tag: OwnedTagInfo, hit: NearbyHit?, nowMs: Long) {
                 )
             }
             Spacer(Modifier.height(8.dp))
-            RssiBar(hit?.rssi)
+            RssiBar(hit?.smoothedRssi)
             Spacer(Modifier.height(4.dp))
             Text(
                 meta(hit, nowMs),
@@ -179,23 +186,17 @@ private fun RssiBar(rssi: Int?) {
 }
 
 private fun proximity(hit: NearbyHit?, nowMs: Long): String {
-    if (hit == null) return "out of range"
+    if (hit == null) return "searching…"
     val age = nowMs - hit.seenAtMs
     if (age > 12_000) return "out of range"
-    // Rough RSSI -> meter mapping (path-loss). Useful as "warmer / colder",
-    // not as an actual distance.
-    val m = approxMeters(hit.rssi)
-    return when {
-        m < 1.0 -> "<1 m"
-        m < 10.0 -> "~${m.roundToInt()} m"
-        else -> "~${m.roundToInt()} m"
-    }
+    val m = approxMeters(hit.smoothedRssi)
+    return "~${m.roundToInt()} m"
 }
 
 private fun meta(hit: NearbyHit?, nowMs: Long): String {
-    if (hit == null) return "Never seen this session"
+    if (hit == null) return "Not seen this session"
     val age = ((nowMs - hit.seenAtMs) / 1000).coerceAtLeast(0)
-    return "RSSI ${hit.rssi} dBm · seen ${age}s ago · ${hit.keyType.lowercase()}"
+    return "RSSI ${hit.smoothedRssi} dBm · seen ${age}s ago · ${hit.keyType.lowercase()}"
 }
 
 private fun approxMeters(rssi: Int): Double {

@@ -32,6 +32,8 @@ class NearbyViewModel(
         scope: CoroutineScope,
         onEvent: (NearbyScanEvent) -> Unit,
     ) -> Job,
+    /** Host capability probe (UwbCapability on Android, false on stubs). */
+    private val uwbAvailable: Boolean = false,
     private val scope: CoroutineScope? = null,
     private val now: () -> Long = { Clock.System.now().toEpochMilliseconds() },
 ) : ViewModel() {
@@ -47,6 +49,7 @@ class NearbyViewModel(
         _state.update {
             it.copy(
                 tags = tags,
+                uwbAvailable = uwbAvailable,
                 scanState = if (it.scanState == ScanState.IDLE) ScanState.STARTING else it.scanState,
             )
         }
@@ -64,6 +67,9 @@ class NearbyViewModel(
         scanJob = startBleScan(runScope) { event -> handleEvent(event) }
     }
 
+    /** Per-beacon rolling RSSI window so the bar doesn't jitter from one bad sample. */
+    private val rssiWindow: MutableMap<String, ArrayDeque<Int>> = HashMap()
+
     private fun handleEvent(event: NearbyScanEvent) {
         when (event) {
             is NearbyScanEvent.MissingPermission -> _state.update {
@@ -78,10 +84,16 @@ class NearbyViewModel(
                 } else it
             }
             is NearbyScanEvent.Hit -> _state.update { current ->
+                val window = rssiWindow.getOrPut(event.beaconId) { ArrayDeque() }
+                window.addLast(event.rssi)
+                while (window.size > RSSI_WINDOW_SIZE) window.removeFirst()
+                val smoothed = window.average().toInt()
                 val merged = current.hits.toMutableMap()
                 merged[event.beaconId] = NearbyHit(
                     beaconId = event.beaconId,
                     rssi = event.rssi,
+                    smoothedRssi = smoothed,
+                    sampleCount = window.size,
                     keyType = event.keyType,
                     seenAtMs = now(),
                 )
@@ -91,6 +103,10 @@ class NearbyViewModel(
                 )
             }
         }
+    }
+
+    companion object {
+        const val RSSI_WINDOW_SIZE: Int = 5
     }
 }
 
@@ -104,7 +120,11 @@ data class OwnedTagInfo(
 
 data class NearbyHit(
     val beaconId: String,
+    /** Most recent raw RSSI sample. */
     val rssi: Int,
+    /** Moving average over the last [NearbyViewModel.RSSI_WINDOW_SIZE] samples. */
+    val smoothedRssi: Int,
+    val sampleCount: Int,
     val keyType: String,
     val seenAtMs: Long,
 )
@@ -113,6 +133,8 @@ data class NearbyUiState(
     val tags: List<OwnedTagInfo> = emptyList(),
     val hits: Map<String, NearbyHit> = emptyMap(),
     val scanState: ScanState = ScanState.IDLE,
+    /** True if the host reports UWB hardware (Pixel 9 Pro XL etc.). */
+    val uwbAvailable: Boolean = false,
 )
 
 sealed interface NearbyScanEvent {
