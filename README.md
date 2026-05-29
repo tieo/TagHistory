@@ -1,5 +1,3 @@
-![taghistory_banner](./assets/opentagviewer_banner_github.png)
-
 <h1>
    <img src="./opentagviewer_icon_xs.png"/> TagHistory
 </h1>
@@ -36,7 +34,9 @@ built on the [FindMy.py](https://github.com/malmeloo/FindMy.py) library.
 
 1. **Install** the APK from the [latest release](https://github.com/tieo/TagHistory/releases/latest).
 2. **Log in** with your Apple ID inside the app.
-3. **Export** your AirTag data on a Mac using the [OpenTagViewer macOS Exporter](https://github.com/parawanderer/OpenTagViewer/wiki/How-To:-Export-AirTags-From-Mac). This produces a `.zip` file.
+3. **Export** your AirTag data. This produces a `.zip` file. Two options:
+   * On a Mac, run the [OpenTagViewer macOS Exporter](https://github.com/parawanderer/OpenTagViewer/wiki/How-To:-Export-AirTags-From-Mac) by hand.
+   * On Linux with KVM, use [afm-key-extractor](https://github.com/tieo/afm-key-extractor) — a Docker image that drives an automated macOS VM end-to-end.
 4. **Import** the `.zip` in the app.
 5. Your AirTags now appear on the map and update automatically.
 
