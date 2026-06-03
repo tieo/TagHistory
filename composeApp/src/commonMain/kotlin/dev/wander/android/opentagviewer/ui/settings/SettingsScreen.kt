@@ -7,6 +7,9 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
@@ -179,33 +182,59 @@ fun SettingsScreen(
             }
             if (onImport != null) {
                 if (onRefreshNow != null) HorizontalDivider()
+                // Import is a two-step flow (picker -> parse + DB write)
+                // and the parse can take a second on a real export.
+                // Without a busy state the user only saw a brief result
+                // banner that disappeared after 4 s; if they looked
+                // away the whole flow read as "nothing happened" (which
+                // is exactly what they reported).
+                var importing by remember { mutableStateOf(false) }
                 OutlinedButton(
                     onClick = {
+                        if (importing) return@OutlinedButton
+                        importing = true
                         scope.launch {
-                            val msg = onImport.invoke()
-                            if (msg != null) importMessage = msg
+                            val msg = try {
+                                onImport.invoke()
+                            } catch (e: Exception) {
+                                "Import failed: ${e.message ?: e::class.simpleName}"
+                            }
+                            importing = false
+                            importMessage = msg ?: "Cancelled"
                         }
                     },
+                    enabled = !importing,
                     modifier = Modifier.fillMaxWidth(),
                 ) {
-                    Icon(
-                        imageVector = Icons.Filled.FileUpload,
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp),
-                    )
-                    Text(" " + "Import tags from FindMy export…")
+                    if (importing) {
+                        AlwaysSpinningIndicator(
+                            modifier = Modifier.padding(end = 8.dp).size(18.dp),
+                            strokeWidth = 2.dp,
+                        )
+                        Text("Importing…")
+                    } else {
+                        Icon(
+                            imageVector = Icons.Filled.FileUpload,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp),
+                        )
+                        Text(" " + "Import tags from FindMy export…")
+                    }
                 }
             }
             val msg = importMessage
             if (msg != null) {
+                // 15 s instead of 4 s so the user actually has time to
+                // read parse errors before the message vanishes.
                 LaunchedEffect(msg) {
-                    delay(4000)
+                    delay(15000)
                     importMessage = null
                 }
                 Text(
                     msg,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.testTag("import_message"),
                 )
             }
         }
@@ -462,57 +491,74 @@ private fun SyncLogPanel() {
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         } else {
-            for (event in events.asReversed().take(60)) {
-                val isOpen = expanded[event.timestampMs] == true
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable(enabled = event.details.isNotEmpty()) {
-                            expanded[event.timestampMs] = !isOpen
-                        }
-                        .padding(vertical = 2.dp),
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+            // Bounded-height scroll viewport. Without this the panel
+            // grew with every event and pushed Account / About off the
+            // bottom of Settings; on a small screen the whole Settings
+            // scroll became "sync log" plus a tiny strip of other rows.
+            val visible = events.asReversed().take(60)
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(SYNC_LOG_PANEL_HEIGHT),
+            ) {
+                // No `key` on items intentionally: SyncEvent.timestampMs
+                // collides when two events fire in the same millisecond
+                // (cascade rungs do this), which crashes LazyColumn with
+                // "key was already used". Position-based identity is
+                // fine here — the list is append-only.
+                items(visible.size) { idx ->
+                    val event = visible[idx]
+                    val isOpen = expanded[event.timestampMs] == true
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable(enabled = event.details.isNotEmpty()) {
+                                expanded[event.timestampMs] = !isOpen
+                            }
+                            .padding(vertical = 2.dp),
                     ) {
-                        Text(
-                            io.github.tieo.taghistory.ui.history
-                                .formatLocalTimeWithSeconds(event.timestampMs),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.outline,
-                        )
-                        Text(
-                            event.kind.name,
-                            style = MaterialTheme.typography.labelSmall,
-                            color = when (event.kind) {
-                                SyncEvent.Kind.RUNG_FAIL ->
-                                    MaterialTheme.colorScheme.error
-                                SyncEvent.Kind.REFRESH_DONE ->
-                                    MaterialTheme.colorScheme.primary
-                                else -> MaterialTheme.colorScheme.outline
-                            },
-                        )
-                        Text(
-                            event.message,
-                            style = MaterialTheme.typography.bodySmall,
-                            modifier = Modifier.weight(1f),
-                        )
-                        if (event.details.isNotEmpty()) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
                             Text(
-                                if (isOpen) "▾" else "▸",
+                                io.github.tieo.taghistory.ui.history
+                                    .formatLocalTimeWithSeconds(event.timestampMs),
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.outline,
                             )
-                        }
-                    }
-                    if (isOpen) {
-                        for ((k, v) in event.details) {
                             Text(
-                                "  $k = $v",
+                                event.kind.name,
                                 style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                color = when (event.kind) {
+                                    SyncEvent.Kind.RUNG_FAIL ->
+                                        MaterialTheme.colorScheme.error
+                                    SyncEvent.Kind.REFRESH_DONE ->
+                                        MaterialTheme.colorScheme.primary
+                                    else -> MaterialTheme.colorScheme.outline
+                                },
                             )
+                            Text(
+                                event.message,
+                                style = MaterialTheme.typography.bodySmall,
+                                modifier = Modifier.weight(1f),
+                            )
+                            if (event.details.isNotEmpty()) {
+                                Text(
+                                    if (isOpen) "▾" else "▸",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.outline,
+                                )
+                            }
+                        }
+                        if (isOpen) {
+                            for ((k, v) in event.details) {
+                                Text(
+                                    "  $k = $v",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
                         }
                     }
                 }
@@ -520,6 +566,8 @@ private fun SyncLogPanel() {
         }
     }
 }
+
+private val SYNC_LOG_PANEL_HEIGHT = 280.dp
 
 @OptIn(kotlin.time.ExperimentalTime::class)
 private fun buildSyncLogExport(
