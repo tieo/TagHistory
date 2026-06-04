@@ -304,24 +304,48 @@ actual fun PlatformMapView(
         didInitialFocus[0] = true
         mapView.getMapAsync { map ->
             val currentZoom = map.cameraPosition.zoom
+            val current = map.cameraPosition.target
             // Zoom in to at least street level; preserve higher zoom if already there.
             val targetZoom = maxOf(currentZoom, DEFAULT_ZOOM)
             val update = CameraUpdateFactory.newLatLngZoom(
                 LatLng(target.latitude, target.longitude),
                 targetZoom,
             )
-            // 600 ms ease instead of the 300 ms default jump. Longer +
-            // ease-in/out lets the Compose chip overlay's per-frame
-            // projection keep up so the chip doesn't visibly slide
-            // behind the camera. (Real fix is moving chips into a
-            // SymbolLayer so they render inside the map's own frame
-            // pass — TODO.)
-            map.animateCamera(update, MARKER_FOLLOW_DURATION_MS)
+            // Duration scales with how far the camera has to travel:
+            // a tag-switch across the country gets a long, smooth pan;
+            // a re-tap on the already-centered card snaps. Lerp from
+            // CAMERA_MIN_MS at 0 km to CAMERA_MAX_MS at CAMERA_LERP_KM
+            // and clamp.
+            val distM = if (current == null) 0.0 else haversineMeters(
+                current.latitude, current.longitude,
+                target.latitude, target.longitude,
+            )
+            val dur = cameraDurationFor(distM)
+            map.animateCamera(update, dur)
         }
     }
 }
 
-private const val MARKER_FOLLOW_DURATION_MS = 600
+private const val CAMERA_MIN_MS = 300
+private const val CAMERA_MAX_MS = 1200
+private const val CAMERA_LERP_KM = 100.0
+
+private fun cameraDurationFor(distMeters: Double): Int {
+    val km = distMeters / 1000.0
+    val frac = (km / CAMERA_LERP_KM).coerceIn(0.0, 1.0)
+    return (CAMERA_MIN_MS + frac * (CAMERA_MAX_MS - CAMERA_MIN_MS)).toInt()
+}
+
+private fun haversineMeters(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Double {
+    val r = 6_371_000.0
+    val dLat = (lat2 - lat1) * PI / 180.0
+    val dLon = (lon2 - lon1) * PI / 180.0
+    val a = sin(dLat / 2).let { it * it } +
+        cos(lat1 * PI / 180.0) * cos(lat2 * PI / 180.0) *
+        sin(dLon / 2).let { it * it }
+    val c = 2 * atan2(kotlin.math.sqrt(a), kotlin.math.sqrt(1 - a))
+    return r * c
+}
 
 /**
  * Unified pill marker — emoji + name in one rounded chip with a small

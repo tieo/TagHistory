@@ -28,6 +28,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.DarkMode
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.material.icons.filled.Directions
@@ -171,7 +172,9 @@ fun MapScreen(
                     selectedBeaconId = state.selectedBeaconId,
                     fetchingBeaconIds = state.fetchingBeaconIds,
                     isRefreshing = state.isRefreshing,
+                    hasError = state.refreshError != null,
                     onRefresh = viewModel::refresh,
+                    onRename = viewModel::renameBeacon,
                     onSelect = viewModel::selectBeacon,
                     onOpenInfo = onOpenDevice,
                     onOpenHistory = onOpenHistory,
@@ -272,7 +275,9 @@ internal fun TagGlassList(
     @Suppress("UNUSED_PARAMETER")
     fetchingBeaconIds: Set<String>,
     isRefreshing: Boolean,
+    hasError: Boolean,
     onRefresh: () -> Unit,
+    onRename: (String, String) -> Unit,
     onSelect: (String) -> Unit,
     onOpenInfo: (String) -> Unit,
     onOpenHistory: (String, String) -> Unit,
@@ -280,6 +285,7 @@ internal fun TagGlassList(
     onRoute: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    var showEdit by remember { mutableStateOf(false) }
     val configuration = androidx.compose.ui.platform.LocalConfiguration.current
     val listHeight = configuration.screenHeightDp.dp * 0.45f
     val containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.78f)
@@ -313,7 +319,27 @@ internal fun TagGlassList(
                     color = MaterialTheme.colorScheme.outline,
                 )
                 Spacer(Modifier.width(4.dp))
-                RefreshSpinButton(isRefreshing = isRefreshing, onClick = onRefresh)
+                RefreshSpinButton(
+                    isRefreshing = isRefreshing,
+                    hasError = hasError,
+                    onClick = onRefresh,
+                )
+                Spacer(Modifier.width(2.dp))
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(CircleShape)
+                        .clickable { showEdit = true }
+                        .testTag("btn_edit_tags"),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Edit,
+                        contentDescription = "Edit tags",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(22.dp),
+                    )
+                }
             }
             androidx.compose.foundation.lazy.LazyColumn(
                 modifier = Modifier.fillMaxSize(),
@@ -339,6 +365,71 @@ internal fun TagGlassList(
             }
         }
     }
+    if (showEdit) {
+        EditTagsDialog(
+            cards = cards,
+            onSave = onRename,
+            onDismiss = { showEdit = false },
+        )
+    }
+}
+
+@Composable
+private fun EditTagsDialog(
+    cards: List<TagCardUi>,
+    onSave: (String, String) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    // Single-step edit dialog: every tag gets a TextField pre-filled
+    // with its current displayName. Save iterates non-empty diffs through
+    // onSave so MapViewModel.renameBeacon can persist + refresh names.
+    val drafts = remember(cards) {
+        androidx.compose.runtime.mutableStateMapOf<String, String>().apply {
+            cards.forEach { put(it.beaconId, it.displayName) }
+        }
+    }
+    androidx.compose.material3.AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Edit tags") },
+        text = {
+            androidx.compose.foundation.lazy.LazyColumn(
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                items(cards.size) { idx ->
+                    val card = cards[idx]
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            card.emoji ?: card.displayName.firstOrNull()?.toString() ?: "·",
+                            fontSize = 20.sp,
+                            modifier = Modifier.width(36.dp),
+                        )
+                        androidx.compose.material3.OutlinedTextField(
+                            value = drafts[card.beaconId] ?: card.displayName,
+                            onValueChange = { drafts[card.beaconId] = it },
+                            singleLine = true,
+                            modifier = Modifier.weight(1f),
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            androidx.compose.material3.TextButton(
+                onClick = {
+                    cards.forEach { card ->
+                        val updated = drafts[card.beaconId]?.trim().orEmpty()
+                        if (updated.isNotEmpty() && updated != card.displayName) {
+                            onSave(card.beaconId, updated)
+                        }
+                    }
+                    onDismiss()
+                },
+            ) { Text("Save") }
+        },
+        dismissButton = {
+            androidx.compose.material3.TextButton(onClick = onDismiss) { Text("Cancel") }
+        },
+    )
 }
 
 /**
@@ -351,7 +442,17 @@ internal fun TagGlassList(
  * wobble during spin.
  */
 @Composable
-private fun RefreshSpinButton(isRefreshing: Boolean, onClick: () -> Unit) {
+private fun RefreshSpinButton(
+    isRefreshing: Boolean,
+    hasError: Boolean,
+    onClick: () -> Unit,
+) {
+    // Drive rotation only while refreshing. Resetting the
+    // InfiniteTransition with a key (isRefreshing) restarts angle from 0
+    // on each new refresh cycle, so a fast double-tap doesn't snap mid-
+    // rotation. Reading angle.value inside the graphicsLayer lambda
+    // defers the read to the render phase, which keeps the spin smooth
+    // without recomposing the whole row every frame.
     val transition = androidx.compose.animation.core.rememberInfiniteTransition(label = "refresh-spin")
     val angle by transition.animateFloat(
         initialValue = 0f,
@@ -364,9 +465,14 @@ private fun RefreshSpinButton(isRefreshing: Boolean, onClick: () -> Unit) {
         ),
         label = "refresh-angle",
     )
+    val dotColor = when {
+        hasError -> androidx.compose.ui.graphics.Color(0xFFEF4444)        // red
+        isRefreshing -> androidx.compose.ui.graphics.Color(0xFFF59E0B)    // orange
+        else -> androidx.compose.ui.graphics.Color(0xFF22C55E)            // green
+    }
     Box(
         modifier = Modifier
-            .size(36.dp)
+            .size(40.dp)
             .clip(CircleShape)
             .clickable(enabled = !isRefreshing) { onClick() }
             .testTag("btn_refresh_all"),
@@ -377,11 +483,19 @@ private fun RefreshSpinButton(isRefreshing: Boolean, onClick: () -> Unit) {
             contentDescription = "Refresh now",
             tint = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier
-                .size(20.dp)
-                .graphicsLayer(
-                    transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0.5f, 0.55f),
-                    rotationZ = if (isRefreshing) angle else 0f,
-                ),
+                .size(22.dp)
+                .graphicsLayer {
+                    transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0.5f, 0.55f)
+                    rotationZ = if (isRefreshing) angle else 0f
+                },
+        )
+        // Status dot in the middle of the spinning loop. Same pivot as
+        // the rotation so it stays put while the arrow spins around it.
+        Box(
+            modifier = Modifier
+                .size(7.dp)
+                .clip(CircleShape)
+                .background(dotColor),
         )
     }
 }

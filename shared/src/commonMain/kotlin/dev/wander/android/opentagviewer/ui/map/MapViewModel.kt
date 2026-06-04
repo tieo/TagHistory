@@ -405,11 +405,35 @@ class MapViewModel(
     }
 
     /**
+     * Update the user-facing name (and optionally emoji) for a beacon.
+     * Persists via UserBeaconOptions and re-emits cards + markers so the
+     * map UI updates immediately, no Settings round-trip needed. Empty
+     * [name] keeps the existing name (use the dedicated DeviceInfo
+     * delete flow to clear it).
+     */
+    fun renameBeacon(beaconId: String, name: String, emoji: String? = null) {
+        val trimmed = name.trim()
+        if (trimmed.isEmpty()) return
+        runScope.launch {
+            withContext(ioDispatcher) {
+                val now = kotlin.time.Clock.System.now().toEpochMilliseconds()
+                beaconRepo.storeUserBeaconOptions(
+                    io.github.tieo.taghistory.db.UserBeaconOptions(
+                        beacon_id = beaconId,
+                        last_update = now,
+                        ui_name = trimmed,
+                        ui_emoji = emoji,
+                    ),
+                )
+            }
+            refreshNames()
+        }
+    }
+
+    /**
      * Cheap re-read of beacon names/emoji from DB. Called every time the
      * map screen returns to the foreground so renames made in DeviceInfo
      * are immediately reflected in cards and markers.
-     * No-op if beaconsById is empty (boot hasn't finished yet — boot will
-     * call buildCards itself when it completes).
      */
     fun refreshNames() {
         if (beaconsById.isEmpty()) return
