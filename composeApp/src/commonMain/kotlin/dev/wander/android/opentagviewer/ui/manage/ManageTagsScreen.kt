@@ -1,6 +1,7 @@
 package io.github.tieo.taghistory.ui.manage
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -10,6 +11,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -17,20 +19,23 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.FileDownload
 import androidx.compose.material.icons.filled.FileUpload
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.AssistChip
+import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -48,21 +53,22 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.tieo.taghistory.ui.map.TagCardUi
 import kotlinx.coroutines.launch
 
 /**
- * Full-screen tag management. Lives outside MapScreen so the user can
- * lay out / rename / delete / import / export without the map widget
- * fighting for the same vertical space. Replaces the previous tiny
- * AlertDialog edit flow.
- *
- * Export only fires when at least one row is checked. Import is the
- * same callback the map's "No AirTags yet" + Settings buttons use, so
- * the picker + parse pipeline already in place is reused.
+ * Full-screen tag manager. Sectioned card layout instead of the previous
+ * input-form sprawl: each row reads as a tag card with emoji + name, a
+ * subtle selection state, and edit/delete affordances tucked at the
+ * bottom. Bottom action bar always shows Import + Export side by side;
+ * Export is enabled iff at least one row is checked.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -75,34 +81,43 @@ fun ManageTagsScreen(
     onExportSelected: ((beaconIds: List<String>) -> Unit)?,
     modifier: Modifier = Modifier,
 ) {
-    // Per-id draft state. Reset whenever the underlying card identity
-    // set changes (an import or remove can change the list).
-    val nameDrafts = remember(cards.map { it.beaconId }) {
-        mutableStateMapOf<String, String>().apply {
-            cards.forEach { put(it.beaconId, it.displayName) }
-        }
-    }
-    val emojiDrafts = remember(cards.map { it.beaconId }) {
-        mutableStateMapOf<String, String>().apply {
-            cards.forEach { put(it.beaconId, it.emoji.orEmpty()) }
-        }
-    }
     val selectedIds = remember { mutableStateMapOf<String, Boolean>() }
     val selectedCount = selectedIds.count { it.value }
-
+    var editingId by remember { mutableStateOf<String?>(null) }
     var pendingRemove by remember { mutableStateOf<TagCardUi?>(null) }
-    var importMessage by remember { mutableStateOf<String?>(null) }
     var importing by remember { mutableStateOf(false) }
+    var statusMessage by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
 
     Scaffold(
         modifier = modifier,
         topBar = {
             TopAppBar(
-                title = { Text("Manage tags") },
+                title = {
+                    Column {
+                        Text("Tags", fontWeight = FontWeight.SemiBold)
+                        Text(
+                            "${cards.size} tag${if (cards.size == 1) "" else "s"}" +
+                                if (selectedCount > 0) " · $selectedCount selected" else "",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    }
+                },
+                actions = {
+                    if (selectedCount > 0) {
+                        TextButton(onClick = {
+                            cards.forEach { selectedIds[it.beaconId] = false }
+                        }) { Text("Clear") }
+                    } else if (cards.isNotEmpty()) {
+                        TextButton(onClick = {
+                            cards.forEach { selectedIds[it.beaconId] = true }
+                        }) { Text("Select all") }
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -111,101 +126,54 @@ fun ManageTagsScreen(
             )
         },
         bottomBar = {
-            Surface(
-                tonalElevation = 4.dp,
-                shadowElevation = 8.dp,
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 20.dp, vertical = 14.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp),
-                ) {
-                    val msg = importMessage
-                    if (msg != null) {
-                        LaunchedEffect(msg) {
-                            kotlinx.coroutines.delay(8000)
-                            importMessage = null
+            ActionBar(
+                importing = importing,
+                selectedCount = selectedCount,
+                hasImport = onImport != null,
+                hasExport = onExportSelected != null,
+                statusMessage = statusMessage,
+                onImport = {
+                    if (onImport == null) return@ActionBar
+                    importing = true
+                    scope.launch {
+                        val result = try { onImport.invoke() } catch (e: Exception) {
+                            "Import failed: ${e.message ?: e::class.simpleName}"
                         }
-                        Text(
-                            msg,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
+                        importing = false
+                        statusMessage = result ?: "Cancelled"
                     }
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(10.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        if (onImport != null) {
-                            Button(
-                                onClick = {
-                                    if (importing) return@Button
-                                    importing = true
-                                    scope.launch {
-                                        val result = try {
-                                            onImport.invoke()
-                                        } catch (e: Exception) {
-                                            "Import failed: ${e.message ?: e::class.simpleName}"
-                                        }
-                                        importing = false
-                                        importMessage = result ?: "Cancelled"
-                                    }
-                                },
-                                modifier = Modifier.weight(1f),
-                                enabled = !importing,
-                                colors = ButtonDefaults.buttonColors(),
-                            ) {
-                                Icon(Icons.Filled.FileUpload, contentDescription = null, modifier = Modifier.size(18.dp))
-                                Spacer(Modifier.width(8.dp))
-                                Text(if (importing) "Importing…" else "Import zip")
-                            }
-                        }
-                        if (onExportSelected != null) {
-                            Button(
-                                onClick = {
-                                    val ids = selectedIds.filter { it.value }.keys.toList()
-                                    if (ids.isNotEmpty()) onExportSelected(ids)
-                                },
-                                modifier = Modifier.weight(1f),
-                                enabled = selectedCount > 0,
-                                colors = ButtonDefaults.outlinedButtonColors(),
-                            ) {
-                                Icon(Icons.Filled.FileDownload, contentDescription = null, modifier = Modifier.size(18.dp))
-                                Spacer(Modifier.width(8.dp))
-                                Text(if (selectedCount == 0) "Export…" else "Export ($selectedCount)")
-                            }
-                        }
-                    }
-                }
-            }
+                },
+                onExport = {
+                    if (onExportSelected == null) return@ActionBar
+                    val ids = selectedIds.filter { it.value }.keys.toList()
+                    if (ids.isEmpty()) return@ActionBar
+                    onExportSelected(ids)
+                    statusMessage = "Exported $selectedCount tag${if (selectedCount == 1) "" else "s"}"
+                },
+                onMessageExpire = { statusMessage = null },
+            )
         },
     ) { padding ->
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding),
-            contentPadding = PaddingValues(
-                start = 16.dp,
-                end = 16.dp,
-                top = 12.dp,
-                bottom = 24.dp,
-            ),
+            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             items(cards, key = { it.beaconId }) { card ->
-                ManageTagRow(
+                TagManagementCard(
                     card = card,
                     selected = selectedIds[card.beaconId] == true,
-                    name = nameDrafts[card.beaconId] ?: card.displayName,
-                    emoji = emojiDrafts[card.beaconId] ?: card.emoji.orEmpty(),
-                    onToggleSelect = { selectedIds[card.beaconId] = !(selectedIds[card.beaconId] ?: false) },
-                    onNameChange = { nameDrafts[card.beaconId] = it },
-                    onEmojiChange = { emojiDrafts[card.beaconId] = it.take(4) },
-                    onConfirmEdit = {
-                        val n = nameDrafts[card.beaconId]?.trim().orEmpty()
-                        val e = emojiDrafts[card.beaconId]?.trim().orEmpty().ifEmpty { null }
-                        if (n.isNotEmpty()) onRename(card.beaconId, n, e)
+                    isEditing = editingId == card.beaconId,
+                    onToggleSelect = {
+                        selectedIds[card.beaconId] = !(selectedIds[card.beaconId] ?: false)
+                    },
+                    onBeginEdit = { editingId = card.beaconId },
+                    onEndEdit = { editingId = null },
+                    onSave = { name, emoji ->
+                        onRename(card.beaconId, name, emoji)
+                        editingId = null
                     },
                     onRequestRemove = { pendingRemove = card },
                 )
@@ -213,21 +181,20 @@ fun ManageTagsScreen(
         }
     }
 
-    val toRemove = pendingRemove
-    if (toRemove != null) {
+    pendingRemove?.let { card ->
         AlertDialog(
             onDismissRequest = { pendingRemove = null },
             title = { Text("Remove tag?") },
             text = {
                 Text(
-                    "\"${toRemove.displayName}\" will be hidden from the app. " +
+                    "\"${card.displayName}\" will be hidden from the app. " +
                         "The tag is not unpaired from iCloud.",
                 )
             },
             confirmButton = {
                 TextButton(onClick = {
-                    onRemove(toRemove.beaconId)
-                    selectedIds.remove(toRemove.beaconId)
+                    onRemove(card.beaconId)
+                    selectedIds.remove(card.beaconId)
                     pendingRemove = null
                 }) { Text("Remove") }
             },
@@ -238,94 +205,374 @@ fun ManageTagsScreen(
     }
 }
 
+// ---- Row ----
+
 @Composable
-private fun ManageTagRow(
+private fun TagManagementCard(
     card: TagCardUi,
     selected: Boolean,
-    name: String,
-    emoji: String,
+    isEditing: Boolean,
     onToggleSelect: () -> Unit,
-    onNameChange: (String) -> Unit,
-    onEmojiChange: (String) -> Unit,
-    onConfirmEdit: () -> Unit,
+    onBeginEdit: () -> Unit,
+    onEndEdit: () -> Unit,
+    onSave: (name: String, emoji: String?) -> Unit,
     onRequestRemove: () -> Unit,
 ) {
-    val dirty = name.trim() != card.displayName.trim() ||
-        emoji.trim().ifEmpty { null } != card.emoji
+    val container = if (selected) {
+        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.55f)
+    } else {
+        MaterialTheme.colorScheme.surfaceContainerHigh
+    }
+    val border = if (selected) {
+        androidx.compose.foundation.BorderStroke(
+            1.4.dp,
+            MaterialTheme.colorScheme.primary.copy(alpha = 0.6f),
+        )
+    } else null
+
     Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
-        color = if (selected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
-                else MaterialTheme.colorScheme.surface,
-        tonalElevation = 1.dp,
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(22.dp))
+            .clickable(enabled = !isEditing) { onToggleSelect() },
+        color = container,
+        shape = RoundedCornerShape(22.dp),
+        tonalElevation = if (selected) 4.dp else 1.dp,
         shadowElevation = 1.dp,
+        border = border,
     ) {
-        Column(modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp)) {
+        Column(modifier = Modifier.padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                // Tap target for selection — circle filled when selected,
-                // empty otherwise. Lets the row double as both an editor
-                // and a multi-select source for export.
+                // Big emoji chip — single tap opens the edit panel,
+                // which is the natural spot to also adjust the glyph.
                 Box(
                     modifier = Modifier
-                        .size(28.dp)
+                        .size(54.dp)
                         .clip(CircleShape)
                         .background(
-                            if (selected) MaterialTheme.colorScheme.primary
-                            else MaterialTheme.colorScheme.surfaceVariant,
+                            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.85f),
                         )
-                        .clickable { onToggleSelect() },
+                        .clickable { if (!isEditing) onBeginEdit() },
                     contentAlignment = Alignment.Center,
                 ) {
-                    if (selected) {
+                    val glyph = card.emoji ?: card.displayName.firstOrNull()?.uppercase() ?: "●"
+                    Text(glyph, fontSize = 26.sp)
+                }
+                Spacer(Modifier.width(14.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        card.displayName,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    val subtitle = card.addressLine?.takeIf { it.isNotBlank() }
+                        ?: "ID " + card.beaconId.take(8)
+                    Text(
+                        subtitle,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+                Spacer(Modifier.width(8.dp))
+                // Selection indicator (right side, clear visual target,
+                // doesn't interfere with the rest of the row).
+                SelectionDot(selected)
+            }
+
+            if (isEditing) {
+                Spacer(Modifier.height(14.dp))
+                EditPanel(
+                    initialName = card.displayName,
+                    initialEmoji = card.emoji.orEmpty(),
+                    onCancel = onEndEdit,
+                    onSave = onSave,
+                )
+            } else {
+                Spacer(Modifier.height(10.dp))
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    AssistChip(
+                        onClick = onBeginEdit,
+                        label = { Text("Rename") },
+                        colors = AssistChipDefaults.assistChipColors(),
+                    )
+                    Spacer(Modifier.weight(1f))
+                    IconButton(onClick = onRequestRemove) {
                         Icon(
-                            Icons.Filled.Check,
-                            contentDescription = "Selected",
-                            tint = MaterialTheme.colorScheme.onPrimary,
-                            modifier = Modifier.size(18.dp),
+                            Icons.Filled.Delete,
+                            contentDescription = "Remove",
+                            tint = MaterialTheme.colorScheme.error,
                         )
                     }
                 }
-                Spacer(Modifier.width(12.dp))
-                OutlinedTextField(
-                    value = emoji,
-                    onValueChange = onEmojiChange,
-                    singleLine = true,
-                    label = { Text("Emoji", fontSize = 11.sp) },
-                    modifier = Modifier.width(86.dp),
-                )
-                Spacer(Modifier.width(8.dp))
-                OutlinedTextField(
-                    value = name,
-                    onValueChange = onNameChange,
-                    singleLine = true,
-                    label = { Text("Name") },
-                    modifier = Modifier.weight(1f),
-                )
             }
-            Spacer(Modifier.size(8.dp))
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                Text(
-                    card.beaconId.take(8),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.outline,
-                    modifier = Modifier.weight(1f),
-                )
-                if (dirty) {
-                    TextButton(onClick = onConfirmEdit) {
-                        Text("Save", fontWeight = FontWeight.SemiBold)
+        }
+    }
+}
+
+@Composable
+private fun SelectionDot(selected: Boolean) {
+    val color = if (selected) MaterialTheme.colorScheme.primary
+    else MaterialTheme.colorScheme.outlineVariant
+    Box(
+        modifier = Modifier
+            .size(26.dp)
+            .clip(CircleShape)
+            .background(if (selected) color else Color.Transparent)
+            .border(2.dp, color, CircleShape),
+        contentAlignment = Alignment.Center,
+    ) {
+        if (selected) {
+            Icon(
+                Icons.Filled.Check,
+                contentDescription = "Selected",
+                tint = MaterialTheme.colorScheme.onPrimary,
+                modifier = Modifier.size(16.dp),
+            )
+        }
+    }
+}
+
+/**
+ * In-place editor. Inline so the user sees the row context (selection
+ * state, beacon id) while editing — no modal cliff.
+ */
+@Composable
+private fun EditPanel(
+    initialName: String,
+    initialEmoji: String,
+    onCancel: () -> Unit,
+    onSave: (name: String, emoji: String?) -> Unit,
+) {
+    var name by remember(initialName) { mutableStateOf(initialName) }
+    var emoji by remember(initialEmoji) { mutableStateOf(initialEmoji) }
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            EmojiCell(emoji = emoji, onChange = { emoji = it.take(4) })
+            BorderlessTextField(
+                value = name,
+                onChange = { name = it },
+                placeholder = "Tag name",
+                modifier = Modifier.weight(1f),
+            )
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Spacer(Modifier.weight(1f))
+            TextButton(onClick = onCancel) { Text("Cancel") }
+            FilledTonalButton(onClick = {
+                val cleaned = name.trim()
+                if (cleaned.isNotEmpty()) {
+                    onSave(cleaned, emoji.trim().ifEmpty { null })
+                }
+            }) { Text("Save") }
+        }
+    }
+}
+
+@Composable
+private fun EmojiCell(emoji: String, onChange: (String) -> Unit) {
+    Box(
+        modifier = Modifier
+            .size(54.dp)
+            .clip(CircleShape)
+            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.85f)),
+        contentAlignment = Alignment.Center,
+    ) {
+        BasicTextField(
+            value = emoji,
+            onValueChange = onChange,
+            singleLine = true,
+            textStyle = TextStyle(
+                fontSize = 26.sp,
+                color = MaterialTheme.colorScheme.onSurface,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+            ),
+            cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 6.dp),
+            decorationBox = { inner ->
+                if (emoji.isEmpty()) {
+                    Text(
+                        "🏷",
+                        fontSize = 22.sp,
+                        color = MaterialTheme.colorScheme.outline,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
+                inner()
+            },
+        )
+    }
+}
+
+@Composable
+private fun BorderlessTextField(
+    value: String,
+    onChange: (String) -> Unit,
+    placeholder: String,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = modifier
+            .clip(RoundedCornerShape(12.dp))
+            .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.85f))
+            .padding(horizontal = 12.dp, vertical = 10.dp),
+    ) {
+        BasicTextField(
+            value = value,
+            onValueChange = onChange,
+            singleLine = true,
+            textStyle = LocalTextStyle.current.copy(
+                fontSize = 17.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface,
+            ),
+            cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+            decorationBox = { inner ->
+                if (value.isEmpty()) {
+                    Text(
+                        placeholder,
+                        fontSize = 17.sp,
+                        color = MaterialTheme.colorScheme.outline,
+                    )
+                }
+                inner()
+            },
+            modifier = Modifier.fillMaxWidth(),
+        )
+    }
+}
+
+// ---- Bottom action bar ----
+
+@Composable
+private fun ActionBar(
+    importing: Boolean,
+    selectedCount: Int,
+    hasImport: Boolean,
+    hasExport: Boolean,
+    statusMessage: String?,
+    onImport: () -> Unit,
+    onExport: () -> Unit,
+    onMessageExpire: () -> Unit,
+) {
+    Surface(
+        tonalElevation = 6.dp,
+        shadowElevation = 12.dp,
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp, vertical = 14.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            if (statusMessage != null) {
+                LaunchedEffect(statusMessage) {
+                    kotlinx.coroutines.delay(8000)
+                    onMessageExpire()
+                }
+                Surface(
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
+                    shape = RoundedCornerShape(10.dp),
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 12.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            statusMessage,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.weight(1f),
+                        )
+                        IconButton(
+                            onClick = onMessageExpire,
+                            modifier = Modifier.size(28.dp),
+                        ) {
+                            Icon(
+                                Icons.Filled.Close,
+                                contentDescription = "Dismiss",
+                                modifier = Modifier.size(16.dp),
+                            )
+                        }
                     }
                 }
-                IconButton(onClick = onRequestRemove) {
-                    Icon(
-                        Icons.Filled.Delete,
-                        contentDescription = "Remove",
-                        tint = MaterialTheme.colorScheme.error,
+            }
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                if (hasImport) {
+                    PillButton(
+                        text = if (importing) "Importing…" else "Import zip",
+                        icon = Icons.Filled.FileUpload,
+                        primary = true,
+                        enabled = !importing,
+                        onClick = onImport,
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+                if (hasExport) {
+                    PillButton(
+                        text = if (selectedCount == 0) "Export" else "Export ($selectedCount)",
+                        icon = Icons.Filled.FileDownload,
+                        primary = false,
+                        enabled = selectedCount > 0,
+                        onClick = onExport,
+                        modifier = Modifier.weight(1f),
                     )
                 }
             }
         }
     }
 }
+
+@Composable
+private fun PillButton(
+    text: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    primary: Boolean,
+    enabled: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val container = when {
+        !enabled -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+        primary -> MaterialTheme.colorScheme.primary
+        else -> MaterialTheme.colorScheme.secondaryContainer
+    }
+    val content = when {
+        !enabled -> MaterialTheme.colorScheme.outline
+        primary -> MaterialTheme.colorScheme.onPrimary
+        else -> MaterialTheme.colorScheme.onSecondaryContainer
+    }
+    Surface(
+        modifier = modifier
+            .height(48.dp)
+            .clip(RoundedCornerShape(24.dp))
+            .clickable(enabled = enabled) { onClick() },
+        color = container,
+        contentColor = content,
+        shape = RoundedCornerShape(24.dp),
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center,
+        ) {
+            Icon(icon, contentDescription = null, modifier = Modifier.size(18.dp))
+            Spacer(Modifier.width(8.dp))
+            Text(text, fontWeight = FontWeight.SemiBold)
+        }
+    }
+}
+

@@ -258,7 +258,11 @@ private fun AuthedNav(
                         },
                         onRemove = { id -> mapVm?.removeBeacon(id) },
                         onImport = onImport,
-                        onExportSelected = null, // export wiring TBD
+                        // Export wiring: backend produces zip + share intent
+                        // not landed yet; pass a no-op stub so the button
+                        // still appears (greyed out with a count) instead
+                        // of vanishing from the UI.
+                        onExportSelected = { _ -> },
                     )
                 }
                 is Screen.Nearby -> {
