@@ -374,6 +374,7 @@ class AndroidAppHost private constructor(
         onShareGpx = { title, dayLabel, points ->
             shareDayAsGpx(context, title, dayLabel, points)
         },
+        onExportTags = { beaconIds -> runExportSelected(context, beaconIds, beaconRepo) },
     )
 
     /**

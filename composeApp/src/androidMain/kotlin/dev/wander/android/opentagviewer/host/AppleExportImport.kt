@@ -1,17 +1,23 @@
 package io.github.tieo.taghistory.host
 
 import android.content.Context
+import android.content.Intent
 import android.net.Uri
 import android.util.Log
+import androidx.core.content.FileProvider
 import io.github.tieo.taghistory.data.importer.AppleExportParser
 import io.github.tieo.taghistory.data.repo.BeaconRepository
 import java.io.ByteArrayOutputStream
+import java.io.File
 import java.io.InputStream
+import java.util.zip.ZipEntry
 import java.util.zip.ZipInputStream
+import java.util.zip.ZipOutputStream
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 private const val TAG = "OTV/Import"
+private const val TAG_EXPORT = "OTV/Export"
 
 /** Upper bound to keep a pathological zip from exploding RAM. */
 private const val MAX_ENTRY_BYTES = 4 * 1024 * 1024 // 4 MiB per file — plists are tiny
@@ -93,5 +99,88 @@ suspend fun runAppleExportImport(
     } catch (t: Throwable) {
         Log.e(TAG, "runAppleExportImport threw", t)
         "Import failed: ${t.message ?: t::class.simpleName}"
+    }
+}
+
+/**
+ * Build a TagHistory-compatible zip of the given beacons and hand it
+ * off via ACTION_SEND so the system chooser can deliver it wherever
+ * the user wants (Files, Drive, Signal, …). Reuses the plist blobs
+ * we already store in the DB — no re-derivation, no Apple servers,
+ * fully offline.
+ *
+ * Returns a user-readable status line for the bottom-bar toast.
+ */
+suspend fun runExportSelected(
+    context: Context,
+    beaconIds: List<String>,
+    beaconRepo: BeaconRepository,
+): String = withContext(Dispatchers.IO) {
+    Log.i(TAG_EXPORT, "runExportSelected ids=${beaconIds.size}")
+    if (beaconIds.isEmpty()) return@withContext "Nothing selected"
+    try {
+        val owned = beaconIds.mapNotNull { beaconRepo.getById(it) }
+        val withContent = owned.filter { !it.ownedBeaconInfo?.content.isNullOrBlank() }
+        if (withContent.isEmpty()) {
+            return@withContext "Export failed: no plist data on disk for selected tags"
+        }
+
+        val outDir = File(context.cacheDir, "exports").apply { mkdirs() }
+        val ts = System.currentTimeMillis()
+        val outFile = File(outDir, "taghistory-export-$ts.zip")
+        outFile.outputStream().use { fos ->
+            ZipOutputStream(fos).use { zos ->
+                // OPENTAGVIEWER.yml at root — matches the format
+                // AppleExportParser expects so the round-trip works.
+                zos.putNextEntry(ZipEntry("OPENTAGVIEWER.yml"))
+                zos.write(
+                    buildString {
+                        appendLine("version: '1'")
+                        appendLine("exportTimestamp: $ts")
+                        appendLine("sourceUser: TagHistory")
+                        appendLine("via: TagHistory in-app export")
+                    }.encodeToByteArray(),
+                )
+                zos.closeEntry()
+
+                for (b in withContent) {
+                    val plistBytes = b.ownedBeaconInfo?.content?.encodeToByteArray()
+                        ?: continue
+                    zos.putNextEntry(ZipEntry("OwnedBeacons/${b.beaconId}.plist"))
+                    zos.write(plistBytes)
+                    zos.closeEntry()
+                    val naming = b.beaconNamingRecord
+                    if (naming != null && !naming.content.isNullOrBlank()) {
+                        zos.putNextEntry(
+                            ZipEntry(
+                                "BeaconNamingRecord/${b.beaconId}/${naming.id}.plist",
+                            ),
+                        )
+                        zos.write(naming.content!!.encodeToByteArray())
+                        zos.closeEntry()
+                    }
+                }
+            }
+        }
+        Log.i(TAG_EXPORT, "wrote ${outFile.length()} bytes -> $outFile")
+
+        val uri = FileProvider.getUriForFile(
+            context,
+            "${context.packageName}.fileprovider",
+            outFile,
+        )
+        val share = Intent(Intent.ACTION_SEND).apply {
+            type = "application/zip"
+            putExtra(Intent.EXTRA_STREAM, uri)
+            putExtra(Intent.EXTRA_SUBJECT, outFile.name)
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+        val chooser = Intent.createChooser(share, "Share TagHistory export")
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        context.startActivity(chooser)
+        "Shared ${withContent.size} tag${if (withContent.size == 1) "" else "s"} (${outFile.length() / 1024} KB) via system share sheet"
+    } catch (t: Throwable) {
+        Log.e(TAG_EXPORT, "export threw", t)
+        "Export failed: ${t.message ?: t::class.simpleName}"
     }
 }

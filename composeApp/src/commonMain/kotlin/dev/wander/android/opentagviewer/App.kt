@@ -89,6 +89,12 @@ data class AppHostFactories(
      * fires ACTION_SEND so the user can pick a share target.
      */
     val onShareGpx: ((title: String, dayLabel: String, points: List<io.github.tieo.taghistory.ui.history.HistoryPoint>) -> Unit)? = null,
+    /**
+     * Export selected tag IDs into a TagHistory-compatible zip and fire
+     * a platform share intent so the user picks where it goes. Returns
+     * a user-readable status line. Null = host doesn't support export.
+     */
+    val onExportTags: (suspend (beaconIds: List<String>) -> String)? = null,
 )
 
 @Composable
@@ -250,6 +256,7 @@ private fun AuthedNav(
                 is Screen.ManageTags -> {
                     val mapState = mapVm?.state?.collectAsStateWithLifecycle()?.value
                     val cards = mapState?.cards.orEmpty()
+                    val exportFn = factories.onExportTags
                     io.github.tieo.taghistory.ui.manage.ManageTagsScreen(
                         cards = cards,
                         onBack = { nav = nav.pop() },
@@ -258,11 +265,7 @@ private fun AuthedNav(
                         },
                         onRemove = { id -> mapVm?.removeBeacon(id) },
                         onImport = onImport,
-                        // Export wiring: backend produces zip + share intent
-                        // not landed yet; pass a no-op stub so the button
-                        // still appears (greyed out with a count) instead
-                        // of vanishing from the UI.
-                        onExportSelected = { _ -> },
+                        onExportSelected = exportFn,
                     )
                 }
                 is Screen.Nearby -> {

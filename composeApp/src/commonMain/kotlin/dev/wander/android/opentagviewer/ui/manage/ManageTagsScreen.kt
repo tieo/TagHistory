@@ -78,7 +78,7 @@ fun ManageTagsScreen(
     onRename: (beaconId: String, name: String, emoji: String?) -> Unit,
     onRemove: (beaconId: String) -> Unit,
     onImport: (suspend () -> String?)?,
-    onExportSelected: ((beaconIds: List<String>) -> Unit)?,
+    onExportSelected: (suspend (beaconIds: List<String>) -> String)?,
     modifier: Modifier = Modifier,
 ) {
     val selectedIds = remember { mutableStateMapOf<String, Boolean>() }
@@ -159,8 +159,13 @@ fun ManageTagsScreen(
                     if (onExportSelected == null) return@ActionBar
                     val ids = selectedIds.filter { it.value }.keys.toList()
                     if (ids.isEmpty()) return@ActionBar
-                    onExportSelected(ids)
-                    statusMessage = "Exported $selectedCount tag${if (selectedCount == 1) "" else "s"}"
+                    scope.launch {
+                        statusMessage = try {
+                            onExportSelected.invoke(ids)
+                        } catch (e: Exception) {
+                            "Export failed: ${e.message ?: e::class.simpleName}"
+                        }
+                    }
                 },
                 onMessageExpire = { statusMessage = null },
             )
@@ -280,14 +285,12 @@ private fun TagManagementCard(
         border = border,
     ) {
         Row(
-            modifier = Modifier.padding(16.dp),
-            verticalAlignment = Alignment.Top,
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            // Big emoji chip — tap opens the edit panel which is the
-            // natural spot to also adjust the glyph.
             Box(
                 modifier = Modifier
-                    .size(54.dp)
+                    .size(48.dp)
                     .clip(CircleShape)
                     .background(
                         MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.85f),
@@ -296,28 +299,14 @@ private fun TagManagementCard(
                 contentAlignment = Alignment.Center,
             ) {
                 val glyph = card.emoji ?: card.displayName.firstOrNull()?.uppercase() ?: "●"
-                Text(glyph, fontSize = 26.sp)
+                Text(glyph, fontSize = 24.sp)
             }
-            Spacer(Modifier.width(14.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    card.displayName,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                val subtitle = card.addressLine?.takeIf { it.isNotBlank() }
-                    ?: "ID " + card.beaconId.take(8)
-                Text(
-                    subtitle,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                if (isEditing) {
-                    Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.width(12.dp))
+            // Edit mode REPLACES the title/subtitle stack — no duplicate
+            // name/emoji rendering. Closing the editor restores the
+            // labels in place.
+            if (isEditing) {
+                Box(modifier = Modifier.weight(1f)) {
                     EditPanel(
                         initialName = card.displayName,
                         initialEmoji = card.emoji.orEmpty(),
@@ -325,41 +314,74 @@ private fun TagManagementCard(
                         onSave = onSave,
                     )
                 }
+            } else {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        card.displayName,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    val subtitle = card.addressLine?.takeIf { it.isNotBlank() }
+                        ?: "ID " + card.beaconId.take(8)
+                    Text(
+                        subtitle,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
             }
-            Spacer(Modifier.width(8.dp))
-            // Right column: selection circle on top, edit + delete
-            // icons stacked underneath it.
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(4.dp),
-            ) {
-                SelectionDot(selected)
-                Row(horizontalArrangement = Arrangement.spacedBy(0.dp)) {
-                    IconButton(
-                        onClick = { if (isEditing) onEndEdit() else onBeginEdit() },
-                        modifier = Modifier.size(36.dp),
-                    ) {
-                        Icon(
-                            Icons.Filled.Edit,
-                            contentDescription = if (isEditing) "Close edit" else "Edit",
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.size(18.dp),
-                        )
-                    }
-                    IconButton(
+            if (!isEditing) {
+                Spacer(Modifier.width(8.dp))
+                // All three actions in one row, same size, same weight —
+                // no "primary chip + secondary icons" hierarchy that
+                // made the previous layout look unbalanced.
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(2.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    SelectionDot(selected)
+                    ActionIconButton(
+                        icon = Icons.Filled.Edit,
+                        contentDescription = "Edit",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        onClick = onBeginEdit,
+                    )
+                    ActionIconButton(
+                        icon = Icons.Filled.Delete,
+                        contentDescription = "Remove",
+                        tint = MaterialTheme.colorScheme.error,
                         onClick = onRequestRemove,
-                        modifier = Modifier.size(36.dp),
-                    ) {
-                        Icon(
-                            Icons.Filled.Delete,
-                            contentDescription = "Remove",
-                            tint = MaterialTheme.colorScheme.error,
-                            modifier = Modifier.size(18.dp),
-                        )
-                    }
+                    )
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun ActionIconButton(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    contentDescription: String,
+    tint: Color,
+    onClick: () -> Unit,
+) {
+    Box(
+        modifier = Modifier
+            .size(40.dp)
+            .clip(CircleShape)
+            .clickable { onClick() },
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = contentDescription,
+            tint = tint,
+            modifier = Modifier.size(22.dp),
+        )
     }
 }
 
@@ -369,19 +391,26 @@ private fun SelectionDot(selected: Boolean) {
     else MaterialTheme.colorScheme.outlineVariant
     Box(
         modifier = Modifier
-            .size(26.dp)
-            .clip(CircleShape)
-            .background(if (selected) color else Color.Transparent)
-            .border(2.dp, color, CircleShape),
+            .size(40.dp)
+            .clip(CircleShape),
         contentAlignment = Alignment.Center,
     ) {
-        if (selected) {
-            Icon(
-                Icons.Filled.Check,
-                contentDescription = "Selected",
-                tint = MaterialTheme.colorScheme.onPrimary,
-                modifier = Modifier.size(16.dp),
-            )
+        Box(
+            modifier = Modifier
+                .size(22.dp)
+                .clip(CircleShape)
+                .background(if (selected) color else Color.Transparent)
+                .border(2.dp, color, CircleShape),
+            contentAlignment = Alignment.Center,
+        ) {
+            if (selected) {
+                Icon(
+                    Icons.Filled.Check,
+                    contentDescription = "Selected",
+                    tint = MaterialTheme.colorScheme.onPrimary,
+                    modifier = Modifier.size(14.dp),
+                )
+            }
         }
     }
 }
