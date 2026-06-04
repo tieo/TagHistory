@@ -168,6 +168,7 @@ private fun AuthedNav(
                                 onOpenHistory = { id, title ->
                                     nav = nav.push(Screen.History(id, title))
                                 },
+                                onManageTags = { nav = nav.push(Screen.ManageTags) },
                                 onRoute = factories.routeTo,
                                 onImport = onImport,
                                 snackbarHostState = snackbarHostState,
@@ -244,6 +245,20 @@ private fun AuthedNav(
                             val title = vm.state.value.displayName
                             nav = nav.push(Screen.History(id, title))
                         },
+                    )
+                }
+                is Screen.ManageTags -> {
+                    val mapState = mapVm?.state?.collectAsStateWithLifecycle()?.value
+                    val cards = mapState?.cards.orEmpty()
+                    io.github.tieo.taghistory.ui.manage.ManageTagsScreen(
+                        cards = cards,
+                        onBack = { nav = nav.pop() },
+                        onRename = { id, name, emoji ->
+                            mapVm?.renameBeacon(id, name, emoji)
+                        },
+                        onRemove = { id -> mapVm?.removeBeacon(id) },
+                        onImport = onImport,
+                        onExportSelected = null, // export wiring TBD
                     )
                 }
                 is Screen.Nearby -> {

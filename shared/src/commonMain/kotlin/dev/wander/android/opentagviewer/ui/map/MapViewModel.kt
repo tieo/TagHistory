@@ -431,6 +431,25 @@ class MapViewModel(
     }
 
     /**
+     * Mark a beacon as removed (soft delete via BeaconNamingRecord +
+     * OwnedBeacons.setRemoved). Drops it from cached state and re-emits
+     * markers/cards so it disappears from the map immediately.
+     */
+    fun removeBeacon(beaconId: String) {
+        runScope.launch {
+            withContext(ioDispatcher) {
+                beaconRepo.markBeaconAsRemoved(beaconId)
+            }
+            beaconsById.remove(beaconId)
+            latestLocationByBeacon.remove(beaconId)
+            if (_state.value.selectedBeaconId == beaconId) {
+                userHasExplicitlySelected = false
+            }
+            refreshNames()
+        }
+    }
+
+    /**
      * Cheap re-read of beacon names/emoji from DB. Called every time the
      * map screen returns to the foreground so renames made in DeviceInfo
      * are immediately reflected in cards and markers.
