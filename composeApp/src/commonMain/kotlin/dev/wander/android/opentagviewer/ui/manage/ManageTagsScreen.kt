@@ -25,11 +25,11 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.DeleteSweep
 import androidx.compose.material.icons.filled.FileDownload
 import androidx.compose.material.icons.filled.FileUpload
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.AssistChip
-import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
@@ -85,6 +85,7 @@ fun ManageTagsScreen(
     val selectedCount = selectedIds.count { it.value }
     var editingId by remember { mutableStateOf<String?>(null) }
     var pendingRemove by remember { mutableStateOf<TagCardUi?>(null) }
+    var pendingBulkRemove by remember { mutableStateOf(false) }
     var importing by remember { mutableStateOf(false) }
     var statusMessage by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
@@ -111,6 +112,17 @@ fun ManageTagsScreen(
                 },
                 actions = {
                     if (selectedCount > 0) {
+                        // Bulk-remove: only surfaces when at least one
+                        // row is checked. Two-step confirm via the
+                        // existing pending-remove dialog by setting
+                        // pendingBulk = true.
+                        IconButton(onClick = { pendingBulkRemove = true }) {
+                            Icon(
+                                Icons.Filled.DeleteSweep,
+                                contentDescription = "Remove selected",
+                                tint = MaterialTheme.colorScheme.error,
+                            )
+                        }
                         TextButton(onClick = {
                             cards.forEach { selectedIds[it.beaconId] = false }
                         }) { Text("Clear") }
@@ -203,6 +215,32 @@ fun ManageTagsScreen(
             },
         )
     }
+
+    if (pendingBulkRemove) {
+        val ids = selectedIds.filter { it.value }.keys.toList()
+        AlertDialog(
+            onDismissRequest = { pendingBulkRemove = false },
+            title = { Text("Remove ${ids.size} tag${if (ids.size == 1) "" else "s"}?") },
+            text = {
+                Text(
+                    "Selected tags will be hidden from the app. They stay " +
+                        "paired in iCloud.",
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    ids.forEach { id ->
+                        onRemove(id)
+                        selectedIds.remove(id)
+                    }
+                    pendingBulkRemove = false
+                }) { Text("Remove all") }
+            },
+            dismissButton = {
+                TextButton(onClick = { pendingBulkRemove = false }) { Text("Cancel") }
+            },
+        )
+    }
 }
 
 // ---- Row ----
@@ -241,73 +279,82 @@ private fun TagManagementCard(
         shadowElevation = 1.dp,
         border = border,
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                // Big emoji chip — single tap opens the edit panel,
-                // which is the natural spot to also adjust the glyph.
-                Box(
-                    modifier = Modifier
-                        .size(54.dp)
-                        .clip(CircleShape)
-                        .background(
-                            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.85f),
-                        )
-                        .clickable { if (!isEditing) onBeginEdit() },
-                    contentAlignment = Alignment.Center,
-                ) {
-                    val glyph = card.emoji ?: card.displayName.firstOrNull()?.uppercase() ?: "●"
-                    Text(glyph, fontSize = 26.sp)
-                }
-                Spacer(Modifier.width(14.dp))
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        card.displayName,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.Top,
+        ) {
+            // Big emoji chip — tap opens the edit panel which is the
+            // natural spot to also adjust the glyph.
+            Box(
+                modifier = Modifier
+                    .size(54.dp)
+                    .clip(CircleShape)
+                    .background(
+                        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.85f),
                     )
-                    val subtitle = card.addressLine?.takeIf { it.isNotBlank() }
-                        ?: "ID " + card.beaconId.take(8)
-                    Text(
-                        subtitle,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                }
-                Spacer(Modifier.width(8.dp))
-                // Selection indicator (right side, clear visual target,
-                // doesn't interfere with the rest of the row).
-                SelectionDot(selected)
+                    .clickable { if (!isEditing) onBeginEdit() },
+                contentAlignment = Alignment.Center,
+            ) {
+                val glyph = card.emoji ?: card.displayName.firstOrNull()?.uppercase() ?: "●"
+                Text(glyph, fontSize = 26.sp)
             }
-
-            if (isEditing) {
-                Spacer(Modifier.height(14.dp))
-                EditPanel(
-                    initialName = card.displayName,
-                    initialEmoji = card.emoji.orEmpty(),
-                    onCancel = onEndEdit,
-                    onSave = onSave,
+            Spacer(Modifier.width(14.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    card.displayName,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                 )
-            } else {
-                Spacer(Modifier.height(10.dp))
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    AssistChip(
-                        onClick = onBeginEdit,
-                        label = { Text("Rename") },
-                        colors = AssistChipDefaults.assistChipColors(),
+                val subtitle = card.addressLine?.takeIf { it.isNotBlank() }
+                    ?: "ID " + card.beaconId.take(8)
+                Text(
+                    subtitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                if (isEditing) {
+                    Spacer(Modifier.height(12.dp))
+                    EditPanel(
+                        initialName = card.displayName,
+                        initialEmoji = card.emoji.orEmpty(),
+                        onCancel = onEndEdit,
+                        onSave = onSave,
                     )
-                    Spacer(Modifier.weight(1f))
-                    IconButton(onClick = onRequestRemove) {
+                }
+            }
+            Spacer(Modifier.width(8.dp))
+            // Right column: selection circle on top, edit + delete
+            // icons stacked underneath it.
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                SelectionDot(selected)
+                Row(horizontalArrangement = Arrangement.spacedBy(0.dp)) {
+                    IconButton(
+                        onClick = { if (isEditing) onEndEdit() else onBeginEdit() },
+                        modifier = Modifier.size(36.dp),
+                    ) {
+                        Icon(
+                            Icons.Filled.Edit,
+                            contentDescription = if (isEditing) "Close edit" else "Edit",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(18.dp),
+                        )
+                    }
+                    IconButton(
+                        onClick = onRequestRemove,
+                        modifier = Modifier.size(36.dp),
+                    ) {
                         Icon(
                             Icons.Filled.Delete,
                             contentDescription = "Remove",
                             tint = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.size(18.dp),
                         )
                     }
                 }

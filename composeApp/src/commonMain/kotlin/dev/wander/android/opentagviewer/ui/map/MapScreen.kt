@@ -383,15 +383,9 @@ private fun RefreshSpinButton(
     onClick: () -> Unit,
 ) {
     // visibleSpin = isRefreshing OR a forced min-duration after each tap.
-    // Without the forced floor, a seeded/local-only refresh that
-    // completes in <100 ms never gives the user a visible spin — that's
-    // why the icon looked frozen even though state.isRefreshing was
-    // technically flipping.
     var forceSpin by remember { mutableStateOf(false) }
     LaunchedEffect(forceSpin) {
         if (forceSpin) {
-            // One full rotation minimum, then keep going while the
-            // network is still in-flight.
             kotlinx.coroutines.delay(900)
             while (isRefreshing) kotlinx.coroutines.delay(150)
             forceSpin = false
@@ -399,18 +393,28 @@ private fun RefreshSpinButton(
     }
     val spinning = isRefreshing || forceSpin
 
-    val transition = androidx.compose.animation.core.rememberInfiniteTransition(label = "refresh-spin")
-    val angle by transition.animateFloat(
-        initialValue = 0f,
-        targetValue = 360f,
-        animationSpec = androidx.compose.animation.core.infiniteRepeatable(
-            animation = androidx.compose.animation.core.tween(
-                durationMillis = 900,
-                easing = androidx.compose.animation.core.LinearEasing,
-            ),
-        ),
-        label = "refresh-angle",
-    )
+    // Frame-driven angle (NOT InfiniteTransition). InfiniteTransition
+    // goes through Compose's MotionDurationScale, which is 0 on devices
+    // with system-wide "Animator duration scale" turned off — that
+    // collapses the tween to instant and the icon never visibly
+    // rotates. Pulling time directly from withFrameNanos bypasses the
+    // scale entirely, so the spin works regardless of system settings.
+    var angle by remember { androidx.compose.runtime.mutableFloatStateOf(0f) }
+    LaunchedEffect(spinning) {
+        if (!spinning) {
+            angle = 0f
+            return@LaunchedEffect
+        }
+        var startNs = 0L
+        while (true) {
+            androidx.compose.runtime.withFrameNanos { ns ->
+                if (startNs == 0L) startNs = ns
+                val elapsedMs = (ns - startNs) / 1_000_000L
+                angle = ((elapsedMs / 900f) * 360f) % 360f
+            }
+        }
+    }
+
     val dotColor = when {
         hasError -> androidx.compose.ui.graphics.Color(0xFFEF4444)        // red
         spinning -> androidx.compose.ui.graphics.Color(0xFFF59E0B)        // orange
@@ -433,13 +437,13 @@ private fun RefreshSpinButton(
             tint = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier
                 .size(22.dp)
-                .rotate(if (spinning) angle else 0f),
+                .rotate(angle),
         )
-        // Status dot in the middle of the spinning loop. Same pivot
+        // Status dot — small, in the middle of the loop. Same pivot
         // as the rotation so it stays put while the arrow spins.
         Box(
             modifier = Modifier
-                .size(7.dp)
+                .size(5.dp)
                 .clip(CircleShape)
                 .background(dotColor),
         )
