@@ -310,10 +310,18 @@ actual fun PlatformMapView(
                 LatLng(target.latitude, target.longitude),
                 targetZoom,
             )
-            map.animateCamera(update)
+            // 600 ms ease instead of the 300 ms default jump. Longer +
+            // ease-in/out lets the Compose chip overlay's per-frame
+            // projection keep up so the chip doesn't visibly slide
+            // behind the camera. (Real fix is moving chips into a
+            // SymbolLayer so they render inside the map's own frame
+            // pass — TODO.)
+            map.animateCamera(update, MARKER_FOLLOW_DURATION_MS)
         }
     }
 }
+
+private const val MARKER_FOLLOW_DURATION_MS = 600
 
 /**
  * Unified pill marker — emoji + name in one rounded chip with a small

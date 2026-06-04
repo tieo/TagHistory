@@ -26,7 +26,10 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
+import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.DarkMode
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.material.icons.filled.Directions
 import androidx.compose.material.icons.filled.FileDownload
 import androidx.compose.material.icons.filled.Info
@@ -167,6 +170,8 @@ fun MapScreen(
                     cards = state.cards,
                     selectedBeaconId = state.selectedBeaconId,
                     fetchingBeaconIds = state.fetchingBeaconIds,
+                    isRefreshing = state.isRefreshing,
+                    onRefresh = viewModel::refresh,
                     onSelect = viewModel::selectBeacon,
                     onOpenInfo = onOpenDevice,
                     onOpenHistory = onOpenHistory,
@@ -264,7 +269,10 @@ private fun EmptyDevicesCard(
 internal fun TagGlassList(
     cards: List<TagCardUi>,
     selectedBeaconId: String?,
+    @Suppress("UNUSED_PARAMETER")
     fetchingBeaconIds: Set<String>,
+    isRefreshing: Boolean,
+    onRefresh: () -> Unit,
     onSelect: (String) -> Unit,
     onOpenInfo: (String) -> Unit,
     onOpenHistory: (String, String) -> Unit,
@@ -285,19 +293,10 @@ internal fun TagGlassList(
         border = BorderStroke(1.dp, borderColor),
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
-            Box(
-                modifier = Modifier
-                    .padding(top = 10.dp)
-                    .align(Alignment.CenterHorizontally)
-                    .width(36.dp)
-                    .height(4.dp)
-                    .clip(RoundedCornerShape(2.dp))
-                    .background(MaterialTheme.colorScheme.outline.copy(alpha = 0.4f)),
-            )
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 20.dp, vertical = 10.dp),
+                    .padding(start = 20.dp, end = 8.dp, top = 14.dp, bottom = 6.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
@@ -313,6 +312,8 @@ internal fun TagGlassList(
                     fontSize = 13.sp,
                     color = MaterialTheme.colorScheme.outline,
                 )
+                Spacer(Modifier.width(4.dp))
+                RefreshSpinButton(isRefreshing = isRefreshing, onClick = onRefresh)
             }
             androidx.compose.foundation.lazy.LazyColumn(
                 modifier = Modifier.fillMaxSize(),
@@ -328,7 +329,6 @@ internal fun TagGlassList(
                     TagGlassRow(
                         card = card,
                         isSelected = card.beaconId == selectedBeaconId,
-                        isFetching = card.beaconId in fetchingBeaconIds,
                         onSelect = { onSelect(card.beaconId) },
                         onOpenInfo = { onOpenInfo(card.beaconId) },
                         onOpenHistory = { onOpenHistory(card.beaconId, card.displayName) },
@@ -341,12 +341,56 @@ internal fun TagGlassList(
     }
 }
 
+/**
+ * Refresh icon button that spins around its visual center while
+ * isRefreshing. Material's Filled.Refresh is roughly centered on the
+ * vector viewbox (24x24), but the visible "C" of the arrow sits a
+ * hair down-left because the arrowhead extends top-right. Pivoting
+ * at TransformOrigin(0.5, 0.55) brings the rotation center onto the
+ * arrow loop instead of the bbox midpoint, which removed the visible
+ * wobble during spin.
+ */
+@Composable
+private fun RefreshSpinButton(isRefreshing: Boolean, onClick: () -> Unit) {
+    val transition = androidx.compose.animation.core.rememberInfiniteTransition(label = "refresh-spin")
+    val angle by transition.animateFloat(
+        initialValue = 0f,
+        targetValue = 360f,
+        animationSpec = androidx.compose.animation.core.infiniteRepeatable(
+            animation = androidx.compose.animation.core.tween(
+                durationMillis = 900,
+                easing = androidx.compose.animation.core.LinearEasing,
+            ),
+        ),
+        label = "refresh-angle",
+    )
+    Box(
+        modifier = Modifier
+            .size(36.dp)
+            .clip(CircleShape)
+            .clickable(enabled = !isRefreshing) { onClick() }
+            .testTag("btn_refresh_all"),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            imageVector = Icons.Filled.Refresh,
+            contentDescription = "Refresh now",
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier
+                .size(20.dp)
+                .graphicsLayer(
+                    transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0.5f, 0.55f),
+                    rotationZ = if (isRefreshing) angle else 0f,
+                ),
+        )
+    }
+}
+
 @OptIn(ExperimentalTime::class)
 @Composable
 private fun TagGlassRow(
     card: TagCardUi,
     isSelected: Boolean,
-    isFetching: Boolean,
     onSelect: () -> Unit,
     onOpenInfo: () -> Unit,
     onOpenHistory: () -> Unit,
@@ -399,26 +443,13 @@ private fun TagGlassRow(
                 modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(2.dp),
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        card.displayName,
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f, fill = false),
-                    )
-                    if (isFetching) {
-                        Spacer(Modifier.width(8.dp))
-                        AlwaysSpinningIndicator(
-                            modifier = Modifier
-                                .size(14.dp)
-                                .testTag("card_fetching_${card.beaconId}"),
-                            strokeWidth = 2.dp,
-                            color = MaterialTheme.colorScheme.primary,
-                        )
-                    }
-                }
+                Text(
+                    card.displayName,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
                 AddressLine(card.addressLine, hasLocation)
                 Text(
                     lastUpdatedLabel(card.lastUpdatedMs),
@@ -431,17 +462,23 @@ private fun TagGlassRow(
                 horizontalArrangement = Arrangement.spacedBy(2.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                RowActionIcon(
-                    icon = Icons.AutoMirrored.Filled.List,
-                    contentDescription = "History",
-                    onClick = onOpenHistory,
-                    tag = "btn_card_history",
-                )
+                // Order: Info -> History -> Route. (User asked for
+                // "i - history - route" because the prior list-list-route
+                // sequence buried Info under History.)
                 RowActionIcon(
                     icon = Icons.Filled.Info,
                     contentDescription = "Details",
                     onClick = onOpenInfo,
                     tag = "btn_card_details",
+                )
+                RowActionIcon(
+                    // Calendar matches the day picker icon used in the
+                    // History screen header, so the affordance reads as
+                    // "open history" instead of generic "list".
+                    icon = Icons.Filled.CalendarMonth,
+                    contentDescription = "History",
+                    onClick = onOpenHistory,
+                    tag = "btn_card_history",
                 )
                 RowActionIcon(
                     icon = Icons.Filled.Directions,
