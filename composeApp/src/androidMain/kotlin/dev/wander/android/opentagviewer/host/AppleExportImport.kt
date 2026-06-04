@@ -2,6 +2,7 @@ package io.github.tieo.taghistory.host
 
 import android.content.Context
 import android.net.Uri
+import android.util.Log
 import io.github.tieo.taghistory.data.importer.AppleExportParser
 import io.github.tieo.taghistory.data.repo.BeaconRepository
 import java.io.ByteArrayOutputStream
@@ -9,6 +10,8 @@ import java.io.InputStream
 import java.util.zip.ZipInputStream
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+
+private const val TAG = "OTV/Import"
 
 /** Upper bound to keep a pathological zip from exploding RAM. */
 private const val MAX_ENTRY_BYTES = 4 * 1024 * 1024 // 4 MiB per file — plists are tiny
@@ -65,17 +68,30 @@ suspend fun runAppleExportImport(
     uri: Uri,
     beaconRepo: BeaconRepository,
 ): String = withContext(Dispatchers.IO) {
+    Log.i(TAG, "runAppleExportImport start uri=$uri")
+    val started = System.currentTimeMillis()
     try {
-        val entries = context.contentResolver.openInputStream(uri)?.use { readZipEntries(it) }
-            ?: return@withContext "Could not open archive"
+        val stream = context.contentResolver.openInputStream(uri)
+        if (stream == null) {
+            Log.w(TAG, "openInputStream returned null for $uri")
+            return@withContext "Could not open archive"
+        }
+        val entries = stream.use { readZipEntries(it) }
+        Log.i(TAG, "zip parsed entries=${entries.size} keys=${entries.keys.take(8)}")
         when (val parsed = AppleExportParser.parse(entries)) {
-            is AppleExportParser.ParseResult.Err -> "Import failed: ${parsed.message}"
+            is AppleExportParser.ParseResult.Err -> {
+                Log.w(TAG, "AppleExportParser err: ${parsed.message}")
+                "Import failed: ${parsed.message}"
+            }
             is AppleExportParser.ParseResult.Ok -> {
+                Log.i(TAG, "AppleExportParser ok imported=${parsed.imported}")
                 beaconRepo.addNewImport(parsed.data)
+                Log.i(TAG, "DB write done in ${System.currentTimeMillis() - started} ms")
                 "Imported ${parsed.imported} beacon${if (parsed.imported == 1) "" else "s"}"
             }
         }
     } catch (t: Throwable) {
+        Log.e(TAG, "runAppleExportImport threw", t)
         "Import failed: ${t.message ?: t::class.simpleName}"
     }
 }

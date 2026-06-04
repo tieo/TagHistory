@@ -2,6 +2,8 @@ package io.github.tieo.taghistory.ui.map
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.ui.draw.clip
+import androidx.compose.material.icons.filled.BluetoothSearching
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -151,18 +153,22 @@ fun MapScreen(
                 )
             }
             state.cards.isNotEmpty() -> {
-                TagCardPager(
+                TagGlassList(
                     cards = state.cards,
                     selectedBeaconId = state.selectedBeaconId,
                     fetchingBeaconIds = state.fetchingBeaconIds,
                     onSelect = viewModel::selectBeacon,
                     onOpenInfo = onOpenDevice,
                     onOpenHistory = onOpenHistory,
-                    onRoute = onRoute,
+                    onOpenNearby = null,
+                    onRoute = { beaconId ->
+                        val card = state.cards.firstOrNull { it.beaconId == beaconId } ?: return@TagGlassList
+                        val lat = card.latitude; val lon = card.longitude
+                        if (lat != null && lon != null) onRoute(lat, lon, card.displayName)
+                    },
                     modifier = Modifier
                         .align(Alignment.BottomCenter)
-                        .fillMaxWidth()
-                        .padding(bottom = 20.dp),
+                        .fillMaxWidth(),
                 )
             }
         }
@@ -232,6 +238,244 @@ private fun EmptyDevicesCard(
                 }
             }
         }
+    }
+}
+
+/**
+ * Vertical glass-style list of every known tag. Replaces the
+ * horizontal one-at-a-time pager so the user sees their whole fleet
+ * without swiping. The container is a translucent rounded surface
+ * anchored at the bottom (~45% of screen height); selecting a row
+ * still drives the map's selected beacon, keeping the rest of the
+ * MapScreen wiring unchanged.
+ */
+@OptIn(ExperimentalTime::class)
+@Composable
+internal fun TagGlassList(
+    cards: List<TagCardUi>,
+    selectedBeaconId: String?,
+    fetchingBeaconIds: Set<String>,
+    onSelect: (String) -> Unit,
+    onOpenInfo: (String) -> Unit,
+    onOpenHistory: (String, String) -> Unit,
+    onOpenNearby: (() -> Unit)?,
+    onRoute: (String) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val configuration = androidx.compose.ui.platform.LocalConfiguration.current
+    val listHeight = configuration.screenHeightDp.dp * 0.45f
+    val containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.78f)
+    val borderColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f)
+    Surface(
+        modifier = modifier.height(listHeight),
+        color = containerColor,
+        shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+        tonalElevation = 6.dp,
+        shadowElevation = 14.dp,
+        border = BorderStroke(1.dp, borderColor),
+    ) {
+        Column(modifier = Modifier.fillMaxSize()) {
+            Box(
+                modifier = Modifier
+                    .padding(top = 10.dp)
+                    .align(Alignment.CenterHorizontally)
+                    .width(36.dp)
+                    .height(4.dp)
+                    .clip(RoundedCornerShape(2.dp))
+                    .background(MaterialTheme.colorScheme.outline.copy(alpha = 0.4f)),
+            )
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp, vertical = 10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    "Tags",
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    letterSpacing = 1.sp,
+                )
+                Spacer(Modifier.weight(1f))
+                Text(
+                    "${cards.size}",
+                    fontSize = 13.sp,
+                    color = MaterialTheme.colorScheme.outline,
+                )
+            }
+            androidx.compose.foundation.lazy.LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = androidx.compose.foundation.layout.PaddingValues(
+                    start = 12.dp,
+                    end = 12.dp,
+                    bottom = 16.dp,
+                ),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                items(cards.size) { idx ->
+                    val card = cards[idx]
+                    TagGlassRow(
+                        card = card,
+                        isSelected = card.beaconId == selectedBeaconId,
+                        isFetching = card.beaconId in fetchingBeaconIds,
+                        onSelect = { onSelect(card.beaconId) },
+                        onOpenInfo = { onOpenInfo(card.beaconId) },
+                        onOpenHistory = { onOpenHistory(card.beaconId, card.displayName) },
+                        onOpenNearby = onOpenNearby,
+                        onRoute = { onRoute(card.beaconId) },
+                    )
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalTime::class)
+@Composable
+private fun TagGlassRow(
+    card: TagCardUi,
+    isSelected: Boolean,
+    isFetching: Boolean,
+    onSelect: () -> Unit,
+    onOpenInfo: () -> Unit,
+    onOpenHistory: () -> Unit,
+    onOpenNearby: (() -> Unit)?,
+    onRoute: () -> Unit,
+) {
+    val hasLocation = card.latitude != null && card.longitude != null
+    val rowColor = if (isSelected) {
+        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.55f)
+    } else {
+        MaterialTheme.colorScheme.surface.copy(alpha = 0.55f)
+    }
+    val rowBorder = if (isSelected) {
+        BorderStroke(1.5.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.7f))
+    } else {
+        BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+    }
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(20.dp))
+            .clickable { onSelect() }
+            .testTag("tag_row_${card.beaconId}"),
+        color = rowColor,
+        shape = RoundedCornerShape(20.dp),
+        tonalElevation = if (isSelected) 4.dp else 0.dp,
+        border = rowBorder,
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 14.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            // Glyph chip
+            Box(
+                modifier = Modifier
+                    .size(44.dp)
+                    .clip(CircleShape)
+                    .background(
+                        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
+                    ),
+                contentAlignment = Alignment.Center,
+            ) {
+                val glyph = card.emoji ?: card.displayName.firstOrNull()?.uppercase() ?: "●"
+                Text(glyph, fontSize = 22.sp)
+            }
+            Spacer(Modifier.width(14.dp))
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(2.dp),
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        card.displayName,
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false),
+                    )
+                    if (isFetching) {
+                        Spacer(Modifier.width(8.dp))
+                        AlwaysSpinningIndicator(
+                            modifier = Modifier
+                                .size(14.dp)
+                                .testTag("card_fetching_${card.beaconId}"),
+                            strokeWidth = 2.dp,
+                            color = MaterialTheme.colorScheme.primary,
+                        )
+                    }
+                }
+                AddressLine(card.addressLine, hasLocation)
+                Text(
+                    lastUpdatedLabel(card.lastUpdatedMs),
+                    fontSize = 11.sp,
+                    color = MaterialTheme.colorScheme.outline,
+                )
+            }
+            Spacer(Modifier.width(10.dp))
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(2.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                RowActionIcon(
+                    icon = Icons.AutoMirrored.Filled.List,
+                    contentDescription = "History",
+                    onClick = onOpenHistory,
+                    tag = "btn_card_history",
+                )
+                RowActionIcon(
+                    icon = Icons.Filled.Info,
+                    contentDescription = "Details",
+                    onClick = onOpenInfo,
+                    tag = "btn_card_details",
+                )
+                RowActionIcon(
+                    icon = Icons.Filled.Directions,
+                    contentDescription = "Route",
+                    onClick = onRoute,
+                    enabled = hasLocation,
+                )
+                if (onOpenNearby != null) {
+                    RowActionIcon(
+                        icon = Icons.Filled.BluetoothSearching,
+                        contentDescription = "Nearby",
+                        onClick = onOpenNearby,
+                        tag = "btn_card_nearby",
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun RowActionIcon(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    contentDescription: String,
+    onClick: () -> Unit,
+    enabled: Boolean = true,
+    tag: String? = null,
+) {
+    val tint = if (enabled) MaterialTheme.colorScheme.onSurface
+               else MaterialTheme.colorScheme.outline.copy(alpha = 0.4f)
+    Box(
+        modifier = Modifier
+            .size(36.dp)
+            .clip(CircleShape)
+            .clickable(enabled = enabled) { onClick() }
+            .then(if (tag != null) Modifier.testTag(tag) else Modifier),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = contentDescription,
+            tint = tint,
+            modifier = Modifier.size(20.dp),
+        )
     }
 }
 

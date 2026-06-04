@@ -218,8 +218,16 @@ class AndroidAppHost private constructor(
      * cancel) from whatever file-picker flow it has set up.
      */
     fun createImportCallback(pickZip: suspend () -> android.net.Uri?): suspend () -> String? = label@{
-        val uri = pickZip() ?: return@label null
-        runAppleExportImport(context, uri, beaconRepo)
+        Log.i(TAG, "import callback: calling pickZip()")
+        val uri = pickZip()
+        if (uri == null) {
+            Log.i(TAG, "import callback: pickZip returned null (user cancelled)")
+            return@label null
+        }
+        Log.i(TAG, "import callback: got uri=$uri, running import")
+        val result = runAppleExportImport(context, uri, beaconRepo)
+        Log.i(TAG, "import callback: result='$result'")
+        result
     }
 
     /**

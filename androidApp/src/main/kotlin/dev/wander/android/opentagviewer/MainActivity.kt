@@ -3,12 +3,15 @@ package io.github.tieo.taghistory
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import io.github.tieo.taghistory.host.AndroidAppHost
 import kotlinx.coroutines.CompletableDeferred
+
+private const val TAG = "OTV/MainAct"
 
 class MainActivity : ComponentActivity() {
 
@@ -22,6 +25,7 @@ class MainActivity : ComponentActivity() {
 
     private val pickZipLauncher =
         registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
+            Log.i(TAG, "pickZipLauncher result uri=$uri")
             pendingZipPick?.complete(uri)
             pendingZipPick = null
         }
@@ -42,6 +46,7 @@ class MainActivity : ComponentActivity() {
     }
 
     private suspend fun launchZipPicker(): Uri? {
+        Log.i(TAG, "launchZipPicker: launching GetContent('application/zip')")
         val deferred = CompletableDeferred<Uri?>()
         pendingZipPick = deferred
         pickZipLauncher.launch("application/zip")
