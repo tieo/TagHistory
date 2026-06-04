@@ -21,5 +21,12 @@ expect fun PlatformMapView(
     basemap: MapBasemap,
     onMarkerClick: (String) -> Unit,
     onCameraIdle: (UserMapCameraPosition) -> Unit,
+    /**
+     * Pixels at the bottom of the view occluded by the host's UI
+     * (e.g. the TagGlassList). MapLibre uses this as camera padding so
+     * "center on selected marker" frames the marker inside the still-
+     * visible top portion instead of behind the list.
+     */
+    bottomInsetPx: Int = 0,
     modifier: Modifier = Modifier,
 )

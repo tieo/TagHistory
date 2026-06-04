@@ -35,8 +35,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -63,6 +61,19 @@ import org.maplibre.android.geometry.LatLng
 import org.maplibre.android.maps.MapLibreMap
 import org.maplibre.android.maps.MapView
 import org.maplibre.android.maps.Style
+import org.maplibre.android.style.layers.FillLayer
+import org.maplibre.android.style.layers.LineLayer
+import org.maplibre.android.style.layers.PropertyFactory
+import org.maplibre.android.style.sources.GeoJsonSource
+import org.maplibre.geojson.Feature
+import org.maplibre.geojson.FeatureCollection
+import org.maplibre.geojson.Point
+import org.maplibre.geojson.Polygon
+import kotlin.math.PI
+import kotlin.math.asin
+import kotlin.math.atan2
+import kotlin.math.cos
+import kotlin.math.sin
 
 private const val DEFAULT_ZOOM = 16.0
 private const val MEANINGFUL_ZOOM_FLOOR = 6.0
@@ -109,6 +120,7 @@ actual fun PlatformMapView(
     basemap: MapBasemap,
     onMarkerClick: (String) -> Unit,
     onCameraIdle: (UserMapCameraPosition) -> Unit,
+    bottomInsetPx: Int,
     modifier: Modifier,
 ) {
     val context = LocalContext.current
@@ -146,13 +158,36 @@ actual fun PlatformMapView(
         }
     }
 
-    // Theme / basemap cycle — reload style; no marker re-apply needed since
-    // markers live in Compose, not the style.
+    // Camera-padding follow: when the glass tag list height changes (e.g.
+    // appears after the first import), update map padding so subsequent
+    // newLatLngZoom calls center within the visible region above it.
+    LaunchedEffect(bottomInsetPx) {
+        mapView.getMapAsync { map ->
+            map.setPadding(0, 0, 0, bottomInsetPx)
+        }
+    }
+
+    // Accuracy circles live in the map style now, so they tilt + rotate
+    // with the camera (the Canvas overlay version stayed pixel-flat and
+    // sheared visibly during 3D rotation). Re-emit the source data
+    // whenever markers or selection change.
+    LaunchedEffect(markers, selectedBeaconId) {
+        mapView.getMapAsync { map ->
+            val style = map.style ?: return@getMapAsync
+            applyAccuracyData(style, markers, selectedBeaconId)
+        }
+    }
+
+    // Theme / basemap cycle — reload style; re-install accuracy layers
+    // since setStyle wipes existing sources/layers.
     LaunchedEffect(basemap) {
         if (lastAppliedBasemap[0] == basemap) return@LaunchedEffect
         lastAppliedBasemap[0] = basemap
         mapView.getMapAsync { map ->
-            map.setStyle(Style.Builder().fromBasemap(basemap, context))
+            map.setStyle(Style.Builder().fromBasemap(basemap, context)) { style ->
+                installAccuracyLayers(style)
+                applyAccuracyData(style, markers, selectedBeaconId)
+            }
         }
     }
 
@@ -173,7 +208,14 @@ actual fun PlatformMapView(
                             .zoom(it.zoom.toDouble())
                             .build()
                     }
-                    map.setStyle(Style.Builder().fromBasemap(basemap, context))
+                    map.setStyle(Style.Builder().fromBasemap(basemap, context)) { style ->
+                        installAccuracyLayers(style)
+                    }
+                    // Camera padding: bottomInsetPx is the height of the
+                    // glass tag list that overlays the map. With it set,
+                    // newLatLngZoom centers the target inside the visible
+                    // top portion instead of behind the list.
+                    map.setPadding(0, 0, 0, bottomInsetPx)
                     map.addOnCameraMoveListener {
                         cameraTick++
                         bearing = map.cameraPosition.bearing.toFloat()
@@ -208,25 +250,6 @@ actual fun PlatformMapView(
             val density = LocalDensity.current.density
             val unselected = markers.filter { it.beaconId != selectedBeaconId }
             val selected = markers.firstOrNull { it.beaconId == selectedBeaconId }
-
-            // Accuracy circles layer — one Canvas covering the full overlay.
-            Canvas(modifier = Modifier.fillMaxSize()) {
-                for (m in markers) {
-                    val radius = accuracyToScreenPx(map, m.latitude, m.longitude, m.horizontalAccuracy)
-                    if (radius < 2f) continue
-                    val screen = map.projection.toScreenLocation(LatLng(m.latitude, m.longitude))
-                    val isSelected = m.beaconId == selectedBeaconId
-                    val color = if (isSelected) Color(0xFFE53935) else Color(0xFF8B2A2A)
-                    val center = Offset(screen.x, screen.y)
-                    drawCircle(color.copy(alpha = 0.10f), radius = radius, center = center)
-                    drawCircle(
-                        color.copy(alpha = 0.30f),
-                        radius = radius,
-                        center = center,
-                        style = Stroke(1.5f * density),
-                    )
-                }
-            }
 
             for (m in unselected) {
                 val screen = map.projection.toScreenLocation(LatLng(m.latitude, m.longitude))
@@ -424,5 +447,84 @@ private fun NorthLockButton(
             modifier = Modifier.graphicsLayer { rotationZ = needleAngle },
         )
     }
+}
+
+private const val ACCURACY_SOURCE = "map-accuracy-src"
+private const val ACCURACY_FILL_LAYER = "map-accuracy-fill"
+private const val ACCURACY_STROKE_LAYER = "map-accuracy-stroke"
+
+/** Install (idempotent) the source + fill/stroke layers for accuracy circles. */
+private fun installAccuracyLayers(style: Style) {
+    if (style.getSource(ACCURACY_SOURCE) == null) {
+        style.addSourceAt(0, GeoJsonSource(ACCURACY_SOURCE, FeatureCollection.fromFeatures(emptyList())))
+    }
+    if (style.getLayer(ACCURACY_FILL_LAYER) == null) {
+        style.addLayer(
+            FillLayer(ACCURACY_FILL_LAYER, ACCURACY_SOURCE).withProperties(
+                PropertyFactory.fillColor("#8B2A2A"),
+                PropertyFactory.fillOpacity(0.10f),
+            ),
+        )
+    }
+    if (style.getLayer(ACCURACY_STROKE_LAYER) == null) {
+        style.addLayer(
+            LineLayer(ACCURACY_STROKE_LAYER, ACCURACY_SOURCE).withProperties(
+                PropertyFactory.lineColor("#8B2A2A"),
+                PropertyFactory.lineOpacity(0.30f),
+                PropertyFactory.lineWidth(1.5f),
+            ),
+        )
+    }
+}
+
+/** Workaround helper: MapLibre's Style.addSource has no index overload. */
+private fun Style.addSourceAt(@Suppress("UNUSED_PARAMETER") index: Int, src: GeoJsonSource) {
+    addSource(src)
+}
+
+private fun applyAccuracyData(
+    style: Style,
+    markers: List<BeaconMarkerUi>,
+    selectedBeaconId: String?,
+) {
+    val src = style.getSourceAs<GeoJsonSource>(ACCURACY_SOURCE) ?: return
+    val features = markers.mapNotNull { m ->
+        val r = m.horizontalAccuracy.toDouble()
+        if (r < 5.0) return@mapNotNull null
+        val ring = circleRing(m.latitude, m.longitude, r, segments = 48)
+        Feature.fromGeometry(Polygon.fromLngLats(listOf(ring)))
+    }
+    src.setGeoJson(FeatureCollection.fromFeatures(features))
+    // selectedBeaconId currently unused for tint; chip is the primary
+    // selection indicator. Keep parameter for future selected-feature
+    // expression.
+    @Suppress("UNUSED_EXPRESSION") selectedBeaconId
+}
+
+/** WGS-84 circle approximation as a closed polygon ring. */
+private fun circleRing(
+    centerLat: Double,
+    centerLon: Double,
+    radiusM: Double,
+    segments: Int,
+): List<Point> {
+    val earthR = 6_371_000.0
+    val lat0 = centerLat * PI / 180.0
+    val lon0 = centerLon * PI / 180.0
+    val angularDist = radiusM / earthR
+    val out = ArrayList<Point>(segments + 1)
+    for (i in 0..segments) {
+        val bearing = 2.0 * PI * i / segments
+        val newLat = asin(
+            sin(lat0) * cos(angularDist) +
+                cos(lat0) * sin(angularDist) * cos(bearing),
+        )
+        val newLon = lon0 + atan2(
+            sin(bearing) * sin(angularDist) * cos(lat0),
+            cos(angularDist) - sin(lat0) * sin(newLat),
+        )
+        out += Point.fromLngLat(newLon * 180.0 / PI, newLat * 180.0 / PI)
+    }
+    return out
 }
 

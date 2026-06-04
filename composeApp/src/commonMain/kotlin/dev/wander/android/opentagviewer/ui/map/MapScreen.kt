@@ -104,6 +104,15 @@ fun MapScreen(
     val themeDefault = defaultBasemap()
     var basemap by remember(themeDefault) { mutableStateOf(themeDefault) }
     val haptics = LocalHapticFeedback.current
+    // Bottom inset = height of the glass tag list overlay so the map
+    // camera centers above it instead of behind it. Matches the
+    // TagGlassList height calculation (screen * 0.45f). Empty cards
+    // case skips the list entirely so inset = 0.
+    val configuration = androidx.compose.ui.platform.LocalConfiguration.current
+    val density = androidx.compose.ui.platform.LocalDensity.current
+    val listHeightDp = configuration.screenHeightDp.dp * 0.45f
+    val bottomInsetPx = if (state.cards.isEmpty()) 0
+    else with(density) { listHeightDp.toPx().toInt() }
 
     Box(modifier = modifier.fillMaxSize()) {
         PlatformMapView(
@@ -113,6 +122,7 @@ fun MapScreen(
             basemap = basemap,
             onMarkerClick = viewModel::selectBeacon,
             onCameraIdle = viewModel::saveCamera,
+            bottomInsetPx = bottomInsetPx,
             modifier = Modifier.fillMaxSize(),
         )
 
@@ -464,7 +474,7 @@ private fun RowActionIcon(
                else MaterialTheme.colorScheme.outline.copy(alpha = 0.4f)
     Box(
         modifier = Modifier
-            .size(36.dp)
+            .size(42.dp)
             .clip(CircleShape)
             .clickable(enabled = enabled) { onClick() }
             .then(if (tag != null) Modifier.testTag(tag) else Modifier),
@@ -474,7 +484,7 @@ private fun RowActionIcon(
             imageVector = icon,
             contentDescription = contentDescription,
             tint = tint,
-            modifier = Modifier.size(20.dp),
+            modifier = Modifier.size(24.dp),
         )
     }
 }

@@ -22,6 +22,7 @@ actual fun PlatformMapView(
     basemap: MapBasemap,
     onMarkerClick: (String) -> Unit,
     onCameraIdle: (UserMapCameraPosition) -> Unit,
+    bottomInsetPx: Int,
     modifier: Modifier,
 ) {
     Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
