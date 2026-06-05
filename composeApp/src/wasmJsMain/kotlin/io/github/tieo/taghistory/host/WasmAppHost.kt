@@ -39,7 +39,16 @@ class WasmAppHost(
     private val db: TagHistoryDatabase,
     private val settingsFactory: SettingsFactory,
     private val crypto: SecureBlobStore,
+    /**
+     * Endpoint overrides. Default values point straight at the upstream
+     * hosts (CORS-blocked in browsers); the proxy in `scripts/web-proxy.ts`
+     * exposes the same endpoints under `/anisette`, `/gsa`, `/mobileme`
+     * with permissive headers — pass those URLs here in deployments
+     * served behind that proxy.
+     */
     private val anisetteUrl: String = "https://ani.sidestore.io",
+    private val gsaEndpoint: String? = null,
+    private val mobileMeEndpoint: String? = null,
 ) {
     private val rawHttpClient = createPlatformHttpClient()
     private val httpTransport: HttpTransport = defaultPlatformHttpTransport()
@@ -63,12 +72,22 @@ class WasmAppHost(
 
     private fun createLoginViewModel(onLoggedIn: suspend () -> Unit): AppleLoginViewModel {
         val account = AppleAccount()
+        val gsa = if (gsaEndpoint != null) {
+            GsaClient(httpTransport, anisette, endpoint = gsaEndpoint)
+        } else {
+            GsaClient(httpTransport, anisette)
+        }
+        val mobileMe = if (mobileMeEndpoint != null) {
+            MobileMeClient(httpTransport, anisette, endpoint = mobileMeEndpoint)
+        } else {
+            MobileMeClient(httpTransport, anisette)
+        }
         val service = AppleLoginService(
             account = account,
             http = httpTransport,
             anisette = anisette,
-            gsa = GsaClient(httpTransport, anisette),
-            mobileMe = MobileMeClient(httpTransport, anisette),
+            gsa = gsa,
+            mobileMe = mobileMe,
         )
         return AppleLoginViewModel(
             startLogin = { email, password -> service.login(email, password) },
