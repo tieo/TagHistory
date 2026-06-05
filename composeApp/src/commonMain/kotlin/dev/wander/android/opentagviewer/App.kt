@@ -365,7 +365,10 @@ fun App(viewModelFactory: () -> AppleLoginViewModel = ::placeholderViewModel) {
 private fun placeholderViewModel(): AppleLoginViewModel = AppleLoginViewModel(
     startLogin = { _, _ ->
         kotlinx.coroutines.delay(400)
-        throw IllegalStateException("Platform host did not inject an AppleLoginService factory")
+        throw IllegalStateException(
+            "Web preview only — sign-in needs a platform crypto stack " +
+                "(P-224 + AES) the wasm target does not ship yet."
+        )
     },
     onLoggedIn = {},
 )
