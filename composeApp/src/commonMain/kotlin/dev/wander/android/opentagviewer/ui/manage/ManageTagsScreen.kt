@@ -31,7 +31,6 @@ import androidx.compose.material.icons.filled.FileDownload
 import androidx.compose.material.icons.filled.FileUpload
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LocalTextStyle
@@ -284,10 +283,22 @@ private fun TagManagementCard(
         shadowElevation = 1.dp,
         border = border,
     ) {
+        // Local editor drafts live here so the avatar in edit mode can
+        // ALSO double as the emoji input (no second emoji surface).
+        var emojiDraft by remember(isEditing, card.beaconId) {
+            mutableStateOf(card.emoji.orEmpty())
+        }
+        var nameDraft by remember(isEditing, card.beaconId) {
+            mutableStateOf(card.displayName)
+        }
         Row(
             modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
+            // The avatar IS the emoji editor when isEditing. View-mode it
+            // renders the glyph statically; edit-mode swaps to a
+            // BasicTextField in the same 48 dp circle so there's exactly
+            // one place the emoji shows up.
             Box(
                 modifier = Modifier
                     .size(48.dp)
@@ -295,23 +306,45 @@ private fun TagManagementCard(
                     .background(
                         MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.85f),
                     )
-                    .clickable { if (!isEditing) onBeginEdit() },
+                    .clickable(enabled = !isEditing) { onBeginEdit() },
                 contentAlignment = Alignment.Center,
             ) {
-                val glyph = card.emoji ?: card.displayName.firstOrNull()?.uppercase() ?: "●"
-                Text(glyph, fontSize = 24.sp)
+                if (isEditing) {
+                    BasicTextField(
+                        value = emojiDraft,
+                        onValueChange = { emojiDraft = it.take(4) },
+                        singleLine = true,
+                        textStyle = TextStyle(
+                            fontSize = 24.sp,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                        ),
+                        cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+                        decorationBox = { inner ->
+                            if (emojiDraft.isEmpty()) {
+                                Text(
+                                    "🏷",
+                                    fontSize = 22.sp,
+                                    color = MaterialTheme.colorScheme.outline,
+                                )
+                            }
+                            inner()
+                        },
+                    )
+                } else {
+                    val glyph = card.emoji ?: card.displayName.firstOrNull()?.uppercase() ?: "●"
+                    Text(glyph, fontSize = 24.sp)
+                }
             }
             Spacer(Modifier.width(12.dp))
-            // Edit mode REPLACES the title/subtitle stack — no duplicate
-            // name/emoji rendering. Closing the editor restores the
-            // labels in place.
+            // Title or inline name editor. Subtitle (address) only when
+            // not editing — keeps the in-place editor compact.
             if (isEditing) {
-                Box(modifier = Modifier.weight(1f)) {
-                    EditPanel(
-                        initialName = card.displayName,
-                        initialEmoji = card.emoji.orEmpty(),
-                        onCancel = onEndEdit,
-                        onSave = onSave,
+                Column(modifier = Modifier.weight(1f)) {
+                    BorderlessTextField(
+                        value = nameDraft,
+                        onChange = { nameDraft = it },
+                        placeholder = "Tag name",
                     )
                 }
             } else {
@@ -334,16 +367,37 @@ private fun TagManagementCard(
                     )
                 }
             }
-            if (!isEditing) {
-                Spacer(Modifier.width(8.dp))
-                // All three actions in one row, same size, same weight —
-                // no "primary chip + secondary icons" hierarchy that
-                // made the previous layout look unbalanced.
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(2.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    SelectionDot(selected)
+            Spacer(Modifier.width(8.dp))
+            // Action column: same three slots in both modes. In edit
+            // mode the edit pencil becomes a Save check (same position,
+            // different glyph) so the user's finger doesn't have to
+            // hunt.
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(2.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                SelectionDot(selected)
+                if (isEditing) {
+                    ActionIconButton(
+                        icon = Icons.Filled.Check,
+                        contentDescription = "Save",
+                        tint = MaterialTheme.colorScheme.primary,
+                        onClick = {
+                            val n = nameDraft.trim()
+                            if (n.isNotEmpty()) {
+                                onSave(n, emojiDraft.trim().ifEmpty { null })
+                            } else {
+                                onEndEdit()
+                            }
+                        },
+                    )
+                    ActionIconButton(
+                        icon = Icons.Filled.Close,
+                        contentDescription = "Cancel",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        onClick = onEndEdit,
+                    )
+                } else {
                     ActionIconButton(
                         icon = Icons.Filled.Edit,
                         contentDescription = "Edit",
@@ -415,78 +469,6 @@ private fun SelectionDot(selected: Boolean) {
     }
 }
 
-/**
- * In-place editor. Inline so the user sees the row context (selection
- * state, beacon id) while editing — no modal cliff.
- */
-@Composable
-private fun EditPanel(
-    initialName: String,
-    initialEmoji: String,
-    onCancel: () -> Unit,
-    onSave: (name: String, emoji: String?) -> Unit,
-) {
-    var name by remember(initialName) { mutableStateOf(initialName) }
-    var emoji by remember(initialEmoji) { mutableStateOf(initialEmoji) }
-    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            EmojiCell(emoji = emoji, onChange = { emoji = it.take(4) })
-            BorderlessTextField(
-                value = name,
-                onChange = { name = it },
-                placeholder = "Tag name",
-                modifier = Modifier.weight(1f),
-            )
-        }
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Spacer(Modifier.weight(1f))
-            TextButton(onClick = onCancel) { Text("Cancel") }
-            FilledTonalButton(onClick = {
-                val cleaned = name.trim()
-                if (cleaned.isNotEmpty()) {
-                    onSave(cleaned, emoji.trim().ifEmpty { null })
-                }
-            }) { Text("Save") }
-        }
-    }
-}
-
-@Composable
-private fun EmojiCell(emoji: String, onChange: (String) -> Unit) {
-    Box(
-        modifier = Modifier
-            .size(54.dp)
-            .clip(CircleShape)
-            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.85f)),
-        contentAlignment = Alignment.Center,
-    ) {
-        BasicTextField(
-            value = emoji,
-            onValueChange = onChange,
-            singleLine = true,
-            textStyle = TextStyle(
-                fontSize = 26.sp,
-                color = MaterialTheme.colorScheme.onSurface,
-                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-            ),
-            cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 6.dp),
-            decorationBox = { inner ->
-                if (emoji.isEmpty()) {
-                    Text(
-                        "🏷",
-                        fontSize = 22.sp,
-                        color = MaterialTheme.colorScheme.outline,
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                }
-                inner()
-            },
-        )
-    }
-}
 
 @Composable
 private fun BorderlessTextField(
