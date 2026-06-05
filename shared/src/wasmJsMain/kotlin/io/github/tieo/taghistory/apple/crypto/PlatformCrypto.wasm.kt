@@ -67,4 +67,15 @@ actual fun aesGcmDecrypt(
     tagLenBits: Int,
 ): ByteArray = NI()
 
-actual fun secureRng(): Rng = Rng { _ -> NI() }
+// Browser's crypto.getRandomValues is synchronous, so it fits the
+// existing Rng contract without bouncing through a coroutine. Returns
+// the bytes as a string of code points (one byte per char, 0..255)
+// because Kotlin/Wasm's JS interop can't hand a Uint8Array back to
+// Kotlin directly — string round-trips cleanly through interop.
+private fun randomBytesString(len: Int): String =
+    js("(() => { var a = new Uint8Array(len); crypto.getRandomValues(a); var s = ''; for (var i = 0; i < a.length; i++) s += String.fromCharCode(a[i]); return s; })()")
+
+actual fun secureRng(): Rng = Rng { out ->
+    val s = randomBytesString(out.size)
+    for (i in out.indices) out[i] = s[i].code.toByte()
+}

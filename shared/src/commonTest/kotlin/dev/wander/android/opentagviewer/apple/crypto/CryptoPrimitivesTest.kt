@@ -39,6 +39,17 @@ class CryptoPrimitivesTest {
     }
 
     @Test
+    fun `secureRng fills the buffer with non-trivial bytes`() {
+        // Coarse statistical sanity — 256 random bytes should hit at
+        // least 100 distinct values. Catches a stuck-at-zero buffer
+        // or a length-mismatch bug in the wasm getRandomValues bridge.
+        val buf = ByteArray(256)
+        secureRng().nextBytes(buf)
+        val distinct = buf.map { it.toInt() and 0xFF }.toSet().size
+        kotlin.test.assertTrue(distinct > 100, "expected >100 distinct values, got $distinct")
+    }
+
+    @Test
     fun `pbkdf2HmacSha256 RFC 7914 test vector`() {
         // RFC 7914 §11 — password="passwd", salt="salt", c=1, dkLen=64.
         val expected = "55ac046e56e3089fec1691c22544b605" +
