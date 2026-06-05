@@ -44,4 +44,3 @@ local-maven/
 memory/
 composeApp/build/dist/
 .kotlin/
-kotlin-js-store/
