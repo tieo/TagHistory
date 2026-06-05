@@ -22,7 +22,9 @@ private const val DAY_MS = 24L * 60L * 60L * 1_000L
  */
 fun seedTestData(context: Context) {
     val app = context.applicationContext
-    val db = TagHistoryDatabase(DatabaseDriverFactory(app).create())
+    val db = TagHistoryDatabase(
+        kotlinx.coroutines.runBlocking { DatabaseDriverFactory(app).create() }
+    )
 
     // Refuse to overwrite a non-empty real DB with the seed beacons.
     // The seed is meant for fresh / empty installs only — running it

@@ -10,7 +10,7 @@ import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver
 actual class DatabaseDriverFactory(
     private val jdbcUrl: String = JdbcSqliteDriver.IN_MEMORY,
 ) {
-    actual fun create(): SqlDriver {
+    actual suspend fun create(): SqlDriver {
         val driver = JdbcSqliteDriver(jdbcUrl)
         TagHistoryDatabase.Schema.create(driver)
         return driver

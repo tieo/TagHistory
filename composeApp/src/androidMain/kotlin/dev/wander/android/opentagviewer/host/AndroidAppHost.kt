@@ -459,7 +459,12 @@ class AndroidAppHost private constructor(
             val app = context.applicationContext
             val http = defaultPlatformHttpTransport()
             val anisette = AnisetteClient(NativeAnisetteProvider(app))
-            val db = TagHistoryDatabase(DatabaseDriverFactory(app).create())
+            // AndroidSqliteDriver's constructor is sync; the suspend
+            // contract is for wasm's async sqljs path. Block here at
+            // app-init — single-shot, off the UI thread already.
+            val db = TagHistoryDatabase(
+                kotlinx.coroutines.runBlocking { DatabaseDriverFactory(app).create() }
+            )
             val settings = SettingsFactory(app)
             val crypto = SecureBlobStore()
             return AndroidAppHost(app, http, anisette, db, settings, crypto)

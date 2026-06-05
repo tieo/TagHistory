@@ -12,9 +12,9 @@ import app.cash.sqldelight.db.SqlDriver
  * — callers just wrap it with [TagHistoryDatabase] and go.
  */
 expect class DatabaseDriverFactory {
-    fun create(): SqlDriver
+    suspend fun create(): SqlDriver
 }
 
 /** Build a ready-to-use database from the factory. */
-fun createDatabase(factory: DatabaseDriverFactory): TagHistoryDatabase =
+suspend fun createDatabase(factory: DatabaseDriverFactory): TagHistoryDatabase =
     TagHistoryDatabase(factory.create())

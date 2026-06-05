@@ -16,9 +16,10 @@ import app.cash.sqldelight.db.SqlDriver
  * message than the previous "not wired yet" stub.
  */
 actual class DatabaseDriverFactory {
-    actual fun create(): SqlDriver = throw NotImplementedError(
-        "Web DB driver not connected — SqlDelight's wasm path is async-only " +
-            "and the commonMain DatabaseDriverFactory.create() is sync. " +
-            "Bridging needs an expect-class migration to suspend."
+    actual suspend fun create(): SqlDriver = throw NotImplementedError(
+        "Web DB driver not connected — sqljs worker glue not added yet. " +
+            "The expect class is suspend so this can be wired without " +
+            "further commonMain churn; add web-worker-driver + sql.js npm " +
+            "deps and return WebWorkerDriver(...) here."
     )
 }

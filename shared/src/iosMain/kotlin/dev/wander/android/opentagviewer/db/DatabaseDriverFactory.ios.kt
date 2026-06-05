@@ -4,7 +4,7 @@ import app.cash.sqldelight.db.SqlDriver
 import app.cash.sqldelight.driver.native.NativeSqliteDriver
 
 actual class DatabaseDriverFactory {
-    actual fun create(): SqlDriver =
+    actual suspend fun create(): SqlDriver =
         NativeSqliteDriver(
             schema = TagHistoryDatabase.Schema,
             name = DATABASE_NAME,
