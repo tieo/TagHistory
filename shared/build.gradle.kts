@@ -165,6 +165,11 @@ kotlin {
                 implementation(libs.kotlincrypto.hmac.sha2)
                 implementation(libs.kotlinx.crypto.aes)
                 implementation(libs.ionspin.bignum)
+                // SqlDelight web-worker-driver is async-only and the
+                // commonMain DatabaseDriverFactory.create() expect is
+                // sync — bridging requires migrating commonMain to
+                // suspend. Driver dep is intentionally NOT added until
+                // that refactor lands.
             }
         }
         val desktopTest by getting {
