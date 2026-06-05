@@ -158,11 +158,11 @@ kotlin {
         }
         val wasmJsMain by getting {
             dependencies {
-                // Web actuals are throwing stubs for everything that
-                // needs a native crypto/DB driver. Settings backs onto
-                // the browser's localStorage via multiplatform-settings'
-                // wasm artifact so user-settings at least survive a
-                // reload.
+                // Pure-Kotlin SHA-256 + HMAC-SHA-256 so the report
+                // hasher and any HMAC call sites work on web. AES +
+                // BigInt + P-224 are still throwing stubs.
+                implementation(libs.kotlincrypto.sha2)
+                implementation(libs.kotlincrypto.hmac.sha2)
             }
         }
         val desktopTest by getting {

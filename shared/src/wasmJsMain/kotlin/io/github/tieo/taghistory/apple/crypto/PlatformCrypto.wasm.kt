@@ -19,14 +19,46 @@ actual fun bigIntFromBytes(bytes: ByteArray): BigInt = NI()
 actual fun bigIntFromString(value: String, radix: Int): BigInt = NI()
 actual fun bigIntOf(value: Long): BigInt = NI()
 
-actual fun sha256(data: ByteArray): ByteArray = NI()
-actual fun hmacSha256(key: ByteArray, data: ByteArray): ByteArray = NI()
+actual fun sha256(data: ByteArray): ByteArray =
+    org.kotlincrypto.hash.sha2.SHA256().digest(data)
+
+actual fun hmacSha256(key: ByteArray, data: ByteArray): ByteArray =
+    org.kotlincrypto.macs.hmac.sha2.HmacSHA256(key).doFinal(data)
+
+/**
+ * RFC-2898 PBKDF2-HMAC-SHA-256. Same byte-level contract as the JVM
+ * actual — built directly on top of the KotlinCrypto HMAC primitive
+ * so we don't need a separate KDF dep that lacks a wasmJs artifact.
+ */
 actual fun pbkdf2HmacSha256(
     password: ByteArray,
     salt: ByteArray,
     iterations: Int,
     dkLenBytes: Int,
-): ByteArray = NI()
+): ByteArray {
+    val mac = org.kotlincrypto.macs.hmac.sha2.HmacSHA256(password)
+    val hLen = 32 // SHA-256 output size
+    val blocks = (dkLenBytes + hLen - 1) / hLen
+    val out = ByteArray(dkLenBytes)
+    for (i in 1..blocks) {
+        val intBlock = byteArrayOf(
+            (i ushr 24).toByte(),
+            (i ushr 16).toByte(),
+            (i ushr 8).toByte(),
+            i.toByte(),
+        )
+        var u = mac.doFinal(salt + intBlock)
+        val t = u.copyOf()
+        for (round in 2..iterations) {
+            u = mac.doFinal(u)
+            for (k in t.indices) t[k] = (t[k].toInt() xor u[k].toInt()).toByte()
+        }
+        val offset = (i - 1) * hLen
+        val len = minOf(hLen, dkLenBytes - offset)
+        t.copyInto(out, offset, 0, len)
+    }
+    return out
+}
 actual fun aesCbcDecryptPkcs7(key: ByteArray, iv: ByteArray, ciphertext: ByteArray): ByteArray = NI()
 actual fun aesGcmDecrypt(
     key: ByteArray,

@@ -87,6 +87,12 @@ koin-core = { group = "io.insert-koin", name = "koin-core", version.ref = "koin"
 cryptography-kotlin-core = { group = "dev.whyoleg.cryptography", name = "cryptography-core", version.ref = "cryptographyKotlin" }
 cryptography-kotlin-provider-jdk = { group = "dev.whyoleg.cryptography", name = "cryptography-provider-jdk", version.ref = "cryptographyKotlin" }
 
+# KotlinCrypto — pure-Kotlin SHA-256 + HMAC-SHA-256 used by the wasmJs
+# crypto actuals. Browser crypto.subtle is async-only; sticking with a
+# pure-Kotlin port keeps the existing sync expect signatures intact.
+kotlincrypto-sha2 = { group = "org.kotlincrypto.hash", name = "sha2", version = "0.8.0" }
+kotlincrypto-hmac-sha2 = { group = "org.kotlincrypto.macs", name = "hmac-sha2", version = "0.8.0" }
+
 # multiplatform-settings — expect/actual preferences; datastore binding not cached so
 # Android uses the in-memory MapSettings + SharedPreferences impl.
 multiplatform-settings = { group = "com.russhwolf", name = "multiplatform-settings", version.ref = "multiplatformSettings" }
