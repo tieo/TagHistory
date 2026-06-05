@@ -5,11 +5,14 @@ import io.github.tieo.taghistory.anisette.RemoteAnisetteProvider
 import io.github.tieo.taghistory.apple.account.AppleAccount
 import io.github.tieo.taghistory.apple.account.AppleLoginService
 import io.github.tieo.taghistory.apple.anisette.AnisetteClient
+import io.github.tieo.taghistory.apple.findmy.FindMyAccessory
 import io.github.tieo.taghistory.apple.gsa.GsaClient
 import io.github.tieo.taghistory.apple.http.HttpTransport
 import io.github.tieo.taghistory.apple.http.createPlatformHttpClient
 import io.github.tieo.taghistory.apple.http.defaultPlatformHttpTransport
 import io.github.tieo.taghistory.apple.mobileme.MobileMeClient
+import io.github.tieo.taghistory.apple.reports.AppleReportsService
+import io.github.tieo.taghistory.apple.reports.LocationReportsClient
 import io.github.tieo.taghistory.data.repo.BeaconRepository
 import io.github.tieo.taghistory.data.repo.UserAuthRepository
 import io.github.tieo.taghistory.data.repo.UserDataRepository
@@ -85,16 +88,23 @@ class WasmAppHost(
     fun buildFactories(appVersion: String): AppHostFactories = AppHostFactories(
         createLogin = { createLoginViewModel(onLoggedIn = {}) },
         createMap = {
-            // Returning a real MapViewModel even without auth keeps
-            // App's root nav on MapScreen; MapViewModel itself flips
-            // requireLogin = true on boot when there's no auth blob,
-            // which routes back to LoginScreen — same end state as
-            // the Android host but with a working DB in between.
+            val reportsClient = LocationReportsClient(httpTransport, anisette)
             MapViewModel(
                 beaconRepo = beaconRepo,
                 userDataRepo = userDataRepo,
                 authRepo = userAuthRepo,
-                fetchReports = { _, _ -> emptyMap() },
+                fetchReports = { beaconsById, hoursBack ->
+                    val auth = userAuthRepo.getUserAuth()
+                        ?: return@MapViewModel emptyMap()
+                    val plain = userAuthRepo.decrypt(auth.data).decodeToString()
+                    val account = AppleAccount.restoreFromJson(plain)
+                    val accessories = loadAccessoriesQuiet(
+                        beaconsById.mapValues { it.value.ownedBeaconInfo },
+                    )
+                    if (accessories.isEmpty()) return@MapViewModel emptyMap()
+                    AppleReportsService(reportsClient, account)
+                        .fetchLastReportsByBeacon(accessories, hoursBack)
+                },
                 refreshIntervalMs = 0L,
             )
         },
@@ -120,4 +130,21 @@ class WasmAppHost(
 
 private fun openInNewTab(url: String) {
     js("window.open(url, '_blank')")
+}
+
+/**
+ * Web-side accessory loader. Same shape as the Android host's
+ * `loadAccessoriesVerbose` but quieter — there is no Logcat on web
+ * to dump per-beacon parse failures into; the empty map result is
+ * surfaced through the regular MapViewModel "no reports" path.
+ */
+private fun loadAccessoriesQuiet(
+    input: Map<String, io.github.tieo.taghistory.db.OwnedBeacons?>,
+): Map<String, FindMyAccessory> = buildMap {
+    for ((id, owned) in input) {
+        val content = owned?.content ?: continue
+        runCatching { FindMyAccessory.fromPlist(content.encodeToByteArray()) }
+            .getOrNull()
+            ?.let { put(id, it) }
+    }
 }
