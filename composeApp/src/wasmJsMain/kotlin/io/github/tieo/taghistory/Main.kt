@@ -14,8 +14,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.window.ComposeViewport
 import io.github.tieo.taghistory.data.storage.SecureBlobStore
 import io.github.tieo.taghistory.data.storage.SettingsFactory
-import io.github.tieo.taghistory.db.DatabaseDriverFactory
 import io.github.tieo.taghistory.db.TagHistoryDatabase
+import io.github.tieo.taghistory.db.createIdbBackedDriver
 import io.github.tieo.taghistory.host.WasmAppHost
 import io.github.tieo.taghistory.ui.theme.TagHistoryTheme
 import kotlinx.browser.document
@@ -30,7 +30,7 @@ fun main() {
     ComposeViewport(document.body!!) {
         var factories by remember { mutableStateOf<AppHostFactories?>(null) }
         LaunchedEffect(Unit) {
-            val driver = DatabaseDriverFactory().create()
+            val driver = createIdbBackedDriver()
             val db = TagHistoryDatabase(driver)
             val host = WasmAppHost(
                 db = db,
