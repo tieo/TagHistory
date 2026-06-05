@@ -49,11 +49,12 @@ A wasmJs build of the app runs in any modern browser:
 ```bash
 ./scripts/dev-web.sh                # dev bundle, serves on :8765
 ./scripts/dev-web.sh production     # wasm-opt-shrunk bundle
+deno run --allow-net --allow-env scripts/web-proxy.ts   # CORS proxy on :8770
 ```
 
 The web build is best-effort and ships with caveats:
 
-* Login + report fetch hit Apple's GSA / iCloud / anisette endpoints — none of which set CORS headers, so a same-origin proxy in front of the static bundle is required for any real sign-in.
+* Login + report fetch hit Apple's GSA / iCloud / anisette endpoints — none of which set CORS headers. The included `scripts/web-proxy.ts` (Deno) fronts those endpoints with permissive CORS; pass its URLs into `WasmAppHost(anisetteUrl=..., gsaEndpoint=..., mobileMeEndpoint=...)` in `Main.kt`.
 * Database is `sql.js` in-memory; reloads start fresh until an IndexedDB sync layer lands.
 * `SecureBlobStore` is a pass-through wrapper (browsers have no platform keystore equivalent) so any web deployment is "preview only," never for real key material.
 * Map is a per-marker list with OpenStreetMap click-throughs, not a real basemap. Wiring `maplibre-gl-js` is on the roadmap.
