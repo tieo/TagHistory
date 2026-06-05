@@ -42,6 +42,25 @@ built on the [FindMy.py](https://github.com/malmeloo/FindMy.py) library.
 
 See the [upstream wiki](https://github.com/parawanderer/OpenTagViewer/wiki) for detailed setup instructions. The export and login process is unchanged from OpenTagViewer.
 
+## Web preview 🌐
+
+A wasmJs build of the app runs in any modern browser:
+
+```bash
+./scripts/dev-web.sh                # dev bundle, serves on :8765
+./scripts/dev-web.sh production     # wasm-opt-shrunk bundle
+```
+
+The web build is best-effort and ships with caveats:
+
+* Login + report fetch hit Apple's GSA / iCloud / anisette endpoints — none of which set CORS headers, so a same-origin proxy in front of the static bundle is required for any real sign-in.
+* Database is `sql.js` in-memory; reloads start fresh until an IndexedDB sync layer lands.
+* `SecureBlobStore` is a pass-through wrapper (browsers have no platform keystore equivalent) so any web deployment is "preview only," never for real key material.
+* Map is a per-marker list with OpenStreetMap click-throughs, not a real basemap. Wiring `maplibre-gl-js` is on the roadmap.
+* BLE / Nearby is unavailable on web; the Nearby button is hidden.
+
+Verified end-to-end: shared `compileKotlinWasmJs` is green, all 12 crypto primitives (SHA-256, HMAC-SHA-256, PBKDF2, AES-CBC, AES-GCM, secureRng, BigInt round-trip + modPow, P-224 derive + ECDH) pass `wasmJsBrowserTest` in headless Chromium against NIST/RFC vectors.
+
 ## Contributing
 
 PRs are welcome. Things that would be great to have, with up-to-date status as of 2026-05:
