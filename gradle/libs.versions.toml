@@ -78,6 +78,8 @@ sqldelight-coroutines-extensions = { group = "app.cash.sqldelight", name = "coro
 sqldelight-android-driver = { group = "app.cash.sqldelight", name = "android-driver", version.ref = "sqldelight" }
 sqldelight-native-driver = { group = "app.cash.sqldelight", name = "native-driver", version.ref = "sqldelight" }
 sqldelight-sqlite-driver = { group = "app.cash.sqldelight", name = "sqlite-driver", version.ref = "sqldelight" }
+sqldelight-web-worker-driver = { group = "app.cash.sqldelight", name = "web-worker-driver", version.ref = "sqldelight" }
+sqldelight-async-coroutines-extensions = { group = "app.cash.sqldelight", name = "async-extensions", version.ref = "sqldelight" }
 
 # Koin (core only — android/compose bindings not in local cache, wired manually on android)
 koin-core = { group = "io.insert-koin", name = "koin-core", version.ref = "koin" }

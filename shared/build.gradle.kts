@@ -165,11 +165,14 @@ kotlin {
                 implementation(libs.kotlincrypto.hmac.sha2)
                 implementation(libs.kotlinx.crypto.aes)
                 implementation(libs.ionspin.bignum)
-                // SqlDelight web-worker-driver is async-only and the
-                // commonMain DatabaseDriverFactory.create() expect is
-                // sync — bridging requires migrating commonMain to
-                // suspend. Driver dep is intentionally NOT added until
-                // that refactor lands.
+                // SqlDelight wasm DB stack — async driver + the
+                // synchronous() coroutine bridge so non-suspend
+                // call sites can keep using SqlDriver.execute(...).
+                implementation(libs.sqldelight.web.worker.driver)
+                implementation(libs.sqldelight.async.coroutines.extensions)
+                // sqljs WASM glue + bundled worker.
+                implementation(npm("sql.js", "1.10.3"))
+                implementation(npm("@cashapp/sqldelight-sqljs-worker", "2.1.0"))
             }
         }
         val desktopTest by getting {

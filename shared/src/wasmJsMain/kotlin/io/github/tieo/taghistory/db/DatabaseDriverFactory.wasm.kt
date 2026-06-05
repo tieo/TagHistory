@@ -1,25 +1,25 @@
 package io.github.tieo.taghistory.db
 
+import app.cash.sqldelight.async.coroutines.awaitCreate
 import app.cash.sqldelight.db.SqlDriver
+import app.cash.sqldelight.driver.worker.createDefaultWebWorkerDriver
 
 /**
- * wasmJs DatabaseDriverFactory placeholder. SqlDelight's
- * `web-worker-driver` exposes only `suspend` constructors / open()
- * + `Schema.create` is also suspend on the async path, but the
- * existing `expect class DatabaseDriverFactory { fun create(): SqlDriver }`
- * commonMain signature is non-suspend. Bridging that without
- * touching commonMain needs a runBlocking shim, which Kotlin/Wasm
- * does not provide.
+ * wasmJs DatabaseDriverFactory. Uses SqlDelight's bundled
+ * `createDefaultWebWorkerDriver()` which instantiates a Web Worker
+ * pointing at the sqljs worker script that ships in the
+ * `@cashapp/sqldelight-sqljs-worker` npm package, then awaits
+ * `Schema.create` so the returned SqlDriver is ready to query.
  *
- * Until commonMain is migrated to suspend (or a sync sqljs adapter
- * lands), DB-backed flows on web still throw — but with a clearer
- * message than the previous "not wired yet" stub.
+ * Data lives only for the page lifetime — sqljs writes to an
+ * in-memory database. Persistence across reloads would need an IDB
+ * sync layer on the worker side; out of scope for the initial
+ * scaffold.
  */
 actual class DatabaseDriverFactory {
-    actual suspend fun create(): SqlDriver = throw NotImplementedError(
-        "Web DB driver not connected — sqljs worker glue not added yet. " +
-            "The expect class is suspend so this can be wired without " +
-            "further commonMain churn; add web-worker-driver + sql.js npm " +
-            "deps and return WebWorkerDriver(...) here."
-    )
+    actual suspend fun create(): SqlDriver {
+        val driver = createDefaultWebWorkerDriver()
+        TagHistoryDatabase.Schema.awaitCreate(driver)
+        return driver
+    }
 }
