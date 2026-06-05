@@ -1,6 +1,17 @@
 package io.github.tieo.taghistory.host
 
 import io.github.tieo.taghistory.AppHostFactories
+import io.github.tieo.taghistory.anisette.AnisetteJsProvider
+import io.github.tieo.taghistory.apple.account.AppleAccount
+import io.github.tieo.taghistory.apple.account.AppleLoginService
+import io.github.tieo.taghistory.apple.anisette.AnisetteClient
+import io.github.tieo.taghistory.apple.findmy.FindMyAccessory
+import io.github.tieo.taghistory.apple.gsa.GsaClient
+import io.github.tieo.taghistory.apple.http.HttpTransport
+import io.github.tieo.taghistory.apple.http.defaultPlatformHttpTransport
+import io.github.tieo.taghistory.apple.mobileme.MobileMeClient
+import io.github.tieo.taghistory.apple.reports.AppleReportsService
+import io.github.tieo.taghistory.apple.reports.LocationReportsClient
 import io.github.tieo.taghistory.data.repo.BeaconRepository
 import io.github.tieo.taghistory.data.repo.UserAuthRepository
 import io.github.tieo.taghistory.data.repo.UserDataRepository
@@ -17,24 +28,23 @@ import io.github.tieo.taghistory.ui.nearby.NearbyViewModel
 import io.github.tieo.taghistory.ui.settings.SettingsViewModel
 
 /**
- * Browser host. The Android host generates anisette headers on-device
- * via the Rust ottjni bridge + Apple's libCoreADI / libstoreservicescore.
- * Neither runs in a browser, and we DO NOT proxy through a third-party
- * anisette server — anisette headers identify the device (machine ID +
- * provisioning state), so sending them to anyone else leaks the user's
- * Apple identity. That means Apple login is structurally unavailable on
- * web today.
+ * Browser host.
  *
- * Everything that does NOT need anisette — DB, repos, persisted
- * settings, map rendering, history view — works through the
- * commonMain code paths. Cached locations / history landed from a
- * previous Android sync are visible if the user imports them.
+ * Anisette headers are generated on-device through the bundled
+ * [AnisetteJsProvider] (Unicorn-Engine WASM emulator running Apple's
+ * own libCoreADI / libstoreservicescore — same identity bytes the
+ * Android ottjni bridge produces, no third-party server). When the
+ * anisette dist files are not deployed, sign-in surfaces a clear
+ * setup message instead of leaking the user's machine ID anywhere.
  */
 class WasmAppHost(
     private val db: TagHistoryDatabase,
     private val settingsFactory: SettingsFactory,
     private val crypto: SecureBlobStore,
+    private val anisetteProvider: AnisetteJsProvider?,
 ) {
+    private val httpTransport: HttpTransport = defaultPlatformHttpTransport()
+    private val anisette = anisetteProvider?.let { AnisetteClient(it) }
 
     private val beaconRepo by lazy { BeaconRepository(db) }
     private val userSettingsRepo by lazy {
@@ -51,29 +61,58 @@ class WasmAppHost(
         )
     }
 
-    fun buildFactories(appVersion: String): AppHostFactories = AppHostFactories(
-        createLogin = {
-            AppleLoginViewModel(
-                startLogin = { _, _ ->
-                    throw IllegalStateException(
-                        "Sign-in is not available on the web build. Anisette headers " +
-                            "identify your device and the project will not proxy them " +
-                            "through a third-party server. Run the Android app instead.",
-                    )
-                },
-                onLoggedIn = {},
+    private fun createLoginViewModel(onLoggedIn: suspend () -> Unit): AppleLoginViewModel {
+        val account = AppleAccount()
+        val service = anisette?.let { ani ->
+            AppleLoginService(
+                account = account,
+                http = httpTransport,
+                anisette = ani,
+                gsa = GsaClient(httpTransport, ani),
+                mobileMe = MobileMeClient(httpTransport, ani),
             )
-        },
+        }
+        return AppleLoginViewModel(
+            startLogin = { email, password ->
+                if (service == null) {
+                    throw IllegalStateException(
+                        "Anisette bridge not installed. Run scripts/build-web-anisette.sh " +
+                            "to vendor lbr77/anisette-js + extract the Apple libs before signing in.",
+                    )
+                }
+                service.login(email, password)
+            },
+            onLoggedIn = {
+                runCatching {
+                    val json = account.exportToJson()
+                    val envelope = crypto.encrypt(json.encodeToByteArray(), "apple_account_key")
+                    userAuthRepo.storeUserAuth(envelope)
+                }
+                onLoggedIn()
+            },
+        )
+    }
+
+    fun buildFactories(appVersion: String): AppHostFactories = AppHostFactories(
+        createLogin = { createLoginViewModel(onLoggedIn = {}) },
         createMap = {
+            val reportsClient = anisette?.let { LocationReportsClient(httpTransport, it) }
             MapViewModel(
                 beaconRepo = beaconRepo,
                 userDataRepo = userDataRepo,
                 authRepo = userAuthRepo,
-                // Refresh is intentionally a no-op on web: pulling new
-                // FindMy reports needs anisette + Apple GSA, which we
-                // deliberately do not wire here. Pre-imported cached
-                // locations still render through beaconRepo.
-                fetchReports = { _, _ -> emptyMap() },
+                fetchReports = { beaconsById, hoursBack ->
+                    if (reportsClient == null || anisette == null) return@MapViewModel emptyMap()
+                    val auth = userAuthRepo.getUserAuth() ?: return@MapViewModel emptyMap()
+                    val plain = userAuthRepo.decrypt(auth.data).decodeToString()
+                    val account = AppleAccount.restoreFromJson(plain)
+                    val accessories = loadAccessoriesQuiet(
+                        beaconsById.mapValues { it.value.ownedBeaconInfo },
+                    )
+                    if (accessories.isEmpty()) return@MapViewModel emptyMap()
+                    AppleReportsService(reportsClient, account)
+                        .fetchLastReportsByBeacon(accessories, hoursBack)
+                },
                 refreshIntervalMs = 0L,
             )
         },
@@ -90,7 +129,7 @@ class WasmAppHost(
         },
         settingsFlow = userSettingsRepo.flow,
         onImport = null,
-        onRefreshNow = { "Refresh not available on web (anisette not wired)" },
+        onRefreshNow = { "Refresh not wired on web yet" },
         reverseGeocode = null,
         onShareGpx = null,
         onExportTags = null,
@@ -99,4 +138,15 @@ class WasmAppHost(
 
 private fun openInNewTab(url: String) {
     js("window.open(url, '_blank')")
+}
+
+private fun loadAccessoriesQuiet(
+    input: Map<String, io.github.tieo.taghistory.db.OwnedBeacons?>,
+): Map<String, FindMyAccessory> = buildMap {
+    for ((id, owned) in input) {
+        val content = owned?.content ?: continue
+        runCatching { FindMyAccessory.fromPlist(content.encodeToByteArray()) }
+            .getOrNull()
+            ?.let { put(id, it) }
+    }
 }

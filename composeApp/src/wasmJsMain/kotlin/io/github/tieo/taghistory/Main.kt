@@ -12,6 +12,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.window.ComposeViewport
+import io.github.tieo.taghistory.anisette.AnisetteJsProvider
 import io.github.tieo.taghistory.data.storage.SecureBlobStore
 import io.github.tieo.taghistory.data.storage.SettingsFactory
 import io.github.tieo.taghistory.db.TagHistoryDatabase
@@ -32,10 +33,12 @@ fun main() {
         LaunchedEffect(Unit) {
             val driver = createIdbBackedDriver()
             val db = TagHistoryDatabase(driver)
+            val anisette = AnisetteJsProvider.create()
             val host = WasmAppHost(
                 db = db,
                 settingsFactory = SettingsFactory(),
                 crypto = SecureBlobStore(),
+                anisetteProvider = anisette,
             )
             factories = host.buildFactories(appVersion = "wasm-preview")
         }

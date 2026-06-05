@@ -53,8 +53,8 @@ A wasmJs build of the app runs in any modern browser:
 
 The web build is best-effort and ships with caveats:
 
-* **Apple login is unavailable on web.** Anisette headers identify your device, and the Android app generates them on-device via Apple's libCoreADI / libstoreservicescore + the Rust ottjni bridge. Neither runs in a browser, and the project will not proxy anisette through a third-party server. The web bundle is read-only on cached data.
-* Map + history view render real MapLibre tiles, but new FindMy reports only land via the Android app's sync.
+* **Sign-in needs the on-device anisette bridge.** The Android app generates anisette headers on-device through Apple's own libCoreADI + the Rust ottjni JNI bridge. The web build does the same with [`lbr77/anisette-js`](https://github.com/lbr77/anisette-js) — a Unicorn-Engine WASM emulator that runs the same Apple ARM64 libraries inside the browser. Run `./scripts/build-web-anisette.sh` once to vendor the dist files and copy the Apple libs out of the Apple Music APK that the Android build already extracts. The project will **not** proxy anisette through any third-party server.
+* Map + history view render real MapLibre tiles via the JS bridge.
 * `sql.js` DB is backed by IndexedDB so reloads keep imported data.
 * `SecureBlobStore` is a pass-through wrapper (browsers have no platform keystore equivalent) — anything storing real key material on web has to gate behind a feature flag first.
 * BLE / Nearby is unavailable on web; the Nearby button is hidden.
