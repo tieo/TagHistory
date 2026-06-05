@@ -1,5 +1,7 @@
 package io.github.tieo.taghistory.data.importer
 
+import io.github.tieo.taghistory.apple.plist.PlistValue
+import io.github.tieo.taghistory.apple.plist.XmlPlist
 import io.github.tieo.taghistory.data.model.ImportData
 import io.github.tieo.taghistory.db.BeaconNamingRecord
 import io.github.tieo.taghistory.db.Import
@@ -36,13 +38,72 @@ object AppleExportParser {
     }
 
     /**
+     * One beacon in a [Staged] import — already inner-joined with its
+     * naming record, with the display fields pre-extracted so the
+     * selection UI can show a real name/emoji instead of a bare UUID.
+     */
+    data class StagedTag(
+        val beaconId: String,
+        val displayName: String?,
+        val emoji: String?,
+        val owned: OwnedBeacons,
+        val naming: BeaconNamingRecord,
+    )
+
+    /**
+     * A parsed-but-not-yet-committed import. Hand this to
+     * [toImportData] with the subset of beacon IDs the user picked.
+     */
+    data class Staged(
+        val importRow: Import,
+        val tags: List<StagedTag>,
+    ) {
+        fun toImportData(includedBeaconIds: Set<String>): ImportData {
+            val kept = tags.filter { it.beaconId in includedBeaconIds }
+            return ImportData(
+                anImport = importRow,
+                ownedBeacons = kept.map { it.owned },
+                beaconNamingRecords = kept.map { it.naming },
+            )
+        }
+    }
+
+    sealed class StagedResult {
+        data class Ok(val staged: Staged) : StagedResult()
+        data class Err(val message: String) : StagedResult()
+    }
+
+    /**
      * Parse a map of zipped-entry → content. Returns [ParseResult.Ok] on
      * success or [ParseResult.Err] with a user-readable reason.
+     *
+     * Convenience wrapper around [parseStaged] that includes every
+     * beacon in the archive — keeps the existing one-shot import path
+     * working without a selection step.
      */
     fun parse(
         entries: Map<String, ByteArray>,
         nowMs: Long = Clock.System.now().toEpochMilliseconds(),
-    ): ParseResult {
+    ): ParseResult = when (val staged = parseStaged(entries, nowMs)) {
+        is StagedResult.Err -> ParseResult.Err(staged.message)
+        is StagedResult.Ok -> {
+            val all = staged.staged.tags.map { it.beaconId }.toSet()
+            ParseResult.Ok(
+                data = staged.staged.toImportData(all),
+                imported = staged.staged.tags.size,
+            )
+        }
+    }
+
+    /**
+     * Same archive walk as [parse] but stops just before materialising
+     * into an [ImportData]. Each [StagedTag] carries the parsed name +
+     * emoji so a per-tag selection UI can render meaningful labels.
+     */
+    fun parseStaged(
+        entries: Map<String, ByteArray>,
+        nowMs: Long = Clock.System.now().toEpochMilliseconds(),
+    ): StagedResult {
         var exportInfoYaml: String? = null
         val ownedBeacons = mutableMapOf<String, String>()
         // beaconId -> (recordId, content). On conflict we keep the first
@@ -73,20 +134,20 @@ object AppleExportParser {
         }
 
         if (exportInfoYaml == null || exportInfoYaml.isBlank()) {
-            return ParseResult.Err("OPENTAGVIEWER.yml is missing from the archive")
+            return StagedResult.Err("OPENTAGVIEWER.yml is missing from the archive")
         }
 
         // Inner-join owned beacons with naming records — drop mismatches.
         val common = ownedBeacons.keys.intersect(namingRecords.keys)
         if (common.isEmpty()) {
-            return ParseResult.Err(
+            return StagedResult.Err(
                 "No beacons found — archive contained no matching " +
                     "OwnedBeacons + BeaconNamingRecord pairs",
             )
         }
 
         val yaml = parseExportInfo(exportInfoYaml)
-            ?: return ParseResult.Err("OPENTAGVIEWER.yml could not be parsed")
+            ?: return StagedResult.Err("OPENTAGVIEWER.yml could not be parsed")
 
         val importRow = Import(
             id = 0L, // assigned by the DB
@@ -97,35 +158,44 @@ object AppleExportParser {
             via = yaml.via,
         )
 
-        val ownedRows = common.map { beaconId ->
-            OwnedBeacons(
-                id = beaconId,
-                import_id = null,
-                content = ownedBeacons[beaconId],
-                version = yaml.version,
-                is_removed = false,
+        val tags = common.map { beaconId ->
+            val (recordId, namingContent) = namingRecords[beaconId]!!
+            val ownedContent = ownedBeacons[beaconId]
+            val labels = extractLabels(namingContent)
+            StagedTag(
+                beaconId = beaconId,
+                displayName = labels.first,
+                emoji = labels.second,
+                owned = OwnedBeacons(
+                    id = beaconId,
+                    import_id = null,
+                    content = ownedContent,
+                    version = yaml.version,
+                    is_removed = false,
+                ),
+                naming = BeaconNamingRecord(
+                    id = recordId,
+                    import_id = null,
+                    version = yaml.version,
+                    content = namingContent,
+                    is_removed = false,
+                ),
             )
-        }
+        }.sortedBy { it.displayName?.lowercase() ?: it.beaconId }
 
-        val namingRows = common.map { beaconId ->
-            val (recordId, content) = namingRecords[beaconId]!!
-            BeaconNamingRecord(
-                id = recordId,
-                import_id = null,
-                version = yaml.version,
-                content = content,
-                is_removed = false,
-            )
-        }
+        return StagedResult.Ok(Staged(importRow = importRow, tags = tags))
+    }
 
-        return ParseResult.Ok(
-            ImportData(
-                anImport = importRow,
-                ownedBeacons = ownedRows,
-                beaconNamingRecords = namingRows,
-            ),
-            imported = common.size,
-        )
+    /**
+     * Best-effort name+emoji extraction from a naming-record plist.
+     * Returns `(null, null)` if the blob isn't a parseable plist
+     * (e.g. unit-test fixtures with `"<plist>naming</plist>"`) — the
+     * import still proceeds, just without a friendly label.
+     */
+    private fun extractLabels(namingContent: String): Pair<String?, String?> {
+        val dict = runCatching { XmlPlist.parse(namingContent) }.getOrNull()
+            as? PlistValue.Dict ?: return null to null
+        return dict.string("name") to dict.string("emoji")
     }
 
     internal data class ExportInfo(

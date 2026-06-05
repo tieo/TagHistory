@@ -55,6 +55,15 @@ import kotlinx.coroutines.flow.StateFlow
  * button top-right; every other screen (Settings, DeviceInfo, History,
  * Information) is pushed onto the nav stack and dismissed via back.
  */
+sealed class ImportPreview {
+    data object Cancelled : ImportPreview()
+    data class Ok(
+        val staged: io.github.tieo.taghistory.data.importer.AppleExportParser.Staged,
+        val sourceLabel: String,
+    ) : ImportPreview()
+    data class Err(val message: String) : ImportPreview()
+}
+
 data class AppHostFactories(
     val createLogin: () -> AppleLoginViewModel,
     val createMap: () -> MapViewModel?,
@@ -73,6 +82,22 @@ data class AppHostFactories(
     val routeTo: (lat: Double, lon: Double, label: String) -> Unit = { _, _, _ -> },
     val settingsFlow: StateFlow<UserSettings> = MutableStateFlow(UserSettings()),
     val onImport: (suspend () -> String?)? = null,
+    /**
+     * Two-stage import: open file picker, parse the archive but don't
+     * write yet. Returns [ImportPreview.Ok] with the [Staged] data the
+     * UI can show in a per-tag selection dialog, [ImportPreview.Err]
+     * with a user-facing reason, or [ImportPreview.Cancelled] when the
+     * picker was dismissed. Null = host doesn't expose preview yet.
+     */
+    val onImportPreview: (suspend () -> ImportPreview?)? = null,
+    /**
+     * Commit a previously-staged import, filtered to the beacon IDs
+     * the user ticked. Returns a status string for the snackbar.
+     */
+    val onImportCommit: (suspend (
+        io.github.tieo.taghistory.data.importer.AppleExportParser.Staged,
+        Set<String>,
+    ) -> String)? = null,
     /**
      * One-shot refresh: fetch current reports, persist them, return a
      * user-facing status line (or `null` for no toast). Wired by Settings'
@@ -137,6 +162,21 @@ private fun AuthedNav(
             suspend {
                 val result = orig()
                 if (result != null) mapVm?.reboot()
+                result
+            }
+        }
+    }
+    // Two-stage import: preview returns Staged (no reboot yet),
+    // commit reboots so the new tags show up in cards + on the map.
+    val onImportPreview = factories.onImportPreview
+    val onImportCommit: (suspend (
+        io.github.tieo.taghistory.data.importer.AppleExportParser.Staged,
+        Set<String>,
+    ) -> String)? = remember(factories.onImportCommit) {
+        factories.onImportCommit?.let { orig ->
+            { staged, ids ->
+                val result = orig(staged, ids)
+                mapVm?.reboot()
                 result
             }
         }
@@ -265,6 +305,8 @@ private fun AuthedNav(
                         },
                         onRemove = { id -> mapVm?.removeBeacon(id) },
                         onImport = onImport,
+                        onImportPreview = onImportPreview,
+                        onImportCommit = onImportCommit,
                         onExportSelected = exportFn,
                     )
                 }

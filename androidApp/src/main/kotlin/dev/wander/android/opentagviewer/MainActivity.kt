@@ -40,8 +40,15 @@ class MainActivity : ComponentActivity() {
             ""
         }
         val onImport = host.createImportCallback { launchZipPicker() }
+        val onImportPreview = host.createImportPreviewCallback { launchZipPicker() }
         setContent {
-            App(factories = host.buildAppFactories(versionName, onImport = onImport))
+            App(
+                factories = host.buildAppFactories(
+                    versionName,
+                    onImport = onImport,
+                    onImportPreview = onImportPreview,
+                ),
+            )
         }
     }
 

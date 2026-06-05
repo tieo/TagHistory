@@ -231,6 +231,32 @@ class AndroidAppHost private constructor(
     }
 
     /**
+     * Two-stage variant for the Manage-Tags screen: picks a zip,
+     * parses it, returns an [io.github.tieo.taghistory.ImportPreview]
+     * the UI can render in a checklist dialog. The actual DB write
+     * happens via [createImportCommitCallback] once the user confirms.
+     */
+    fun createImportPreviewCallback(
+        pickZip: suspend () -> android.net.Uri?,
+    ): suspend () -> io.github.tieo.taghistory.ImportPreview? = label@{
+        Log.i(TAG, "import preview: calling pickZip()")
+        val uri = pickZip()
+        if (uri == null) {
+            Log.i(TAG, "import preview: cancelled")
+            return@label io.github.tieo.taghistory.ImportPreview.Cancelled
+        }
+        Log.i(TAG, "import preview: got uri=$uri, staging")
+        stageAppleExportImport(context, uri, beaconRepo)
+    }
+
+    fun createImportCommitCallback(): suspend (
+        io.github.tieo.taghistory.data.importer.AppleExportParser.Staged,
+        Set<String>,
+    ) -> String = { staged, ids ->
+        commitAppleExportImport(staged, ids, beaconRepo)
+    }
+
+    /**
      * Build the "Refresh now" callback used by Settings. Fetches recent
      * reports for every owned beacon via [AppleReportsService] and stores
      * them. Returns a user-facing status line: a success summary on OK,
@@ -343,6 +369,7 @@ class AndroidAppHost private constructor(
     fun buildAppFactories(
         appVersion: String,
         onImport: (suspend () -> String?)? = null,
+        onImportPreview: (suspend () -> io.github.tieo.taghistory.ImportPreview?)? = null,
         onRefreshNow: (suspend () -> String?)? = createRefreshNowCallback(),
     ): AppHostFactories = AppHostFactories(
         createLogin = { createLoginViewModel() },
@@ -370,6 +397,8 @@ class AndroidAppHost private constructor(
         },
         settingsFlow = userSettingsRepo.flow,
         onImport = onImport,
+        onImportPreview = onImportPreview,
+        onImportCommit = createImportCommitCallback(),
         onRefreshNow = onRefreshNow,
         onShareGpx = { title, dayLabel, points ->
             shareDayAsGpx(context, title, dayLabel, points)

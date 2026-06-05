@@ -65,6 +65,84 @@ fun readZipEntries(stream: InputStream): Map<String, ByteArray> {
 }
 
 /**
+ * Stage-1 of the two-stage import: read the zip from [uri] and parse
+ * it but DO NOT write to the DB yet. The caller renders a per-tag
+ * selection UI, then hands the staged result back to
+ * [commitAppleExportImport] with the subset to keep.
+ *
+ * Wraps [AppleExportParser.parseStaged] with the same byte caps and
+ * error handling as the legacy one-shot path.
+ */
+suspend fun stageAppleExportImport(
+    context: Context,
+    uri: Uri,
+    beaconRepo: BeaconRepository,
+): io.github.tieo.taghistory.ImportPreview = withContext(Dispatchers.IO) {
+    Log.i(TAG, "stageAppleExportImport start uri=$uri")
+    try {
+        val stream = context.contentResolver.openInputStream(uri)
+        if (stream == null) {
+            Log.w(TAG, "openInputStream returned null for $uri")
+            return@withContext io.github.tieo.taghistory.ImportPreview.Err(
+                "Could not open archive",
+            )
+        }
+        val entries = stream.use { readZipEntries(it) }
+        Log.i(TAG, "stage zip parsed entries=${entries.size}")
+        when (val parsed = AppleExportParser.parseStaged(entries)) {
+            is AppleExportParser.StagedResult.Err -> {
+                Log.w(TAG, "stage parse err: ${parsed.message}")
+                io.github.tieo.taghistory.ImportPreview.Err(parsed.message)
+            }
+            is AppleExportParser.StagedResult.Ok -> {
+                val label = guessSourceLabel(context, uri)
+                io.github.tieo.taghistory.ImportPreview.Ok(
+                    staged = parsed.staged,
+                    sourceLabel = label,
+                )
+            }
+        }
+    } catch (t: Throwable) {
+        Log.e(TAG, "stage threw", t)
+        io.github.tieo.taghistory.ImportPreview.Err(
+            "Import failed: ${t.message ?: t::class.simpleName}",
+        )
+    }
+}
+
+/**
+ * Stage-2 of the two-stage import: write the user-picked subset of
+ * the [staged] result to the DB. Returns a status string for the
+ * snackbar / status chip.
+ */
+suspend fun commitAppleExportImport(
+    staged: AppleExportParser.Staged,
+    includedBeaconIds: Set<String>,
+    beaconRepo: BeaconRepository,
+): String = withContext(Dispatchers.IO) {
+    val toImport = staged.toImportData(includedBeaconIds)
+    val count = toImport.ownedBeacons.size
+    if (count == 0) return@withContext "Nothing selected"
+    beaconRepo.addNewImport(toImport)
+    Log.i(TAG, "commit wrote $count beacons (of ${staged.tags.size} staged)")
+    "Imported $count beacon${if (count == 1) "" else "s"}"
+}
+
+/**
+ * Best-effort filename extraction from a content-uri so the
+ * selection dialog can show "from MyExport.zip" instead of an opaque
+ * `content://…` path.
+ */
+private fun guessSourceLabel(context: Context, uri: Uri): String {
+    return runCatching {
+        context.contentResolver.query(uri, null, null, null, null)?.use { c ->
+            val idx = c.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME)
+            if (idx >= 0 && c.moveToFirst()) c.getString(idx) else null
+        }
+    }.getOrNull() ?: uri.lastPathSegment ?: "selected archive"
+}
+
+/**
  * Full import pipeline — reads the zip from [uri], parses it, and
  * writes rows through [beaconRepo]. Returns a user-readable status
  * message suitable for a toast / snackbar.

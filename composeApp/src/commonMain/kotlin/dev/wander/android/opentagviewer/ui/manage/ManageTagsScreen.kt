@@ -77,6 +77,11 @@ fun ManageTagsScreen(
     onRename: (beaconId: String, name: String, emoji: String?) -> Unit,
     onRemove: (beaconId: String) -> Unit,
     onImport: (suspend () -> String?)?,
+    onImportPreview: (suspend () -> io.github.tieo.taghistory.ImportPreview?)? = null,
+    onImportCommit: (suspend (
+        io.github.tieo.taghistory.data.importer.AppleExportParser.Staged,
+        Set<String>,
+    ) -> String)? = null,
     onExportSelected: (suspend (beaconIds: List<String>) -> String)?,
     modifier: Modifier = Modifier,
 ) {
@@ -87,6 +92,14 @@ fun ManageTagsScreen(
     var pendingBulkRemove by remember { mutableStateOf(false) }
     var importing by remember { mutableStateOf(false) }
     var statusMessage by remember { mutableStateOf<String?>(null) }
+    // Two-stage import: when set, the selection dialog is shown.
+    // `pendingImport` carries the staged data; `pendingSelected` is
+    // a separate state so toggling individual rows triggers
+    // recomposition without needing to copy the staged blob.
+    var pendingImport by remember {
+        mutableStateOf<PendingImport?>(null)
+    }
+    var pendingSelected by remember { mutableStateOf<Set<String>>(emptySet()) }
     val scope = rememberCoroutineScope()
 
     Scaffold(
@@ -140,10 +153,42 @@ fun ManageTagsScreen(
             ActionBar(
                 importing = importing,
                 selectedCount = selectedCount,
-                hasImport = onImport != null,
+                hasImport = onImport != null || onImportPreview != null,
                 hasExport = onExportSelected != null,
                 statusMessage = statusMessage,
                 onImport = {
+                    // Prefer the two-stage path (preview + per-tag
+                    // selection dialog) when the host supplies one.
+                    // Fall back to the legacy "import everything"
+                    // callback so Settings still works.
+                    if (onImportPreview != null && onImportCommit != null) {
+                        importing = true
+                        scope.launch {
+                            val preview = try { onImportPreview.invoke() } catch (e: Exception) {
+                                io.github.tieo.taghistory.ImportPreview.Err(
+                                    "Import failed: ${e.message ?: e::class.simpleName}",
+                                )
+                            }
+                            importing = false
+                            when (preview) {
+                                null,
+                                io.github.tieo.taghistory.ImportPreview.Cancelled ->
+                                    statusMessage = "Import cancelled"
+                                is io.github.tieo.taghistory.ImportPreview.Err ->
+                                    statusMessage = preview.message
+                                is io.github.tieo.taghistory.ImportPreview.Ok -> {
+                                    pendingImport = PendingImport(
+                                        staged = preview.staged,
+                                        sourceLabel = preview.sourceLabel,
+                                    )
+                                    pendingSelected = preview.staged.tags
+                                        .map { it.beaconId }
+                                        .toSet()
+                                }
+                            }
+                        }
+                        return@ActionBar
+                    }
                     if (onImport == null) return@ActionBar
                     importing = true
                     scope.launch {
@@ -216,6 +261,45 @@ fun ManageTagsScreen(
             },
             dismissButton = {
                 TextButton(onClick = { pendingRemove = null }) { Text("Cancel") }
+            },
+        )
+    }
+
+    pendingImport?.let { pending ->
+        ImportSelectionDialog(
+            staged = pending.staged,
+            sourceLabel = pending.sourceLabel,
+            selected = pendingSelected,
+            onToggle = { beaconId ->
+                pendingSelected = pendingSelected.toMutableSet().also {
+                    if (beaconId in it) it.remove(beaconId) else it.add(beaconId)
+                }
+            },
+            onSelectAll = {
+                pendingSelected = pending.staged.tags.map { it.beaconId }.toSet()
+            },
+            onClearAll = { pendingSelected = emptySet() },
+            onCancel = {
+                pendingImport = null
+                pendingSelected = emptySet()
+                statusMessage = "Import cancelled"
+            },
+            onConfirm = {
+                val staged = pending.staged
+                val ids = pendingSelected
+                pendingImport = null
+                pendingSelected = emptySet()
+                importing = true
+                scope.launch {
+                    val result = try {
+                        onImportCommit?.invoke(staged, ids)
+                            ?: "Host did not wire onImportCommit"
+                    } catch (e: Exception) {
+                        "Import failed: ${e.message ?: e::class.simpleName}"
+                    }
+                    importing = false
+                    statusMessage = result
+                }
             },
         )
     }
@@ -634,3 +718,124 @@ private fun PillButton(
     }
 }
 
+
+// ---- Two-stage import ----
+
+private data class PendingImport(
+    val staged: io.github.tieo.taghistory.data.importer.AppleExportParser.Staged,
+    val sourceLabel: String,
+)
+
+@Composable
+private fun ImportSelectionDialog(
+    staged: io.github.tieo.taghistory.data.importer.AppleExportParser.Staged,
+    sourceLabel: String,
+    selected: Set<String>,
+    onToggle: (String) -> Unit,
+    onSelectAll: () -> Unit,
+    onClearAll: () -> Unit,
+    onCancel: () -> Unit,
+    onConfirm: () -> Unit,
+) {
+    val total = staged.tags.size
+    val picked = selected.size
+    AlertDialog(
+        onDismissRequest = onCancel,
+        title = {
+            Column {
+                Text("Import tags")
+                Text(
+                    "from $sourceLabel",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        },
+        text = {
+            Column {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        "$picked of $total selected",
+                        style = MaterialTheme.typography.labelMedium,
+                    )
+                    Row {
+                        TextButton(onClick = onSelectAll) { Text("All") }
+                        TextButton(onClick = onClearAll) { Text("None") }
+                    }
+                }
+                Spacer(Modifier.height(4.dp))
+                // Cap the list height so the dialog doesn't push the
+                // confirm buttons off-screen on a big archive.
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(320.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    items(
+                        staged.tags,
+                        key = { it.beaconId },
+                    ) { tag ->
+                        val isOn = tag.beaconId in selected
+                        Surface(
+                            onClick = { onToggle(tag.beaconId) },
+                            modifier = Modifier.fillMaxWidth(),
+                            color = if (isOn) {
+                                MaterialTheme.colorScheme.primaryContainer
+                                    .copy(alpha = 0.55f)
+                            } else {
+                                MaterialTheme.colorScheme.surfaceVariant
+                                    .copy(alpha = 0.45f)
+                            },
+                            shape = RoundedCornerShape(12.dp),
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(
+                                    horizontal = 12.dp,
+                                    vertical = 10.dp,
+                                ),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Text(
+                                    tag.emoji ?: "🏷",
+                                    fontSize = 20.sp,
+                                )
+                                Spacer(Modifier.width(10.dp))
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        tag.displayName?.takeIf { it.isNotBlank() }
+                                            ?: "Untitled",
+                                        fontWeight = FontWeight.SemiBold,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                    )
+                                    Text(
+                                        tag.beaconId.take(8) + "…",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
+                                SelectionDot(selected = isOn)
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = onConfirm,
+                enabled = picked > 0,
+            ) {
+                Text("Import $picked")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onCancel) { Text("Cancel") }
+        },
+    )
+}
