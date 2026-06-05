@@ -66,14 +66,16 @@ kotlin {
         }
     }
 
-    // wasmJs target is INTENTIONALLY commented out until commonMain
-    // stops referring to Android-only APIs (`LocalConfiguration`,
-    // `String.format`, `Dp.times(Float)` via kotlin.math which compiles
-    // on JVM but not wasm). Bringing it back means refactoring those to
-    // expect/actuals or to multiplatform replacements like
-    // `androidx.compose.ui.LocalWindowInfo` for size queries.
-    // @OptIn(org.jetbrains.kotlin.gradle.ExperimentalWasmDsl::class)
-    // wasmJs { browser { ... }; binaries.executable() }
+    @OptIn(org.jetbrains.kotlin.gradle.ExperimentalWasmDsl::class)
+    wasmJs {
+        outputModuleName.set("composeApp")
+        browser {
+            commonWebpackConfig {
+                outputFileName = "composeApp.js"
+            }
+        }
+        binaries.executable()
+    }
 
     sourceSets {
         commonMain.dependencies {
@@ -130,6 +132,15 @@ kotlin {
             }
         }
 
+        val wasmJsMain by getting {
+            dependencies {
+                implementation(compose.runtime)
+                implementation(compose.foundation)
+                implementation(compose.material3)
+                implementation(compose.materialIconsExtended)
+                implementation(compose.ui)
+            }
+        }
     }
 }
 

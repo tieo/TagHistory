@@ -113,9 +113,9 @@ fun MapScreen(
     // camera centers above it instead of behind it. Matches the
     // TagGlassList height calculation (screen * 0.45f). Empty cards
     // case skips the list entirely so inset = 0.
-    val configuration = androidx.compose.ui.platform.LocalConfiguration.current
+    val windowInfo = androidx.compose.ui.platform.LocalWindowInfo.current
     val density = androidx.compose.ui.platform.LocalDensity.current
-    val listHeightDp = configuration.screenHeightDp.dp * 0.45f
+    val listHeightDp = with(density) { (windowInfo.containerSize.height * 0.45f).toDp() }
     val bottomInsetPx = if (state.cards.isEmpty()) 0
     else with(density) { listHeightDp.toPx().toInt() }
 
@@ -286,8 +286,9 @@ internal fun TagGlassList(
     onRoute: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val configuration = androidx.compose.ui.platform.LocalConfiguration.current
-    val listHeight = configuration.screenHeightDp.dp * 0.45f
+    val windowInfo = androidx.compose.ui.platform.LocalWindowInfo.current
+    val density = androidx.compose.ui.platform.LocalDensity.current
+    val listHeight = with(density) { (windowInfo.containerSize.height * 0.45f).toDp() }
     val containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.78f)
     val borderColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f)
     Surface(

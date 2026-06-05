@@ -32,6 +32,7 @@ import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Timeline
 import io.github.tieo.taghistory.ui.util.AlwaysSpinningIndicator
+import io.github.tieo.taghistory.ui.util.fmtFixed
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDefaults
 import androidx.compose.material3.DatePickerDialog
@@ -59,7 +60,6 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.semantics.contentDescription
@@ -200,9 +200,9 @@ fun HistoryScreen(
     // the map is told about both so the camera fit only considers
     // the slice that's actually visible between the notch and the
     // sheet, not the whole window.
-    val configuration = LocalConfiguration.current
+    val windowInfo = androidx.compose.ui.platform.LocalWindowInfo.current
     val density = LocalDensity.current
-    val screenHeightDp = configuration.screenHeightDp.dp
+    val screenHeightDp = with(density) { windowInfo.containerSize.height.toDp() }
     val sheetPeek = screenHeightDp * 0.40f
     val sheetPeekPx = with(density) { sheetPeek.toPx().toInt() }
     val statusBarPad = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
@@ -914,7 +914,7 @@ private fun StopRow(
                     else MaterialTheme.colorScheme.tertiary
     val parsed = entry.anchor.address?.let { parseAddress(it) }
         ?: ParsedAddress(
-            "%.5f, %.5f".format(entry.anchor.latitude, entry.anchor.longitude),
+            "${entry.anchor.latitude.fmtFixed(5)}, ${entry.anchor.longitude.fmtFixed(5)}",
             null,
         )
     Column(
@@ -1006,7 +1006,7 @@ private fun MoveRow(
     val subline = "±${entry.point.horizontalAccuracy} m"
     val parsed = entry.point.address?.let { parseAddress(it) }
         ?: ParsedAddress(
-            "%.5f, %.5f".format(entry.point.latitude, entry.point.longitude),
+            "${entry.point.latitude.fmtFixed(5)}, ${entry.point.longitude.fmtFixed(5)}",
             null,
         )
     TimelineEntryRow(
@@ -1400,7 +1400,7 @@ private fun haversineMeters(lat1: Double, lon1: Double, lat2: Double, lon2: Doub
 
 private fun formatDistance(meters: Double): String =
     if (meters < 1_000.0) "${meters.roundToInt()} m"
-    else "%.1f km".format(meters / 1_000.0)
+    else "${(meters / 1_000.0).fmtFixed(1)} km"
 
 private fun formatDuration(ms: Long): String {
     if (ms < 60_000L) return "${(ms / 1_000L).coerceAtLeast(0)} s"
