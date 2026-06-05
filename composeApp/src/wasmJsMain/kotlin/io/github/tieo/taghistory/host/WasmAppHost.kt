@@ -1,7 +1,15 @@
 package io.github.tieo.taghistory.host
 
 import io.github.tieo.taghistory.AppHostFactories
-import io.github.tieo.taghistory.apple.account.LoginResult
+import io.github.tieo.taghistory.anisette.RemoteAnisetteProvider
+import io.github.tieo.taghistory.apple.account.AppleAccount
+import io.github.tieo.taghistory.apple.account.AppleLoginService
+import io.github.tieo.taghistory.apple.anisette.AnisetteClient
+import io.github.tieo.taghistory.apple.gsa.GsaClient
+import io.github.tieo.taghistory.apple.http.HttpTransport
+import io.github.tieo.taghistory.apple.http.createPlatformHttpClient
+import io.github.tieo.taghistory.apple.http.defaultPlatformHttpTransport
+import io.github.tieo.taghistory.apple.mobileme.MobileMeClient
 import io.github.tieo.taghistory.data.repo.BeaconRepository
 import io.github.tieo.taghistory.data.repo.UserAuthRepository
 import io.github.tieo.taghistory.data.repo.UserDataRepository
@@ -28,7 +36,12 @@ class WasmAppHost(
     private val db: TagHistoryDatabase,
     private val settingsFactory: SettingsFactory,
     private val crypto: SecureBlobStore,
+    private val anisetteUrl: String = "https://ani.sidestore.io",
 ) {
+    private val rawHttpClient = createPlatformHttpClient()
+    private val httpTransport: HttpTransport = defaultPlatformHttpTransport()
+    private val anisetteProvider = RemoteAnisetteProvider(rawHttpClient, anisetteUrl)
+    private val anisette = AnisetteClient(anisetteProvider)
 
     private val beaconRepo by lazy { BeaconRepository(db) }
     private val userSettingsRepo by lazy {
@@ -45,18 +58,32 @@ class WasmAppHost(
         )
     }
 
+    private fun createLoginViewModel(onLoggedIn: suspend () -> Unit): AppleLoginViewModel {
+        val account = AppleAccount()
+        val service = AppleLoginService(
+            account = account,
+            http = httpTransport,
+            anisette = anisette,
+            gsa = GsaClient(httpTransport, anisette),
+            mobileMe = MobileMeClient(httpTransport, anisette),
+        )
+        return AppleLoginViewModel(
+            startLogin = { email, password -> service.login(email, password) },
+            onLoggedIn = {
+                // Persist the freshly-authenticated account so the next
+                // boot lands on MapScreen instead of LoginScreen.
+                runCatching {
+                    val json = account.exportToJson()
+                    val envelope = crypto.encrypt(json.encodeToByteArray(), "apple_account_key")
+                    userAuthRepo.storeUserAuth(envelope)
+                }
+                onLoggedIn()
+            },
+        )
+    }
+
     fun buildFactories(appVersion: String): AppHostFactories = AppHostFactories(
-        createLogin = {
-            AppleLoginViewModel(
-                startLogin = { _, _ ->
-                    throw IllegalStateException(
-                        "Web preview only — Apple login needs an Anisette backend " +
-                            "the wasm target does not ship yet.",
-                    )
-                },
-                onLoggedIn = {},
-            )
-        },
+        createLogin = { createLoginViewModel(onLoggedIn = {}) },
         createMap = {
             // Returning a real MapViewModel even without auth keeps
             // App's root nav on MapScreen; MapViewModel itself flips

@@ -139,6 +139,9 @@ kotlin {
                 implementation(compose.material3)
                 implementation(compose.materialIconsExtended)
                 implementation(compose.ui)
+                // Needed by WasmAppHost — wires the remote anisette
+                // provider into the shared Apple login service.
+                implementation(libs.ktor.client.core)
             }
         }
     }
