@@ -57,6 +57,12 @@ kotlin {
         }
     }
 
+    @OptIn(org.jetbrains.kotlin.gradle.ExperimentalWasmDsl::class)
+    wasmJs {
+        browser()
+        binaries.executable()
+    }
+
     sourceSets {
         commonMain.dependencies {
             implementation(libs.kotlinx.coroutines.core)
@@ -148,6 +154,15 @@ kotlin {
         val iosMain by getting {
             dependencies {
                 implementation(libs.sqldelight.native.driver)
+            }
+        }
+        val wasmJsMain by getting {
+            dependencies {
+                // Web actuals are throwing stubs for everything that
+                // needs a native crypto/DB driver. Settings backs onto
+                // the browser's localStorage via multiplatform-settings'
+                // wasm artifact so user-settings at least survive a
+                // reload.
             }
         }
         val desktopTest by getting {

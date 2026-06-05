@@ -66,6 +66,15 @@ kotlin {
         }
     }
 
+    // wasmJs target is INTENTIONALLY commented out until commonMain
+    // stops referring to Android-only APIs (`LocalConfiguration`,
+    // `String.format`, `Dp.times(Float)` via kotlin.math which compiles
+    // on JVM but not wasm). Bringing it back means refactoring those to
+    // expect/actuals or to multiplatform replacements like
+    // `androidx.compose.ui.LocalWindowInfo` for size queries.
+    // @OptIn(org.jetbrains.kotlin.gradle.ExperimentalWasmDsl::class)
+    // wasmJs { browser { ... }; binaries.executable() }
+
     sourceSets {
         commonMain.dependencies {
             implementation(project(":shared"))
@@ -120,6 +129,7 @@ kotlin {
                 implementation(libs.sqldelight.sqlite.driver)
             }
         }
+
     }
 }
 
