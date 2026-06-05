@@ -139,9 +139,6 @@ kotlin {
                 implementation(compose.material3)
                 implementation(compose.materialIconsExtended)
                 implementation(compose.ui)
-                // Needed by WasmAppHost — wires the remote anisette
-                // provider into the shared Apple login service.
-                implementation(libs.ktor.client.core)
                 // IDB-backed SqlDelight driver. sql.js npm is the
                 // underlying SQLite WASM; the worker JS lives in
                 // src/wasmJsMain/resources/idb-sqljs-worker.js.

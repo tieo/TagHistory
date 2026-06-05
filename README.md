@@ -49,15 +49,14 @@ A wasmJs build of the app runs in any modern browser:
 ```bash
 ./scripts/dev-web.sh                # dev bundle, serves on :8765
 ./scripts/dev-web.sh production     # wasm-opt-shrunk bundle
-deno run --allow-net --allow-env scripts/web-proxy.ts   # CORS proxy on :8770
 ```
 
 The web build is best-effort and ships with caveats:
 
-* Login + report fetch hit Apple's GSA / iCloud / anisette endpoints — none of which set CORS headers. The included `scripts/web-proxy.ts` (Deno) fronts those endpoints with permissive CORS; pass its URLs into `WasmAppHost(anisetteUrl=..., gsaEndpoint=..., mobileMeEndpoint=...)` in `Main.kt`.
-* Database is `sql.js` in-memory; reloads start fresh until an IndexedDB sync layer lands.
-* `SecureBlobStore` is a pass-through wrapper (browsers have no platform keystore equivalent) so any web deployment is "preview only," never for real key material.
-* Map is a per-marker list with OpenStreetMap click-throughs, not a real basemap. Wiring `maplibre-gl-js` is on the roadmap.
+* **Apple login is unavailable on web.** Anisette headers identify your device, and the Android app generates them on-device via Apple's libCoreADI / libstoreservicescore + the Rust ottjni bridge. Neither runs in a browser, and the project will not proxy anisette through a third-party server. The web bundle is read-only on cached data.
+* Map + history view render real MapLibre tiles, but new FindMy reports only land via the Android app's sync.
+* `sql.js` DB is backed by IndexedDB so reloads keep imported data.
+* `SecureBlobStore` is a pass-through wrapper (browsers have no platform keystore equivalent) — anything storing real key material on web has to gate behind a feature flag first.
 * BLE / Nearby is unavailable on web; the Nearby button is hidden.
 
 Verified end-to-end: shared `compileKotlinWasmJs` is green, all 12 crypto primitives (SHA-256, HMAC-SHA-256, PBKDF2, AES-CBC, AES-GCM, secureRng, BigInt round-trip + modPow, P-224 derive + ECDH) pass `wasmJsBrowserTest` in headless Chromium against NIST/RFC vectors.
