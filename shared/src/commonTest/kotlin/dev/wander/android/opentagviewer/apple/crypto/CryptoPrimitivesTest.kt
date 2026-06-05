@@ -49,6 +49,39 @@ class CryptoPrimitivesTest {
         kotlin.test.assertTrue(distinct > 100, "expected >100 distinct values, got $distinct")
     }
 
+    private fun hex(s: String): ByteArray {
+        val clean = s.replace(" ", "")
+        return ByteArray(clean.length / 2) {
+            ((clean[2 * it].digitToInt(16) shl 4) or clean[2 * it + 1].digitToInt(16)).toByte()
+        }
+    }
+
+    @Test
+    fun `aesCbcDecryptPkcs7 round-trips a single block`() {
+        // OpenSSL-generated reference (key=zeros, iv=zeros, plaintext=
+        // "Hello, AES-CBC!" padded with 0x01).
+        val key = ByteArray(16)
+        val iv = ByteArray(16)
+        val plaintext = "Hello, AES-CBC!"
+        val ciphertext = hex("477feeed7f8343117bb6e6e2799867ed")
+        assertEquals(plaintext, aesCbcDecryptPkcs7(key, iv, ciphertext).decodeToString())
+    }
+
+    @Test
+    fun `aesGcmDecrypt NIST 96-bit IV vector`() {
+        // NIST GCM spec — test case 14 (key+iv all-zero, empty AAD).
+        // P=00000000000000000000000000000000, returns 16 zero bytes.
+        val key = ByteArray(16)
+        val iv = ByteArray(12)
+        val ciphertextWithTag = hex(
+            "0388dace60b6a392f328c2b971b2fe78" + // ciphertext
+                "ab6e47d42cec13bdf53a67b21257bddf"     // tag
+        )
+        val plain = aesGcmDecrypt(key, iv, ciphertextWithTag)
+        assertEquals(16, plain.size)
+        assertEquals(0, plain.map { it.toInt() }.sum())
+    }
+
     @Test
     fun `pbkdf2HmacSha256 RFC 7914 test vector`() {
         // RFC 7914 §11 — password="passwd", salt="salt", c=1, dkLen=64.

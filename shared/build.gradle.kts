@@ -163,6 +163,7 @@ kotlin {
                 // BigInt + P-224 are still throwing stubs.
                 implementation(libs.kotlincrypto.sha2)
                 implementation(libs.kotlincrypto.hmac.sha2)
+                implementation(libs.kotlinx.crypto.aes)
             }
         }
         val desktopTest by getting {

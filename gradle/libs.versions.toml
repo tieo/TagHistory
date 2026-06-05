@@ -93,6 +93,12 @@ cryptography-kotlin-provider-jdk = { group = "dev.whyoleg.cryptography", name = 
 kotlincrypto-sha2 = { group = "org.kotlincrypto.hash", name = "sha2", version = "0.8.0" }
 kotlincrypto-hmac-sha2 = { group = "org.kotlincrypto.macs", name = "hmac-sha2", version = "0.8.0" }
 
+# Pure-Kotlin AES-128 block cipher — pairs with the in-tree CBC + GCM
+# wrappers in wasmJsMain. Same sync contract as the JVM `javax.crypto`
+# actuals so the existing aesCbcDecryptPkcs7 / aesGcmDecrypt expects
+# stay non-suspend.
+kotlinx-crypto-aes = { group = "io.github.andreypfau", name = "kotlinx-crypto-aes", version = "0.0.4" }
+
 # multiplatform-settings — expect/actual preferences; datastore binding not cached so
 # Android uses the in-memory MapSettings + SharedPreferences impl.
 multiplatform-settings = { group = "com.russhwolf", name = "multiplatform-settings", version.ref = "multiplatformSettings" }
