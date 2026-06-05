@@ -99,6 +99,11 @@ kotlincrypto-hmac-sha2 = { group = "org.kotlincrypto.macs", name = "hmac-sha2", 
 # stay non-suspend.
 kotlinx-crypto-aes = { group = "io.github.andreypfau", name = "kotlinx-crypto-aes", version = "0.0.4" }
 
+# Pure-Kotlin BigInteger so the wasm BigInt actual can forward to a
+# real arbitrary-precision arithmetic implementation. Used by the
+# P-224 EC math in wasmJsMain.
+ionspin-bignum = { group = "com.ionspin.kotlin", name = "bignum", version = "0.3.10" }
+
 # multiplatform-settings — expect/actual preferences; datastore binding not cached so
 # Android uses the in-memory MapSettings + SharedPreferences impl.
 multiplatform-settings = { group = "com.russhwolf", name = "multiplatform-settings", version.ref = "multiplatformSettings" }

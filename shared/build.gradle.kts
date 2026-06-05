@@ -164,6 +164,7 @@ kotlin {
                 implementation(libs.kotlincrypto.sha2)
                 implementation(libs.kotlincrypto.hmac.sha2)
                 implementation(libs.kotlinx.crypto.aes)
+                implementation(libs.ionspin.bignum)
             }
         }
         val desktopTest by getting {
