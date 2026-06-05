@@ -123,9 +123,15 @@ private class MapHandle {
     }
 
     private fun MapBasemap.styleUrl(): String = when (this) {
+        // Free no-API-key vector tile demo. Coverage is global but
+        // styling is plain. Self-hosting a tile server is the
+        // production path; this just keeps the preview live.
         MapBasemap.LIGHT -> "https://demotiles.maplibre.org/style.json"
-        MapBasemap.DARK -> "https://api.maptiler.com/maps/dataviz-dark/style.json?key=missing"
-        MapBasemap.SATELLITE -> "https://api.maptiler.com/maps/hybrid/style.json?key=missing"
+        // Same source — MapLibre demotiles only ship one style. Dark
+        // mode tile sets exist behind API keys (Stadia, MapTiler) but
+        // pinning a key in this scaffold would leak it.
+        MapBasemap.DARK -> "https://demotiles.maplibre.org/style.json"
+        MapBasemap.SATELLITE -> "https://demotiles.maplibre.org/style.json"
     }
 
     private fun encodeMarkers(markers: List<BeaconMarkerUi>, selectedId: String?): String =
