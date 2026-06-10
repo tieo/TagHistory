@@ -31,9 +31,13 @@ name: Information screen — links present, back navigation works, license sub-s
     visible:
       id: "btn_source_code"
     timeout: 25000
-- extendedWaitUntil:
-    visible:
+# License is the third link row — at the fold edge on the short CI
+# viewport, so scroll it into view rather than asserting it's already on
+# screen.
+- scrollUntilVisible:
+    element:
       id: "btn_license"
+    direction: DOWN
     timeout: 25000
 - assertNotVisible:
     text: "Appearance"
@@ -50,9 +54,10 @@ name: Information screen — links present, back navigation works, license sub-s
     visible:
       id: "btn_developer_website"
     timeout: 25000
-- extendedWaitUntil:
-    visible:
+- scrollUntilVisible:
+    element:
       id: "btn_license"
+    direction: DOWN
     timeout: 25000
 - extendedWaitUntil:
     visible:

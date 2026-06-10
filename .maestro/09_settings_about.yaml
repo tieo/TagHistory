@@ -71,7 +71,7 @@ name: Settings — About button navigates to information screen, back returns
     id: "btn_about"
 - extendedWaitUntil:
     visible:
-      id: "btn_license"
+      id: "btn_source_code"
     timeout: 60000
 - back
 - extendedWaitUntil:
