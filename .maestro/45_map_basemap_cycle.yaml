@@ -1,5 +1,5 @@
 appId: io.github.tieo.taghistory
-name: Map — basemap cycle button advances LIGHT/DARK/SATELLITE/LIGHT
+name: Map — basemap cycle button advances LIGHT-DARK-SATELLITE-LIGHT
 ---
 # BasemapCycleButton on map screen has contentDescription "Basemap: <state>".
 # Cycle three times and verify the map and pager are still alive.
@@ -34,7 +34,7 @@ name: Map — basemap cycle button advances LIGHT/DARK/SATELLITE/LIGHT
     timeout: 25000
 - extendedWaitUntil:
     visible:
-      id: "btn_card_history"
+      id: "btn_card_history.*"
     timeout: 25000
 - extendedWaitUntil:
     visible:

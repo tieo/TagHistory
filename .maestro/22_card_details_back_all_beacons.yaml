@@ -1,21 +1,26 @@
 appId: io.github.tieo.taghistory
-name: "Stress: details→back for every beacon — card stays synced"
+name: "Stress: details→back for every beacon — list stays synced"
 ---
-# Opens device info for each beacon in sequence and verifies back navigation
-# always returns to the correct card. Catches pager reset-on-back bugs.
+# Opens device info for each beacon in sequence (via its row's own
+# details action) and verifies back always returns to the map list
+# with every tag still present. Catches nav-stack reset bugs.
 - runFlow:
     file: 00_seed_test_data.yaml
 
-# ── Car Keys ─────────────────────────────────────────────────────────────────
+# ── Car Keys ──────────────────────────────────────────────────────────
 - extendedWaitUntil:
     visible:
-      text: "Car Keys"
+      id: "tag_row_test-beacon-001-aaa"
     timeout: 25000
 - tapOn:
-    id: "btn_card_details"
+    id: "btn_card_details_test-beacon-001-aaa"
 - extendedWaitUntil:
     visible:
       id: "btn_rename"
+    timeout: 25000
+- extendedWaitUntil:
+    visible:
+      text: "Car Keys"
     timeout: 25000
 - back
 - extendedWaitUntil:
@@ -27,21 +32,29 @@ name: "Stress: details→back for every beacon — card stays synced"
       text: "Car Keys"
     timeout: 25000
 
-# ── Backpack ──────────────────────────────────────────────────────────────────
+# ── Backpack ──────────────────────────────────────────────────────────
 - swipe:
-    start: "85%, 75%"
-    end: "15%, 75%"
+    start: "50%, 88%"
+    end: "50%, 55%"
     duration: 400
+- swipe:
+    start: "50%, 88%"
+    end: "50%, 55%"
+    duration: 400
+- extendedWaitUntil:
+    visible:
+      id: "tag_row_test-beacon-002-bbb"
+    timeout: 25000
+- tapOn:
+    id: "btn_card_details_test-beacon-002-bbb"
+- extendedWaitUntil:
+    visible:
+      id: "btn_rename"
+    timeout: 25000
 - extendedWaitUntil:
     visible:
       text: "Backpack"
     timeout: 25000
-- tapOn:
-    id: "btn_card_details"
-- extendedWaitUntil:
-    visible:
-      id: "btn_rename"
-    timeout: 25000
 - back
 - extendedWaitUntil:
     visible:
@@ -52,49 +65,28 @@ name: "Stress: details→back for every beacon — card stays synced"
       text: "Backpack"
     timeout: 25000
 
-# ── Bike ──────────────────────────────────────────────────────────────────────
+# ── Bike ──────────────────────────────────────────────────────────────
 - swipe:
-    start: "85%, 75%"
-    end: "15%, 75%"
+    start: "50%, 88%"
+    end: "50%, 55%"
+    duration: 400
+- swipe:
+    start: "50%, 88%"
+    end: "50%, 55%"
     duration: 400
 - extendedWaitUntil:
     visible:
-      text: "Bike"
+      id: "tag_row_test-beacon-003-ccc"
     timeout: 25000
 - tapOn:
-    id: "btn_card_details"
+    id: "btn_card_details_test-beacon-003-ccc"
 - extendedWaitUntil:
     visible:
       id: "btn_rename"
     timeout: 25000
-- back
-- extendedWaitUntil:
-    visible:
-      id: "btn_settings"
-    timeout: 25000
 - extendedWaitUntil:
     visible:
       text: "Bike"
-    timeout: 25000
-
-# ── Back to Car Keys ──────────────────────────────────────────────────────────
-- swipe:
-    start: "15%, 75%"
-    end: "85%, 75%"
-    duration: 400
-- swipe:
-    start: "15%, 75%"
-    end: "85%, 75%"
-    duration: 400
-- extendedWaitUntil:
-    visible:
-      text: "Car Keys"
-    timeout: 25000
-- tapOn:
-    id: "btn_card_details"
-- extendedWaitUntil:
-    visible:
-      id: "btn_rename"
     timeout: 25000
 # Details landmarks visible, map landmarks gone.
 - extendedWaitUntil:
@@ -112,69 +104,47 @@ name: "Stress: details→back for every beacon — card stays synced"
     visible:
       id: "btn_settings"
     timeout: 25000
-- extendedWaitUntil:
-    visible:
-      text: "Car Keys"
-    timeout: 25000
-- assertNotVisible:
-    text: "Bike"
-- assertNotVisible:
-    text: "Backpack"
-
-# ── second pass: same beacons, second time round-trip ────────────────────────
-- tapOn:
-    id: "btn_card_details"
-- extendedWaitUntil:
-    visible:
-      id: "btn_rename"
-    timeout: 25000
-- back
-- extendedWaitUntil:
-    visible:
-      id: "btn_settings"
-    timeout: 25000
-- extendedWaitUntil:
-    visible:
-      text: "Car Keys"
-    timeout: 25000
-
+# Back-nav resets the list scroll to the top — swipe down again to
+# confirm Bike's row is still intact after the details round-trip.
 - swipe:
-    start: "85%, 75%"
-    end: "15%, 75%"
+    start: "50%, 88%"
+    end: "50%, 55%"
     duration: 400
-- extendedWaitUntil:
-    visible:
-      text: "Backpack"
-    timeout: 25000
-- tapOn:
-    id: "btn_card_details"
-- extendedWaitUntil:
-    visible:
-      id: "btn_rename"
-    timeout: 25000
-- back
-- extendedWaitUntil:
-    visible:
-      id: "btn_settings"
-    timeout: 25000
-- extendedWaitUntil:
-    visible:
-      text: "Backpack"
-    timeout: 25000
-
 - swipe:
-    start: "85%, 75%"
-    end: "15%, 75%"
+    start: "50%, 88%"
+    end: "50%, 55%"
     duration: 400
 - extendedWaitUntil:
     visible:
       text: "Bike"
     timeout: 25000
+
+# ── second pass: Car Keys again — no leak from previous opens ─────────
+- swipe:
+    start: "50%, 70%"
+    end: "50%, 95%"
+    duration: 400
+- swipe:
+    start: "50%, 70%"
+    end: "50%, 95%"
+    duration: 400
+- swipe:
+    start: "50%, 70%"
+    end: "50%, 95%"
+    duration: 400
+- extendedWaitUntil:
+    visible:
+      id: "tag_row_test-beacon-001-aaa"
+    timeout: 25000
 - tapOn:
-    id: "btn_card_details"
+    id: "btn_card_details_test-beacon-001-aaa"
 - extendedWaitUntil:
     visible:
       id: "btn_rename"
+    timeout: 25000
+- extendedWaitUntil:
+    visible:
+      text: "Car Keys"
     timeout: 25000
 - back
 - extendedWaitUntil:
@@ -183,15 +153,9 @@ name: "Stress: details→back for every beacon — card stays synced"
     timeout: 25000
 - extendedWaitUntil:
     visible:
-      text: "Bike"
-    timeout: 25000
-
-# Final: btn_card_details still works, no leak from previous opens.
-- extendedWaitUntil:
-    visible:
-      id: "btn_card_details"
+      id: "btn_card_details_test-beacon-001-aaa"
     timeout: 25000
 - extendedWaitUntil:
     visible:
-      id: "btn_card_history"
+      id: "btn_card_history_test-beacon-001-aaa"
     timeout: 25000

@@ -8,7 +8,7 @@ name: History — navigating past the oldest seeded day still keeps controls ali
     file: 00_seed_test_data.yaml
 
 - tapOn:
-    id: "btn_card_history"
+    id: "btn_card_history.*"
 - extendedWaitUntil:
     visible:
       text: "Today"
@@ -116,7 +116,7 @@ name: History — navigating past the oldest seeded day still keeps controls ali
       text: "Bike"
     timeout: 25000
 - tapOn:
-    id: "btn_card_history"
+    id: "btn_card_history.*"
 - extendedWaitUntil:
     visible:
       text: "Today"

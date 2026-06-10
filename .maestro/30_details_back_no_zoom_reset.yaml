@@ -9,7 +9,7 @@ name: "Stress: details→back does not reset map camera to world"
 
 # ── Car Keys: details → back ─────────────────────────────────────────────────
 - tapOn:
-    id: "btn_card_details"
+    id: "btn_card_details.*"
 - extendedWaitUntil:
     visible:
       id: "btn_rename"
@@ -36,7 +36,7 @@ name: "Stress: details→back does not reset map camera to world"
       text: "Backpack"
     timeout: 25000
 - tapOn:
-    id: "btn_card_history"
+    id: "btn_card_history.*"
 - extendedWaitUntil:
     visible:
       id: "btn_day_prev"
@@ -63,7 +63,7 @@ name: "Stress: details→back does not reset map camera to world"
       text: "Bike"
     timeout: 25000
 - tapOn:
-    id: "btn_card_details"
+    id: "btn_card_details.*"
 - extendedWaitUntil:
     visible:
       id: "btn_view_history"
@@ -110,16 +110,16 @@ name: "Stress: details→back does not reset map camera to world"
     timeout: 25000
 - extendedWaitUntil:
     visible:
-      id: "btn_card_details"
+      id: "btn_card_details.*"
     timeout: 25000
 - extendedWaitUntil:
     visible:
-      id: "btn_card_history"
+      id: "btn_card_history.*"
     timeout: 25000
 
 # ── Car Keys: details -> history -> back -> back, ensure no zoom reset ──────
 - tapOn:
-    id: "btn_card_details"
+    id: "btn_card_details.*"
 - extendedWaitUntil:
     visible:
       id: "btn_view_history"

@@ -1,21 +1,25 @@
 appId: io.github.tieo.taghistory
-name: Map — opening details from card pager works for all three beacons
+name: Map — opening details from the list works for all three beacons
 ---
-# Opens DeviceInfo via btn_card_details for each card and verifies the rename
-# button is rendered (proving the device-info ViewModel loaded).
+# Opens DeviceInfo via each row's own details action and verifies the
+# rename button renders (proving the device-info ViewModel loaded).
 - runFlow:
     file: 00_seed_test_data.yaml
 
 # Car Keys
 - extendedWaitUntil:
     visible:
-      text: "Car Keys"
+      id: "tag_row_test-beacon-001-aaa"
     timeout: 25000
 - tapOn:
-    id: "btn_card_details"
+    id: "btn_card_details_test-beacon-001-aaa"
 - extendedWaitUntil:
     visible:
       id: "btn_rename"
+    timeout: 25000
+- extendedWaitUntil:
+    visible:
+      text: "Car Keys"
     timeout: 25000
 - back
 - extendedWaitUntil:
@@ -25,18 +29,26 @@ name: Map — opening details from card pager works for all three beacons
 
 # Backpack
 - swipe:
-    start: "85%, 75%"
-    end: "15%, 75%"
+    start: "50%, 88%"
+    end: "50%, 55%"
+    duration: 400
+- swipe:
+    start: "50%, 88%"
+    end: "50%, 55%"
     duration: 400
 - extendedWaitUntil:
     visible:
-      text: "Backpack"
+      id: "tag_row_test-beacon-002-bbb"
     timeout: 25000
 - tapOn:
-    id: "btn_card_details"
+    id: "btn_card_details_test-beacon-002-bbb"
 - extendedWaitUntil:
     visible:
       id: "btn_rename"
+    timeout: 25000
+- extendedWaitUntil:
+    visible:
+      text: "Backpack"
     timeout: 25000
 - back
 - extendedWaitUntil:
@@ -46,94 +58,29 @@ name: Map — opening details from card pager works for all three beacons
 
 # Bike
 - swipe:
-    start: "85%, 75%"
-    end: "15%, 75%"
+    start: "50%, 88%"
+    end: "50%, 55%"
     duration: 400
-- extendedWaitUntil:
-    visible:
-      text: "Bike"
-    timeout: 25000
-- tapOn:
-    id: "btn_card_details"
-- extendedWaitUntil:
-    visible:
-      id: "btn_rename"
-    timeout: 25000
-- extendedWaitUntil:
-    visible:
-      text: "Bike"
-    timeout: 25000
-- extendedWaitUntil:
-    visible:
-      id: "btn_view_history"
-    timeout: 25000
-- extendedWaitUntil:
-    visible:
-      id: "btn_remove"
-    timeout: 25000
-- back
-- extendedWaitUntil:
-    visible:
-      id: "btn_settings"
-    timeout: 25000
-- extendedWaitUntil:
-    visible:
-      text: "Bike"
-    timeout: 25000
-
-# ── Reverse pass: swipe back to Backpack and Car Keys, details each ─────────
 - swipe:
-    start: "15%, 75%"
-    end: "85%, 75%"
+    start: "50%, 88%"
+    end: "50%, 55%"
     duration: 400
 - extendedWaitUntil:
     visible:
-      text: "Backpack"
+      id: "tag_row_test-beacon-003-ccc"
     timeout: 25000
 - tapOn:
-    id: "btn_card_details"
+    id: "btn_card_details_test-beacon-003-ccc"
 - extendedWaitUntil:
     visible:
       id: "btn_rename"
     timeout: 25000
 - extendedWaitUntil:
     visible:
-      text: "Backpack"
+      text: "Bike"
     timeout: 25000
 - back
 - extendedWaitUntil:
     visible:
       id: "btn_settings"
-    timeout: 25000
-- extendedWaitUntil:
-    visible:
-      text: "Backpack"
-    timeout: 25000
-
-- swipe:
-    start: "15%, 75%"
-    end: "85%, 75%"
-    duration: 400
-- extendedWaitUntil:
-    visible:
-      text: "Car Keys"
-    timeout: 25000
-- tapOn:
-    id: "btn_card_details"
-- extendedWaitUntil:
-    visible:
-      id: "btn_rename"
-    timeout: 25000
-- extendedWaitUntil:
-    visible:
-      text: "Car Keys"
-    timeout: 25000
-- back
-- extendedWaitUntil:
-    visible:
-      id: "btn_settings"
-    timeout: 25000
-- extendedWaitUntil:
-    visible:
-      text: "Car Keys"
     timeout: 25000

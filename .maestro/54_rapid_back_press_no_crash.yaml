@@ -7,7 +7,7 @@ name: Navigation — rapid back from deep stack does not crash
     file: 00_seed_test_data.yaml
 
 - tapOn:
-    id: "btn_card_details"
+    id: "btn_card_details.*"
 - extendedWaitUntil:
     visible:
       id: "btn_view_history"
@@ -52,7 +52,7 @@ name: Navigation — rapid back from deep stack does not crash
       text: "Backpack"
     timeout: 25000
 - tapOn:
-    id: "btn_card_details"
+    id: "btn_card_details.*"
 - extendedWaitUntil:
     visible:
       id: "btn_view_history"
@@ -87,7 +87,7 @@ name: Navigation — rapid back from deep stack does not crash
       id: "btn_settings"
     timeout: 25000
 - tapOn:
-    id: "btn_card_history"
+    id: "btn_card_history.*"
 - extendedWaitUntil:
     visible:
       id: "btn_day_prev"

@@ -1,35 +1,50 @@
 appId: io.github.tieo.taghistory
-name: Map screen — seeded beacons appear as cards and markers
+name: Map screen — seeded beacons all appear in the glass tag list
 ---
-# Structural assertions: card text visible, pager scrollable via card-area swipes.
-# Adds: emoji glyphs, last-updated label format, full-cycle pager round-trip,
-# and circle-action visibility on every card.
+# Structural assertions for the glass list: ALL tags visible at once
+# (sorted most-recent first), every visible row carries the circle
+# actions, header shows count + refresh + edit affordances.
 - runFlow:
     file: 00_seed_test_data.yaml
 
-# First card must be Car Keys (most recent — seeded 30 min ago).
+# Header: "Tags" + count + refresh + manage-tags entry points.
+- extendedWaitUntil:
+    visible:
+      text: "Tags"
+    timeout: 25000
+- extendedWaitUntil:
+    visible:
+      id: "btn_refresh_all"
+    timeout: 25000
+- extendedWaitUntil:
+    visible:
+      id: "btn_edit_tags"
+    timeout: 25000
+
+# Most-recent tag (Car Keys, seeded 30 min ago) is the first row and
+# visible without scrolling. Backpack too on a 640px-tall screen.
+- extendedWaitUntil:
+    visible:
+      id: "tag_row_test-beacon-001-aaa"
+    timeout: 25000
 - extendedWaitUntil:
     visible:
       text: "Car Keys"
     timeout: 25000
 - extendedWaitUntil:
     visible:
-      id: "btn_card_details"
+      text: "Backpack"
+    timeout: 25000
+
+# Row carries the circle actions.
+- extendedWaitUntil:
+    visible:
+      id: "btn_card_details.*"
     timeout: 25000
 - extendedWaitUntil:
     visible:
-      id: "btn_card_history"
+      id: "btn_card_history.*"
     timeout: 25000
-# Route circle-action label is also rendered.
-- extendedWaitUntil:
-    visible:
-      text: "Route"
-    timeout: 25000
-# Other beacons must NOT be visible on the centre card overlay.
-- assertNotVisible:
-    text: "Backpack"
-- assertNotVisible:
-    text: "Bike"
 
 # "Updated <N> min ago" / "Updated <N> h ago" — catches enum/raw output.
 - extendedWaitUntil:
@@ -37,73 +52,47 @@ name: Map screen — seeded beacons appear as cards and markers
       text: ".*Updated.*ago.*"
     timeout: 25000
 
-# Swipe LEFT on card area (75% down screen) → Backpack.
+# Bike (oldest) is reachable by scrolling the list.
 - swipe:
-    start: "85%, 75%"
-    end: "15%, 75%"
+    start: "50%, 88%"
+    end: "50%, 55%"
+    duration: 400
+- swipe:
+    start: "50%, 88%"
+    end: "50%, 55%"
     duration: 400
 - extendedWaitUntil:
     visible:
-      text: "Backpack"
+      id: "tag_row_test-beacon-003-ccc"
     timeout: 25000
-- assertNotVisible:
-    text: "Car Keys"
-- extendedWaitUntil:
-    visible:
-      id: "btn_card_details"
-    timeout: 25000
-- extendedWaitUntil:
-    visible:
-      id: "btn_card_history"
-    timeout: 25000
-- extendedWaitUntil:
-    visible:
-      text: ".*Updated.*ago.*"
-    timeout: 25000
-
-# Swipe LEFT again → Bike.
-- swipe:
-    start: "85%, 75%"
-    end: "15%, 75%"
-    duration: 400
 - extendedWaitUntil:
     visible:
       text: "Bike"
     timeout: 25000
-- assertNotVisible:
-    text: "Backpack"
-- extendedWaitUntil:
-    visible:
-      id: "btn_card_details"
-    timeout: 25000
-- extendedWaitUntil:
-    visible:
-      id: "btn_card_history"
-    timeout: 25000
 
-# Swipe RIGHT twice → Car Keys again, full round-trip.
+# Scroll back up — first row + header still intact (no recycler crash).
 - swipe:
-    start: "15%, 75%"
-    end: "85%, 75%"
+    start: "50%, 70%"
+    end: "50%, 95%"
+    duration: 400
+- swipe:
+    start: "50%, 70%"
+    end: "50%, 95%"
+    duration: 400
+- swipe:
+    start: "50%, 70%"
+    end: "50%, 95%"
     duration: 400
 - extendedWaitUntil:
     visible:
-      text: "Backpack"
+      id: "tag_row_test-beacon-001-aaa"
     timeout: 25000
-- swipe:
-    start: "15%, 75%"
-    end: "85%, 75%"
-    duration: 400
 - extendedWaitUntil:
     visible:
       text: "Car Keys"
     timeout: 25000
-- assertNotVisible:
-    text: "Bike"
-- assertNotVisible:
-    text: "Backpack"
 
-# Settings button is part of map screen; never gone during card scroll.
+# Settings button is part of map screen; never gone during list scroll.
 - extendedWaitUntil:
     visible:
       id: "btn_settings"

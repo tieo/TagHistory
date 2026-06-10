@@ -5,7 +5,7 @@ name: Device info — View history button navigates to history; back returns
     file: 00_seed_test_data.yaml
 
 - tapOn:
-    id: "btn_card_details"
+    id: "btn_card_details.*"
 - extendedWaitUntil:
     visible:
       id: "btn_view_history"

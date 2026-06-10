@@ -1,223 +1,79 @@
 appId: io.github.tieo.taghistory
-name: "Stress: wild card swipes — card always lands on correct beacon"
+name: "Stress: wild list scrolling — rows + actions survive chaotic input"
 ---
-# Hammers the pager with boundary slams and single-step advances.
-# Strategy: slam to a known boundary, then step to a specific card.
-# This is deterministic regardless of pager animation timing.
-# Catches: off-by-one, pager desynced from selectedBeaconId, recomposition reset.
+# The old pager-boundary stress is obsolete (no pager). Replacement:
+# hammer the glass list with fast alternating up/down flings, then
+# confirm every row, its circle actions, and the header controls are
+# still rendered and tappable — i.e. the LazyColumn doesn't corrupt or
+# lose content under chaotic input, and we never fell off the map.
 - runFlow:
     file: 00_seed_test_data.yaml
 
-# ── slam left past the end → Bike (boundary) ─────────────────────────────────
-- swipe:
-    start: "85%, 75%"
-    end: "15%, 75%"
-    duration: 300
-- swipe:
-    start: "85%, 75%"
-    end: "15%, 75%"
-    duration: 300
-- swipe:
-    start: "85%, 75%"
-    end: "15%, 75%"
-    duration: 300
-- swipe:
-    start: "85%, 75%"
-    end: "15%, 75%"
-    duration: 300
-- swipe:
-    start: "85%, 75%"
-    end: "15%, 75%"
-    duration: 300
 - extendedWaitUntil:
     visible:
-      text: "Bike"
+      id: "tag_row_test-beacon-001-aaa"
     timeout: 25000
 
-# ── one step right from Bike → Backpack ──────────────────────────────────────
-- swipe:
-    start: "15%, 75%"
-    end: "85%, 75%"
-    duration: 400
-- extendedWaitUntil:
-    visible:
-      text: "Backpack"
-    timeout: 25000
+# Burst of fast flings within the list area (bottom ~45% of screen).
+- repeat:
+    times: 6
+    commands:
+      - swipe:
+          start: "50%, 88%"
+          end: "50%, 60%"
+          duration: 150
+      - swipe:
+          start: "50%, 60%"
+          end: "50%, 92%"
+          duration: 150
 
-# ── one more step right → Car Keys ───────────────────────────────────────────
-- swipe:
-    start: "15%, 75%"
-    end: "85%, 75%"
-    duration: 400
+# After the chaos: list settled, all three rows present, header intact.
+- scrollUntilVisible:
+    element:
+      id: "tag_row_test-beacon-001-aaa"
+    direction: UP
+    timeout: 25000
 - extendedWaitUntil:
     visible:
       text: "Car Keys"
     timeout: 25000
-
-# ── slam right past the start → Car Keys (boundary) ──────────────────────────
-- swipe:
-    start: "15%, 75%"
-    end: "85%, 75%"
-    duration: 300
-- swipe:
-    start: "15%, 75%"
-    end: "85%, 75%"
-    duration: 300
-- swipe:
-    start: "15%, 75%"
-    end: "85%, 75%"
-    duration: 300
-- extendedWaitUntil:
-    visible:
-      text: "Car Keys"
-    timeout: 25000
-
-# ── two steps left → Bike ─────────────────────────────────────────────────────
-- swipe:
-    start: "85%, 75%"
-    end: "15%, 75%"
-    duration: 400
-- extendedWaitUntil:
-    visible:
-      text: "Backpack"
-    timeout: 25000
-- swipe:
-    start: "85%, 75%"
-    end: "15%, 75%"
-    duration: 400
-- extendedWaitUntil:
-    visible:
-      text: "Bike"
-    timeout: 25000
-
-# ── slam right from Bike → Car Keys ──────────────────────────────────────────
-- swipe:
-    start: "15%, 75%"
-    end: "85%, 75%"
-    duration: 300
-- swipe:
-    start: "15%, 75%"
-    end: "85%, 75%"
-    duration: 300
-- swipe:
-    start: "15%, 75%"
-    end: "85%, 75%"
-    duration: 300
-- extendedWaitUntil:
-    visible:
-      text: "Car Keys"
-    timeout: 25000
-
-# ── step to middle, check buttons still alive ─────────────────────────────────
-- swipe:
-    start: "85%, 75%"
-    end: "15%, 75%"
-    duration: 400
 - extendedWaitUntil:
     visible:
       text: "Backpack"
     timeout: 25000
 - extendedWaitUntil:
     visible:
-      id: "btn_card_details"
+      id: "btn_refresh_all"
     timeout: 25000
-- extendedWaitUntil:
-    visible:
-      id: "btn_card_history"
-    timeout: 25000
-- assertNotVisible:
-    text: "Car Keys"
-- assertNotVisible:
-    text: "Bike"
-
-# ── alternating swipes: L, R, L, R back to Backpack via repeated bounces ───
-- swipe:
-    start: "85%, 75%"
-    end: "15%, 75%"
-    duration: 200
-- swipe:
-    start: "15%, 75%"
-    end: "85%, 75%"
-    duration: 200
-- swipe:
-    start: "85%, 75%"
-    end: "15%, 75%"
-    duration: 200
-- swipe:
-    start: "15%, 75%"
-    end: "85%, 75%"
-    duration: 200
-- extendedWaitUntil:
-    visible:
-      text: "Backpack"
-    timeout: 25000
-
-# ── slam left to Bike, slam right to Car Keys, slam left twice to Bike ───
-- swipe:
-    start: "85%, 75%"
-    end: "15%, 75%"
-    duration: 200
-- swipe:
-    start: "85%, 75%"
-    end: "15%, 75%"
-    duration: 200
-- extendedWaitUntil:
-    visible:
-      text: "Bike"
-    timeout: 25000
-- swipe:
-    start: "15%, 75%"
-    end: "85%, 75%"
-    duration: 200
-- swipe:
-    start: "15%, 75%"
-    end: "85%, 75%"
-    duration: 200
-- extendedWaitUntil:
-    visible:
-      text: "Car Keys"
-    timeout: 25000
-- swipe:
-    start: "85%, 75%"
-    end: "15%, 75%"
-    duration: 200
-- swipe:
-    start: "85%, 75%"
-    end: "15%, 75%"
-    duration: 200
-- extendedWaitUntil:
-    visible:
-      text: "Bike"
-    timeout: 25000
-
-# ── settings button is still tappable from any card ────────────────────────
 - extendedWaitUntil:
     visible:
       id: "btn_settings"
     timeout: 25000
-- extendedWaitUntil:
-    visible:
-      id: "btn_card_details"
-    timeout: 25000
-- extendedWaitUntil:
-    visible:
-      id: "btn_card_history"
-    timeout: 25000
 
-# ── final round-trip back to Car Keys ───────────────────────────────────────
-- swipe:
-    start: "15%, 75%"
-    end: "85%, 75%"
-    duration: 300
-- swipe:
-    start: "15%, 75%"
-    end: "85%, 75%"
-    duration: 300
+# Row actions still wired — open Car Keys details and back.
+- tapOn:
+    id: "btn_card_details_test-beacon-001-aaa"
+- extendedWaitUntil:
+    visible:
+      id: "btn_rename"
+    timeout: 25000
 - extendedWaitUntil:
     visible:
       text: "Car Keys"
     timeout: 25000
-- assertNotVisible:
-    text: "Backpack"
-- assertNotVisible:
-    text: "Bike"
+- back
+- extendedWaitUntil:
+    visible:
+      id: "btn_settings"
+    timeout: 25000
+
+# Bike still reachable after everything.
+- scrollUntilVisible:
+    element:
+      id: "tag_row_test-beacon-003-ccc"
+    direction: DOWN
+    timeout: 25000
+- extendedWaitUntil:
+    visible:
+      text: "Bike"
+    timeout: 25000

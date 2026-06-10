@@ -6,7 +6,7 @@ name: History screen — seeded reports visible, day nav works, back returns to 
 
 # Open history from map card (Car Keys has 6 seeded reports across 3 days).
 - tapOn:
-    id: "btn_card_history"
+    id: "btn_card_history.*"
 - extendedWaitUntil:
     visible:
       id: "btn_day_prev"
@@ -28,7 +28,7 @@ name: History screen — seeded reports visible, day nav works, back returns to 
 - assertNotVisible:
     id: "btn_settings"
 - assertNotVisible:
-    id: "btn_card_details"
+    id: "btn_card_details.*"
 
 # Expand the bottom sheet so we can verify the chronological list renders.
 - extendedWaitUntil:

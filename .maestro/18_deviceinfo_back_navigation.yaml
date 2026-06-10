@@ -1,30 +1,29 @@
 appId: io.github.tieo.taghistory
-name: Device info — back button returns to map with same beacon selected
+name: Device info — back button returns to map with the list intact
 ---
 - runFlow:
     file: 00_seed_test_data.yaml
 
-# Swipe to Backpack (index 1).
+# Open details for Backpack via its own row action.
 - swipe:
-    start: "85%, 75%"
-    end: "15%, 75%"
+    start: "50%, 88%"
+    end: "50%, 55%"
+    duration: 400
+- swipe:
+    start: "50%, 88%"
+    end: "50%, 55%"
     duration: 400
 - extendedWaitUntil:
     visible:
-      text: "Backpack"
+      id: "tag_row_test-beacon-002-bbb"
     timeout: 25000
-- assertNotVisible:
-    text: "Car Keys"
-- assertNotVisible:
-    text: "Bike"
-
 - tapOn:
-    id: "btn_card_details"
+    id: "btn_card_details_test-beacon-002-bbb"
 - extendedWaitUntil:
     visible:
       id: "btn_rename"
     timeout: 25000
-# On details: card pager / map landmarks gone, details ones present.
+# On details: map landmarks gone, details ones present.
 - extendedWaitUntil:
     visible:
       text: "Backpack"
@@ -32,50 +31,21 @@ name: Device info — back button returns to map with same beacon selected
 - assertNotVisible:
     id: "btn_settings"
 - assertNotVisible:
-    id: "btn_card_history"
+    id: "btn_refresh_all"
 
 - back
 - extendedWaitUntil:
     visible:
       id: "btn_settings"
     timeout: 25000
-# Back on map: same card index restored.
+# Back on map: the full list is restored, details widgets gone.
 - extendedWaitUntil:
     visible:
       text: "Backpack"
     timeout: 25000
-- assertNotVisible:
-    text: "Car Keys"
+- extendedWaitUntil:
+    visible:
+      text: "Car Keys"
+    timeout: 25000
 - assertNotVisible:
     id: "btn_rename"
-
-# Swipe further to Bike, open details, back — same flow.
-- swipe:
-    start: "85%, 75%"
-    end: "15%, 75%"
-    duration: 400
-- extendedWaitUntil:
-    visible:
-      text: "Bike"
-    timeout: 25000
-- tapOn:
-    id: "btn_card_details"
-- extendedWaitUntil:
-    visible:
-      id: "btn_rename"
-    timeout: 25000
-- extendedWaitUntil:
-    visible:
-      text: "Bike"
-    timeout: 25000
-- back
-- extendedWaitUntil:
-    visible:
-      id: "btn_settings"
-    timeout: 25000
-- extendedWaitUntil:
-    visible:
-      text: "Bike"
-    timeout: 25000
-- assertNotVisible:
-    text: "Backpack"

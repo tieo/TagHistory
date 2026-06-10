@@ -1,102 +1,67 @@
 appId: io.github.tieo.taghistory
-name: "Stress: settings deep scroll then back — card at non-zero index unchanged"
+name: "Stress: settings deep scroll + theme change then back — map list intact"
 ---
-# Scrolls deep into settings (past Account section), triggers theme change, then
-# backs out. Tests that the map pager card is not reset even after settings
-# makes a persistent state change (theme rewrite could trigger recomposition).
+# Selects a row, scrolls deep into settings, mutates the theme (a
+# persistent state change that triggers recomposition), backs out, and
+# verifies the map list survived intact. With the glass list all rows
+# stay visible — the old "pager card index unchanged" check becomes
+# "every row still rendered after the settings round-trip".
 - runFlow:
     file: 00_seed_test_data.yaml
 
-# Park on Bike (index 2) before going to settings
-- swipe:
-    start: "85%, 75%"
-    end: "15%, 75%"
-    duration: 400
-- swipe:
-    start: "85%, 75%"
-    end: "15%, 75%"
-    duration: 400
+# Select Bike before going to settings.
+- extendedWaitUntil:
+    visible:
+      id: "tag_row_test-beacon-003-ccc"
+    timeout: 25000
+- tapOn:
+    id: "tag_row_test-beacon-003-ccc"
 - extendedWaitUntil:
     visible:
       text: "Bike"
     timeout: 25000
 
-# Open settings and scroll all the way down
+# Open settings, scroll deep, change theme.
 - tapOn:
     id: "btn_settings"
 - extendedWaitUntil:
     visible:
       text: "Settings"
     timeout: 25000
-- swipe:
-    direction: UP
-    duration: 800
-- swipe:
-    direction: UP
-    duration: 800
-- extendedWaitUntil:
-    visible:
-      text: "Account"
-    timeout: 25000
-
-# Change theme (state mutation) while scrolled deep
 - scrollUntilVisible:
     element:
       id: "btn_theme_dark"
-    direction: UP
+    direction: DOWN
     timeout: 25000
 - tapOn:
     id: "btn_theme_dark"
 - tapOn:
     id: "btn_theme_system"
 
-# Back → Bike must still be the active card
+# Back → map list intact, still on map (not login).
 - back
 - extendedWaitUntil:
     visible:
       id: "btn_settings"
     timeout: 25000
+- assertNotVisible:
+    id: "btn_import"
 - extendedWaitUntil:
     visible:
       text: "Bike"
     timeout: 25000
-- assertNotVisible:
-    id: "btn_import"
 
-# ── second pass: from Bike, swipe to Backpack, deep-scroll settings, theme,
-# deep-scroll to bottom, back → Backpack still active ────────────────────────
-- swipe:
-    start: "15%, 75%"
-    end: "85%, 75%"
-    duration: 400
-- extendedWaitUntil:
-    visible:
-      text: "Backpack"
-    timeout: 25000
+# Second pass: theme cycle, scroll, back — list still whole.
 - tapOn:
     id: "btn_settings"
 - extendedWaitUntil:
     visible:
       text: "Settings"
     timeout: 25000
-- swipe:
-    direction: UP
-    duration: 800
-- swipe:
-    direction: UP
-    duration: 800
-- extendedWaitUntil:
-    visible:
-      text: "Account"
-    timeout: 25000
-- extendedWaitUntil:
-    visible:
-      text: "About"
-    timeout: 25000
 - scrollUntilVisible:
     element:
       id: "btn_theme_light"
-    direction: UP
+    direction: DOWN
     timeout: 25000
 - tapOn:
     id: "btn_theme_light"
@@ -104,25 +69,22 @@ name: "Stress: settings deep scroll then back — card at non-zero index unchang
     id: "btn_theme_dark"
 - tapOn:
     id: "btn_theme_system"
-- swipe:
-    direction: UP
-    duration: 800
-- extendedWaitUntil:
-    visible:
-      text: "About"
-    timeout: 25000
 - back
 - extendedWaitUntil:
     visible:
       id: "btn_settings"
     timeout: 25000
+- assertNotVisible:
+    id: "btn_import"
+- extendedWaitUntil:
+    visible:
+      text: "Car Keys"
+    timeout: 25000
 - extendedWaitUntil:
     visible:
       text: "Backpack"
     timeout: 25000
-- assertNotVisible:
-    text: "Bike"
-- assertNotVisible:
-    text: "Car Keys"
-- assertNotVisible:
-    id: "btn_import"
+- extendedWaitUntil:
+    visible:
+      text: "Bike"
+    timeout: 25000

@@ -9,7 +9,7 @@ name: History — expanded list shows item addresses or coords plus times
     file: 00_seed_test_data.yaml
 
 - tapOn:
-    id: "btn_card_history"
+    id: "btn_card_history.*"
 - extendedWaitUntil:
     visible:
       text: "Today"
@@ -68,11 +68,8 @@ name: History — expanded list shows item addresses or coords plus times
     visible:
       text: ".*\\d+:\\d\\d.*"
     timeout: 25000
-# Yesterday for Car Keys has 2 points — items 0 and 1 visible.
-- extendedWaitUntil:
-    visible:
-      id: "history_item_1"
-    timeout: 25000
+# Yesterday's two points cluster into one stop entry (the stop-grouping
+# merges nearby consecutive fixes), so only item_0 is guaranteed.
 
 # Older bucket (3 days ago, 1 point) — date label is YYYY-MM-DD.
 - tapOn:

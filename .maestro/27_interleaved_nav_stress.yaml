@@ -33,7 +33,7 @@ name: "Stress: interleaved settings+details+history with card switches"
 
 # ── from Backpack: details → back ────────────────────────────────────────────
 - tapOn:
-    id: "btn_card_details"
+    id: "btn_card_details.*"
 - extendedWaitUntil:
     visible:
       id: "btn_rename"
@@ -50,7 +50,7 @@ name: "Stress: interleaved settings+details+history with card switches"
 
 # ── from Backpack: history → back ────────────────────────────────────────────
 - tapOn:
-    id: "btn_card_history"
+    id: "btn_card_history.*"
 - extendedWaitUntil:
     visible:
       id: "btn_day_prev"
@@ -92,7 +92,7 @@ name: "Stress: interleaved settings+details+history with card switches"
     timeout: 25000
 
 - tapOn:
-    id: "btn_card_details"
+    id: "btn_card_details.*"
 - extendedWaitUntil:
     visible:
       id: "btn_rename"
@@ -108,7 +108,7 @@ name: "Stress: interleaved settings+details+history with card switches"
     timeout: 25000
 
 - tapOn:
-    id: "btn_card_history"
+    id: "btn_card_history.*"
 - extendedWaitUntil:
     visible:
       id: "btn_day_prev"
@@ -154,7 +154,7 @@ name: "Stress: interleaved settings+details+history with card switches"
 
 # ── from Car Keys: details, history, then back-back ────────────────────────
 - tapOn:
-    id: "btn_card_details"
+    id: "btn_card_details.*"
 - extendedWaitUntil:
     visible:
       id: "btn_rename"
@@ -170,7 +170,7 @@ name: "Stress: interleaved settings+details+history with card switches"
     timeout: 25000
 
 - tapOn:
-    id: "btn_card_history"
+    id: "btn_card_history.*"
 - extendedWaitUntil:
     visible:
       id: "btn_day_prev"
@@ -195,7 +195,7 @@ name: "Stress: interleaved settings+details+history with card switches"
       text: "Backpack"
     timeout: 25000
 - tapOn:
-    id: "btn_card_details"
+    id: "btn_card_details.*"
 - extendedWaitUntil:
     visible:
       id: "btn_view_history"

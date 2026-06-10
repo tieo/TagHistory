@@ -9,7 +9,7 @@ name: Device info — rename with empty name keeps save disabled and original na
     file: 00_seed_test_data.yaml
 
 - tapOn:
-    id: "btn_card_details"
+    id: "btn_card_details.*"
 - extendedWaitUntil:
     visible:
       id: "btn_rename"
@@ -81,7 +81,7 @@ name: Device info — rename with empty name keeps save disabled and original na
       text: "Car Keys"
     timeout: 25000
 - tapOn:
-    id: "btn_card_details"
+    id: "btn_card_details.*"
 - extendedWaitUntil:
     visible:
       id: "btn_rename"

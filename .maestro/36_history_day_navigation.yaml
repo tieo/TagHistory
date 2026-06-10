@@ -1,11 +1,11 @@
 appId: io.github.tieo.taghistory
-name: History — day navigation prev/next changes point list
+name: History — day navigation prev-next changes point list
 ---
 - runFlow:
     file: 00_seed_test_data.yaml
 
 - tapOn:
-    id: "btn_card_history"
+    id: "btn_card_history.*"
 - extendedWaitUntil:
     visible:
       text: "Today"

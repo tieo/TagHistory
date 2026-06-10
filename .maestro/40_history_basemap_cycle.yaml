@@ -1,5 +1,5 @@
 appId: io.github.tieo.taghistory
-name: History — basemap cycle button cycles through light/dark/satellite
+name: History — basemap cycle button cycles through light-dark-satellite
 ---
 # BasemapCycleButton has contentDescription "Basemap: <state>". Cycling
 # advances LIGHT -> DARK -> SATELLITE -> LIGHT.
@@ -7,7 +7,7 @@ name: History — basemap cycle button cycles through light/dark/satellite
     file: 00_seed_test_data.yaml
 
 - tapOn:
-    id: "btn_card_history"
+    id: "btn_card_history.*"
 - extendedWaitUntil:
     visible:
       id: "btn_day_prev"

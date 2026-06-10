@@ -1,15 +1,20 @@
 appId: io.github.tieo.taghistory
-name: "Stress: swipe cards after fetch-older — history loads independently per beacon"
+name: "Stress: per-beacon history after fetch-older — no state bleed"
 ---
-# Opens history for Car Keys, fetches older, goes back. Then opens history for
-# Backpack. Catches state bleed where a previous beacon's history contaminates
-# the next screen, or the ViewModel isn't reset between navigations.
+# Opens history for Car Keys, fetches older, goes back. Then opens
+# history for Backpack and Bike the same way. Catches state bleed where
+# a previous beacon's history contaminates the next screen, or the
+# ViewModel isn't reset between navigations.
 - runFlow:
     file: 00_seed_test_data.yaml
 
-# ── Car Keys: open history, fetch older ──────────────────────────────────────
+# ── Car Keys: open history, fetch older ───────────────────────────────
+- extendedWaitUntil:
+    visible:
+      id: "tag_row_test-beacon-001-aaa"
+    timeout: 25000
 - tapOn:
-    id: "btn_card_history"
+    id: "btn_card_history_test-beacon-001-aaa"
 - extendedWaitUntil:
     visible:
       id: "btn_day_prev"
@@ -26,17 +31,21 @@ name: "Stress: swipe cards after fetch-older — history loads independently per
       id: "btn_settings"
     timeout: 25000
 
-# ── swipe to Backpack, open history ──────────────────────────────────────────
+# ── Backpack: open history, fetch older ───────────────────────────────
 - swipe:
-    start: "85%, 75%"
-    end: "15%, 75%"
+    start: "50%, 88%"
+    end: "50%, 55%"
+    duration: 400
+- swipe:
+    start: "50%, 88%"
+    end: "50%, 55%"
     duration: 400
 - extendedWaitUntil:
     visible:
-      text: "Backpack"
+      id: "tag_row_test-beacon-002-bbb"
     timeout: 25000
 - tapOn:
-    id: "btn_card_history"
+    id: "btn_card_history_test-beacon-002-bbb"
 - extendedWaitUntil:
     visible:
       id: "btn_day_prev"
@@ -57,93 +66,40 @@ name: "Stress: swipe cards after fetch-older — history loads independently per
       text: "Backpack"
     timeout: 25000
 
-# ── swipe to Bike, open history ───────────────────────────────────────────────
+# ── Bike: open history ────────────────────────────────────────────────
 - swipe:
-    start: "85%, 75%"
-    end: "15%, 75%"
+    start: "50%, 88%"
+    end: "50%, 55%"
+    duration: 400
+- swipe:
+    start: "50%, 88%"
+    end: "50%, 55%"
+    duration: 400
+- extendedWaitUntil:
+    visible:
+      id: "tag_row_test-beacon-003-ccc"
+    timeout: 25000
+- tapOn:
+    id: "btn_card_history_test-beacon-003-ccc"
+- extendedWaitUntil:
+    visible:
+      id: "btn_day_prev"
+    timeout: 25000
+- back
+- extendedWaitUntil:
+    visible:
+      id: "btn_settings"
+    timeout: 25000
+# Back-nav reset the list to the top; swipe down to confirm Bike's row.
+- swipe:
+    start: "50%, 88%"
+    end: "50%, 55%"
+    duration: 400
+- swipe:
+    start: "50%, 88%"
+    end: "50%, 55%"
     duration: 400
 - extendedWaitUntil:
     visible:
       text: "Bike"
-    timeout: 25000
-- tapOn:
-    id: "btn_card_history"
-- extendedWaitUntil:
-    visible:
-      id: "btn_day_prev"
-    timeout: 25000
-- extendedWaitUntil:
-    visible:
-      text: "Today"
-    timeout: 25000
-- back
-- extendedWaitUntil:
-    visible:
-      id: "btn_settings"
-    timeout: 25000
-- extendedWaitUntil:
-    visible:
-      text: "Bike"
-    timeout: 25000
-
-# ── swipe back through Backpack and Car Keys, history each — pager-history sync ─
-- swipe:
-    start: "15%, 75%"
-    end: "85%, 75%"
-    duration: 400
-- extendedWaitUntil:
-    visible:
-      text: "Backpack"
-    timeout: 25000
-- tapOn:
-    id: "btn_card_history"
-- extendedWaitUntil:
-    visible:
-      id: "btn_day_prev"
-    timeout: 25000
-# Day-prev exercises VM reload at least once.
-- tapOn:
-    id: "btn_day_prev"
-- extendedWaitUntil:
-    visible:
-      text: "Yesterday"
-    timeout: 25000
-- back
-- extendedWaitUntil:
-    visible:
-      id: "btn_settings"
-    timeout: 25000
-- extendedWaitUntil:
-    visible:
-      text: "Backpack"
-    timeout: 25000
-- assertNotVisible:
-    text: "Bike"
-
-- swipe:
-    start: "15%, 75%"
-    end: "85%, 75%"
-    duration: 400
-- extendedWaitUntil:
-    visible:
-      text: "Car Keys"
-    timeout: 25000
-- tapOn:
-    id: "btn_card_history"
-- extendedWaitUntil:
-    visible:
-      id: "btn_day_prev"
-    timeout: 25000
-- extendedWaitUntil:
-    visible:
-      text: "Today"
-    timeout: 25000
-- back
-- extendedWaitUntil:
-    visible:
-      id: "btn_settings"
-    timeout: 25000
-- extendedWaitUntil:
-    visible:
-      text: "Car Keys"
     timeout: 25000

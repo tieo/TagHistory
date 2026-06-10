@@ -1,5 +1,5 @@
 appId: io.github.tieo.taghistory
-name: History — rapid day prev/next does not crash, ends on valid label
+name: History — rapid day prev-next does not crash, ends on valid label
 ---
 # Mash btn_day_prev and btn_day_next alternately. Final state must show one
 # of the legal day labels (Today, Yesterday, or YYYY-MM-DD). The day-nav
@@ -8,7 +8,7 @@ name: History — rapid day prev/next does not crash, ends on valid label
     file: 00_seed_test_data.yaml
 
 - tapOn:
-    id: "btn_card_history"
+    id: "btn_card_history.*"
 - extendedWaitUntil:
     visible:
       text: "Today"

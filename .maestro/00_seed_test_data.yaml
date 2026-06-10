@@ -5,13 +5,17 @@ name: Seed test data — fake auth + 3 beacons + location reports
 # TestSeedActivity via its deep link. It seeds idempotently and hands off
 # to MainActivity. Structural assertion: btn_settings visible on map = auth
 # succeeded and at least one beacon card rendered.
+#
+# The openLink + map-landing pair is wrapped in retry because the deep
+# link is occasionally dropped when fired while the process is still
+# restarting after the state wipe; one retry reliably re-fires it.
 - launchApp:
     clearState: true
-- openLink: taghistory://test/seed
-# CI emulators occasionally take >90 s for the cold-start +
-# TestSeedActivity → MainActivity hop to land on the map screen,
-# which made the seed flow flaky. Bumped to 180 s.
-- extendedWaitUntil:
-    visible:
-      id: "btn_settings"
-    timeout: 180000
+- retry:
+    maxRetries: 4
+    commands:
+      - openLink: taghistory://test/seed
+      - extendedWaitUntil:
+          visible:
+            id: "btn_settings"
+          timeout: 90000

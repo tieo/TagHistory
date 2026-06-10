@@ -58,11 +58,11 @@ name: Map — tapping btn_card_route launches chooser without crashing
     timeout: 25000
 - extendedWaitUntil:
     visible:
-      id: "btn_card_details"
+      id: "btn_card_details.*"
     timeout: 25000
 - extendedWaitUntil:
     visible:
-      id: "btn_card_history"
+      id: "btn_card_history.*"
     timeout: 25000
 
 # Repeat the route flow on a different beacon — Backpack also has location

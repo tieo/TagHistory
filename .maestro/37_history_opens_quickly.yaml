@@ -7,7 +7,7 @@ name: History — opens within 3s on cached data (btn_day_prev visible quickly)
     file: 00_seed_test_data.yaml
 
 - tapOn:
-    id: "btn_card_history"
+    id: "btn_card_history.*"
 - extendedWaitUntil:
     visible:
       id: "btn_day_prev"
@@ -28,7 +28,7 @@ name: History — opens within 3s on cached data (btn_day_prev visible quickly)
 - assertNotVisible:
     id: "btn_settings"
 - assertNotVisible:
-    id: "btn_card_details"
+    id: "btn_card_details.*"
 
 - back
 - extendedWaitUntil:
@@ -40,7 +40,7 @@ name: History — opens within 3s on cached data (btn_day_prev visible quickly)
 
 # Reopen — must still open quickly (cached path the second time).
 - tapOn:
-    id: "btn_card_history"
+    id: "btn_card_history.*"
 - extendedWaitUntil:
     visible:
       id: "btn_day_prev"
@@ -68,7 +68,7 @@ name: History — opens within 3s on cached data (btn_day_prev visible quickly)
       text: "Backpack"
     timeout: 25000
 - tapOn:
-    id: "btn_card_history"
+    id: "btn_card_history.*"
 - extendedWaitUntil:
     visible:
       id: "btn_day_prev"

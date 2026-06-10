@@ -1,5 +1,5 @@
 appId: io.github.tieo.taghistory
-name: Settings — background sync toggle shows/hides interval and persists
+name: Settings — background sync toggle shows-hides interval and persists
 ---
 # Background sync defaults to ON (Interval visible initially).
 # Toggle OFF → Interval hidden. Toggle ON → Interval visible again.

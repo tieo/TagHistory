@@ -1,273 +1,54 @@
 appId: io.github.tieo.taghistory
-name: History — open/close ten times in a row, app stays alive
+name: History — open-close ten times in a row, app stays alive
 ---
-# Hammers the navigation: open history, back to map, ten rounds. After
-# each round the map screen still has btn_settings visible. Catches
-# memory leaks, ViewModel re-init storms, navigation stack corruption.
+# Hammers navigation: open a row's history, back to map, ten rounds.
+# After each round the map screen still has btn_settings visible.
+# Catches memory leaks, ViewModel re-init storms, nav-stack corruption.
 - runFlow:
     file: 00_seed_test_data.yaml
 
-# 10 rounds
-- tapOn:
-    id: "btn_card_history"
-- extendedWaitUntil:
-    visible:
-      id: "btn_day_prev"
-    timeout: 25000
-- back
-- extendedWaitUntil:
-    visible:
-      id: "btn_settings"
-    timeout: 25000
+- repeat:
+    times: 10
+    commands:
+      - tapOn:
+          id: "btn_card_history_test-beacon-001-aaa"
+      - extendedWaitUntil:
+          visible:
+            id: "btn_day_prev"
+          timeout: 25000
+      - back
+      - extendedWaitUntil:
+          visible:
+            id: "btn_settings"
+          timeout: 25000
 
-- tapOn:
-    id: "btn_card_history"
-- extendedWaitUntil:
-    visible:
-      id: "btn_day_prev"
-    timeout: 25000
-- back
-- extendedWaitUntil:
-    visible:
-      id: "btn_settings"
-    timeout: 25000
-
-- tapOn:
-    id: "btn_card_history"
-- extendedWaitUntil:
-    visible:
-      id: "btn_day_prev"
-    timeout: 25000
-- back
-- extendedWaitUntil:
-    visible:
-      id: "btn_settings"
-    timeout: 25000
-
-- tapOn:
-    id: "btn_card_history"
-- extendedWaitUntil:
-    visible:
-      id: "btn_day_prev"
-    timeout: 25000
-- back
-- extendedWaitUntil:
-    visible:
-      id: "btn_settings"
-    timeout: 25000
-
-- tapOn:
-    id: "btn_card_history"
-- extendedWaitUntil:
-    visible:
-      id: "btn_day_prev"
-    timeout: 25000
-- back
-- extendedWaitUntil:
-    visible:
-      id: "btn_settings"
-    timeout: 25000
-
-- tapOn:
-    id: "btn_card_history"
-- extendedWaitUntil:
-    visible:
-      id: "btn_day_prev"
-    timeout: 25000
-- back
-- extendedWaitUntil:
-    visible:
-      id: "btn_settings"
-    timeout: 25000
-
-- tapOn:
-    id: "btn_card_history"
-- extendedWaitUntil:
-    visible:
-      id: "btn_day_prev"
-    timeout: 25000
-- back
-- extendedWaitUntil:
-    visible:
-      id: "btn_settings"
-    timeout: 25000
-
-- tapOn:
-    id: "btn_card_history"
-- extendedWaitUntil:
-    visible:
-      id: "btn_day_prev"
-    timeout: 25000
-- back
-- extendedWaitUntil:
-    visible:
-      id: "btn_settings"
-    timeout: 25000
-
-- tapOn:
-    id: "btn_card_history"
-- extendedWaitUntil:
-    visible:
-      id: "btn_day_prev"
-    timeout: 25000
-- back
-- extendedWaitUntil:
-    visible:
-      id: "btn_settings"
-    timeout: 25000
-
-- tapOn:
-    id: "btn_card_history"
-- extendedWaitUntil:
-    visible:
-      id: "btn_day_prev"
-    timeout: 25000
-- back
-- extendedWaitUntil:
-    visible:
-      id: "btn_settings"
-    timeout: 25000
-
-# Final assertion: card pager still shows the original card.
+# List intact after 10 round-trips.
 - extendedWaitUntil:
     visible:
       text: "Car Keys"
     timeout: 25000
 
-# ── 10 more rounds on Backpack ─────────────────────────────────────────────
-- swipe:
-    start: "85%, 75%"
-    end: "15%, 75%"
-    duration: 400
+# 10 more rounds on Backpack's row.
+- repeat:
+    times: 10
+    commands:
+      - tapOn:
+          id: "btn_card_history_test-beacon-002-bbb"
+      - extendedWaitUntil:
+          visible:
+            id: "btn_day_prev"
+          timeout: 25000
+      - back
+      - extendedWaitUntil:
+          visible:
+            id: "btn_settings"
+          timeout: 25000
+
 - extendedWaitUntil:
     visible:
       text: "Backpack"
     timeout: 25000
-
-- tapOn:
-    id: "btn_card_history"
 - extendedWaitUntil:
     visible:
-      id: "btn_day_prev"
+      text: "Bike"
     timeout: 25000
-- back
-- extendedWaitUntil:
-    visible:
-      id: "btn_settings"
-    timeout: 25000
-
-- tapOn:
-    id: "btn_card_history"
-- extendedWaitUntil:
-    visible:
-      id: "btn_day_prev"
-    timeout: 25000
-- back
-- extendedWaitUntil:
-    visible:
-      id: "btn_settings"
-    timeout: 25000
-
-- tapOn:
-    id: "btn_card_history"
-- extendedWaitUntil:
-    visible:
-      id: "btn_day_prev"
-    timeout: 25000
-- back
-- extendedWaitUntil:
-    visible:
-      id: "btn_settings"
-    timeout: 25000
-
-- tapOn:
-    id: "btn_card_history"
-- extendedWaitUntil:
-    visible:
-      id: "btn_day_prev"
-    timeout: 25000
-- back
-- extendedWaitUntil:
-    visible:
-      id: "btn_settings"
-    timeout: 25000
-
-- tapOn:
-    id: "btn_card_history"
-- extendedWaitUntil:
-    visible:
-      id: "btn_day_prev"
-    timeout: 25000
-- back
-- extendedWaitUntil:
-    visible:
-      id: "btn_settings"
-    timeout: 25000
-
-- tapOn:
-    id: "btn_card_history"
-- extendedWaitUntil:
-    visible:
-      id: "btn_day_prev"
-    timeout: 25000
-- back
-- extendedWaitUntil:
-    visible:
-      id: "btn_settings"
-    timeout: 25000
-
-- tapOn:
-    id: "btn_card_history"
-- extendedWaitUntil:
-    visible:
-      id: "btn_day_prev"
-    timeout: 25000
-- back
-- extendedWaitUntil:
-    visible:
-      id: "btn_settings"
-    timeout: 25000
-
-- tapOn:
-    id: "btn_card_history"
-- extendedWaitUntil:
-    visible:
-      id: "btn_day_prev"
-    timeout: 25000
-- back
-- extendedWaitUntil:
-    visible:
-      id: "btn_settings"
-    timeout: 25000
-
-- tapOn:
-    id: "btn_card_history"
-- extendedWaitUntil:
-    visible:
-      id: "btn_day_prev"
-    timeout: 25000
-- back
-- extendedWaitUntil:
-    visible:
-      id: "btn_settings"
-    timeout: 25000
-
-- tapOn:
-    id: "btn_card_history"
-- extendedWaitUntil:
-    visible:
-      id: "btn_day_prev"
-    timeout: 25000
-- back
-- extendedWaitUntil:
-    visible:
-      id: "btn_settings"
-    timeout: 25000
-
-# Card pager still shows Backpack after 20 total round-trips.
-- extendedWaitUntil:
-    visible:
-      text: "Backpack"
-    timeout: 25000
-- assertNotVisible:
-    text: "Car Keys"

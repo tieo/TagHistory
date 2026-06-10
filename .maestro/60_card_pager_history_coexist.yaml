@@ -14,7 +14,7 @@ name: History + Pager — open history, back, swipe to next, open history again
       text: "Car Keys"
     timeout: 25000
 - tapOn:
-    id: "btn_card_history"
+    id: "btn_card_history.*"
 - extendedWaitUntil:
     visible:
       id: "btn_day_prev"
@@ -29,19 +29,21 @@ name: History + Pager — open history, back, swipe to next, open history again
       text: "Car Keys"
     timeout: 25000
 
-# Swipe to card 2 (Backpack)
+# Row 2 (Backpack) -> History -> back
 - swipe:
-    start: "85%, 75%"
-    end: "15%, 75%"
+    start: "50%, 88%"
+    end: "50%, 55%"
+    duration: 400
+- swipe:
+    start: "50%, 88%"
+    end: "50%, 55%"
     duration: 400
 - extendedWaitUntil:
     visible:
-      text: "Backpack"
+      id: "tag_row_test-beacon-002-bbb"
     timeout: 25000
-
-# Card 2 -> History -> back
 - tapOn:
-    id: "btn_card_history"
+    id: "btn_card_history_test-beacon-002-bbb"
 - extendedWaitUntil:
     visible:
       id: "btn_day_prev"
@@ -68,7 +70,7 @@ name: History + Pager — open history, back, swipe to next, open history again
 
 # Open history once more from Car Keys — must not show Backpack's data.
 - tapOn:
-    id: "btn_card_history"
+    id: "btn_card_history.*"
 - extendedWaitUntil:
     visible:
       id: "btn_day_prev"
@@ -96,21 +98,21 @@ name: History + Pager — open history, back, swipe to next, open history again
       text: "Car Keys"
     timeout: 25000
 
-# Swipe to Bike (1 point only, today). Open history. List has only item 0.
+# Bike (1 point only, today). Open history. List has only item 0.
 - swipe:
-    start: "85%, 75%"
-    end: "15%, 75%"
+    start: "50%, 88%"
+    end: "50%, 55%"
     duration: 400
 - swipe:
-    start: "85%, 75%"
-    end: "15%, 75%"
+    start: "50%, 88%"
+    end: "50%, 55%"
     duration: 400
 - extendedWaitUntil:
     visible:
-      text: "Bike"
+      id: "tag_row_test-beacon-003-ccc"
     timeout: 25000
 - tapOn:
-    id: "btn_card_history"
+    id: "btn_card_history_test-beacon-003-ccc"
 - extendedWaitUntil:
     visible:
       id: "btn_day_prev"
@@ -124,9 +126,20 @@ name: History + Pager — open history, back, swipe to next, open history again
     visible:
       id: "btn_settings"
     timeout: 25000
+# List resets to top after back; swipe down to confirm Bike's row.
+- swipe:
+    start: "50%, 88%"
+    end: "50%, 55%"
+    duration: 400
+- swipe:
+    start: "50%, 88%"
+    end: "50%, 55%"
+    duration: 400
 - extendedWaitUntil:
     visible:
       text: "Bike"
     timeout: 25000
-- assertNotVisible:
-    text: "Backpack"
+- extendedWaitUntil:
+    visible:
+      id: "btn_refresh_all"
+    timeout: 25000

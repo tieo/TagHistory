@@ -1,5 +1,5 @@
 appId: io.github.tieo.taghistory
-name: "Stress: settings open/close ×5 — map and card unchanged"
+name: "Stress: settings open-close ×5 — map and card unchanged"
 ---
 # Rapidly opens and dismisses settings five times. After each round-trip the
 # original card (Car Keys, index 0) must still be shown. Catches any bug where

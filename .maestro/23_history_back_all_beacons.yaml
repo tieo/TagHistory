@@ -12,7 +12,7 @@ name: "Stress: history→back for every beacon — card stays synced"
       text: "Car Keys"
     timeout: 25000
 - tapOn:
-    id: "btn_card_history"
+    id: "btn_card_history.*"
 - extendedWaitUntil:
     visible:
       id: "btn_day_prev"
@@ -37,7 +37,7 @@ name: "Stress: history→back for every beacon — card stays synced"
       text: "Backpack"
     timeout: 25000
 - tapOn:
-    id: "btn_card_history"
+    id: "btn_card_history.*"
 - extendedWaitUntil:
     visible:
       id: "btn_day_prev"
@@ -62,7 +62,7 @@ name: "Stress: history→back for every beacon — card stays synced"
       text: "Bike"
     timeout: 25000
 - tapOn:
-    id: "btn_card_history"
+    id: "btn_card_history.*"
 - extendedWaitUntil:
     visible:
       id: "btn_day_prev"
@@ -93,7 +93,7 @@ name: "Stress: history→back for every beacon — card stays synced"
       text: "Backpack"
     timeout: 25000
 - tapOn:
-    id: "btn_card_history"
+    id: "btn_card_history.*"
 - extendedWaitUntil:
     visible:
       id: "btn_day_prev"
@@ -117,7 +117,7 @@ name: "Stress: history→back for every beacon — card stays synced"
       text: "Car Keys"
     timeout: 25000
 - tapOn:
-    id: "btn_card_history"
+    id: "btn_card_history.*"
 - extendedWaitUntil:
     visible:
       id: "btn_day_prev"

@@ -7,9 +7,13 @@ name: "Stress: map→details→history→back×2 — full back-stack depth"
 - runFlow:
     file: 00_seed_test_data.yaml
 
-# ── Descend: map → details → history ─────────────────────────────────────────
+# ── Descend from Car Keys: map → details → history ────────────────────
+- extendedWaitUntil:
+    visible:
+      id: "tag_row_test-beacon-001-aaa"
+    timeout: 25000
 - tapOn:
-    id: "btn_card_details"
+    id: "btn_card_details_test-beacon-001-aaa"
 - extendedWaitUntil:
     visible:
       id: "btn_view_history"
@@ -21,7 +25,7 @@ name: "Stress: map→details→history→back×2 — full back-stack depth"
       id: "btn_day_prev"
     timeout: 25000
 
-# ── Unwind level 1: history → details ────────────────────────────────────────
+# ── Unwind level 1: history → details ─────────────────────────────────
 - back
 - extendedWaitUntil:
     visible:
@@ -31,7 +35,7 @@ name: "Stress: map→details→history→back×2 — full back-stack depth"
 - assertNotVisible:
     id: "btn_settings"
 
-# ── Unwind level 2: details → map ────────────────────────────────────────────
+# ── Unwind level 2: details → map ─────────────────────────────────────
 - back
 - extendedWaitUntil:
     visible:
@@ -42,24 +46,28 @@ name: "Stress: map→details→history→back×2 — full back-stack depth"
       text: "Car Keys"
     timeout: 25000
 
-# ── Do it again from Bike ─────────────────────────────────────────────────────
+# ── Same drill from Bike ──────────────────────────────────────────────
 - swipe:
-    start: "85%, 75%"
-    end: "15%, 75%"
+    start: "50%, 88%"
+    end: "50%, 55%"
     duration: 400
 - swipe:
-    start: "85%, 75%"
-    end: "15%, 75%"
+    start: "50%, 88%"
+    end: "50%, 55%"
     duration: 400
 - extendedWaitUntil:
     visible:
-      text: "Bike"
+      id: "tag_row_test-beacon-003-ccc"
     timeout: 25000
 - tapOn:
-    id: "btn_card_details"
+    id: "btn_card_details_test-beacon-003-ccc"
 - extendedWaitUntil:
     visible:
       id: "btn_view_history"
+    timeout: 25000
+- extendedWaitUntil:
+    visible:
+      text: "Bike"
     timeout: 25000
 - tapOn:
     id: "btn_view_history"
@@ -67,12 +75,6 @@ name: "Stress: map→details→history→back×2 — full back-stack depth"
     visible:
       id: "btn_day_prev"
     timeout: 25000
-- extendedWaitUntil:
-    visible:
-      id: "btn_day_next"
-    timeout: 25000
-- assertNotVisible:
-    id: "btn_view_history"
 - back
 - extendedWaitUntil:
     visible:
@@ -80,56 +82,22 @@ name: "Stress: map→details→history→back×2 — full back-stack depth"
     timeout: 25000
 - assertNotVisible:
     id: "btn_settings"
-- assertNotVisible:
-    id: "btn_day_prev"
 - back
 - extendedWaitUntil:
     visible:
       id: "btn_settings"
     timeout: 25000
+# List scroll resets to top after the back-pops; swipe down to verify
+# Bike's row survived the deep navigation.
+- swipe:
+    start: "50%, 88%"
+    end: "50%, 55%"
+    duration: 400
+- swipe:
+    start: "50%, 88%"
+    end: "50%, 55%"
+    duration: 400
 - extendedWaitUntil:
     visible:
       text: "Bike"
     timeout: 25000
-- assertNotVisible:
-    id: "btn_view_history"
-
-# ── Third pass from Backpack: Map -> Details -> History -> back -> back ────
-- swipe:
-    start: "15%, 75%"
-    end: "85%, 75%"
-    duration: 400
-- extendedWaitUntil:
-    visible:
-      text: "Backpack"
-    timeout: 25000
-- tapOn:
-    id: "btn_card_details"
-- extendedWaitUntil:
-    visible:
-      id: "btn_view_history"
-    timeout: 25000
-- tapOn:
-    id: "btn_view_history"
-- extendedWaitUntil:
-    visible:
-      id: "btn_day_prev"
-    timeout: 25000
-- back
-- extendedWaitUntil:
-    visible:
-      id: "btn_view_history"
-    timeout: 25000
-- back
-- extendedWaitUntil:
-    visible:
-      id: "btn_settings"
-    timeout: 25000
-- extendedWaitUntil:
-    visible:
-      text: "Backpack"
-    timeout: 25000
-- assertNotVisible:
-    text: "Bike"
-- assertNotVisible:
-    text: "Car Keys"

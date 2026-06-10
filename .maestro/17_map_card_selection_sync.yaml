@@ -1,86 +1,94 @@
 appId: io.github.tieo.taghistory
-name: Map — card pager swipe changes visible beacon name and is symmetric
+name: Map — tapping list rows selects each beacon, selection is stable
 ---
+# Selection semantics in the glass list: tapping a row selects that
+# beacon (marker focus). All rows stay visible the whole time — the
+# old pager's one-card-at-a-time assertions are obsolete. Structural
+# proof of selection: rows remain tappable, the app stays on the map
+# (btn_settings present), and re-tapping is idempotent (no crash, no
+# nav). Marker highlight itself is canvas-drawn — not assertable.
 - runFlow:
     file: 00_seed_test_data.yaml
 
 - extendedWaitUntil:
     visible:
-      text: "Car Keys"
+      id: "tag_row_test-beacon-001-aaa"
     timeout: 25000
-- assertNotVisible:
-    text: "Backpack"
-- assertNotVisible:
-    text: "Bike"
+- extendedWaitUntil:
+    visible:
+      id: "tag_row_test-beacon-002-bbb"
+    timeout: 25000
 
-# Forward through all three cards.
-- swipe:
-    start: "85%, 75%"
-    end: "15%, 75%"
-    duration: 400
+# Select Backpack, then Bike, then back to Car Keys.
+- tapOn:
+    id: "tag_row_test-beacon-002-bbb"
 - extendedWaitUntil:
     visible:
       text: "Backpack"
     timeout: 25000
-- assertNotVisible:
-    text: "Car Keys"
-
-- swipe:
-    start: "85%, 75%"
-    end: "15%, 75%"
-    duration: 400
-- extendedWaitUntil:
-    visible:
-      text: "Bike"
-    timeout: 25000
-- assertNotVisible:
-    text: "Backpack"
-
-# Bike is the boundary — extra left swipe must not advance further.
-- swipe:
-    start: "85%, 75%"
-    end: "15%, 75%"
-    duration: 300
-- extendedWaitUntil:
-    visible:
-      text: "Bike"
-    timeout: 25000
-
-# Reverse direction returns through Backpack to Car Keys.
-- swipe:
-    start: "15%, 75%"
-    end: "85%, 75%"
-    duration: 400
-- extendedWaitUntil:
-    visible:
-      text: "Backpack"
-    timeout: 25000
-- assertNotVisible:
-    text: "Bike"
-
-- swipe:
-    start: "15%, 75%"
-    end: "85%, 75%"
-    duration: 400
-- extendedWaitUntil:
-    visible:
-      text: "Car Keys"
-    timeout: 25000
-
-# Car Keys is the leading boundary — extra right swipe must not advance further.
-- swipe:
-    start: "15%, 75%"
-    end: "85%, 75%"
-    duration: 300
-- extendedWaitUntil:
-    visible:
-      text: "Car Keys"
-    timeout: 25000
-- assertNotVisible:
-    text: "Backpack"
-
-# btn_settings stays visible the whole time (proves we are on map).
 - extendedWaitUntil:
     visible:
       id: "btn_settings"
+    timeout: 25000
+
+- swipe:
+    start: "50%, 88%"
+    end: "50%, 55%"
+    duration: 400
+- swipe:
+    start: "50%, 88%"
+    end: "50%, 55%"
+    duration: 400
+- extendedWaitUntil:
+    visible:
+      id: "tag_row_test-beacon-003-ccc"
+    timeout: 25000
+- tapOn:
+    id: "tag_row_test-beacon-003-ccc"
+- extendedWaitUntil:
+    visible:
+      text: "Bike"
+    timeout: 25000
+- extendedWaitUntil:
+    visible:
+      id: "btn_settings"
+    timeout: 25000
+
+- swipe:
+    start: "50%, 70%"
+    end: "50%, 95%"
+    duration: 400
+- swipe:
+    start: "50%, 70%"
+    end: "50%, 95%"
+    duration: 400
+- swipe:
+    start: "50%, 70%"
+    end: "50%, 95%"
+    duration: 400
+- extendedWaitUntil:
+    visible:
+      id: "tag_row_test-beacon-001-aaa"
+    timeout: 25000
+- tapOn:
+    id: "tag_row_test-beacon-001-aaa"
+- extendedWaitUntil:
+    visible:
+      text: "Car Keys"
+    timeout: 25000
+
+# Re-tap the already-selected row — idempotent, still on map.
+- tapOn:
+    id: "tag_row_test-beacon-001-aaa"
+- extendedWaitUntil:
+    visible:
+      text: "Car Keys"
+    timeout: 25000
+- extendedWaitUntil:
+    visible:
+      id: "btn_settings"
+    timeout: 25000
+- extendedWaitUntil:
+    visible:
+      id: "btn_refresh_all"
     timeout: 25000

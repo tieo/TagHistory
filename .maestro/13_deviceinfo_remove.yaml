@@ -5,7 +5,7 @@ name: "Device info — remove dialog: cancel keeps device, dialog state idempote
     file: 00_seed_test_data.yaml
 
 - tapOn:
-    id: "btn_card_details"
+    id: "btn_card_details.*"
 - extendedWaitUntil:
     visible:
       id: "btn_remove"
@@ -73,5 +73,5 @@ name: "Device info — remove dialog: cancel keeps device, dialog state idempote
     timeout: 25000
 - extendedWaitUntil:
     visible:
-      id: "btn_card_details"
+      id: "btn_card_details.*"
     timeout: 25000

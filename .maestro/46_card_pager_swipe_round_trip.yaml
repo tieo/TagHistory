@@ -1,8 +1,9 @@
 appId: io.github.tieo.taghistory
-name: Map — card pager swipe right then left lands back on Car Keys
+name: Map — list scroll down to last tag and back lands on Car Keys
 ---
-# Verifies the pager is symmetric: from Car Keys, one left -> Backpack,
-# then one right -> Car Keys. Catches one-sided pager bugs.
+# Replaces the old pager-symmetry flow: scroll to the bottom of the
+# glass list (Bike) and back to the top (Car Keys). Catches list
+# recycling bugs where rows lose content after scroll round-trips.
 - runFlow:
     file: 00_seed_test_data.yaml
 
@@ -11,86 +12,81 @@ name: Map — card pager swipe right then left lands back on Car Keys
       text: "Car Keys"
     timeout: 25000
 
-# left -> Backpack
 - swipe:
-    start: "85%, 75%"
-    end: "15%, 75%"
+    start: "50%, 88%"
+    end: "50%, 55%"
+    duration: 400
+- swipe:
+    start: "50%, 88%"
+    end: "50%, 55%"
     duration: 400
 - extendedWaitUntil:
     visible:
-      text: "Backpack"
+      id: "tag_row_test-beacon-003-ccc"
     timeout: 25000
-
-# right -> Car Keys
-- swipe:
-    start: "15%, 75%"
-    end: "85%, 75%"
-    duration: 400
-- extendedWaitUntil:
-    visible:
-      text: "Car Keys"
-    timeout: 25000
-- extendedWaitUntil:
-    visible:
-      text: "Car Keys"
-    timeout: 25000
-- assertNotVisible:
-    text: "Backpack"
-
-# Two-step left -> Bike, two-step right -> Car Keys.
-- swipe:
-    start: "85%, 75%"
-    end: "15%, 75%"
-    duration: 400
-- extendedWaitUntil:
-    visible:
-      text: "Backpack"
-    timeout: 25000
-- swipe:
-    start: "85%, 75%"
-    end: "15%, 75%"
-    duration: 400
 - extendedWaitUntil:
     visible:
       text: "Bike"
     timeout: 25000
-- assertNotVisible:
-    text: "Backpack"
-- assertNotVisible:
-    text: "Car Keys"
 
 - swipe:
-    start: "15%, 75%"
-    end: "85%, 75%"
+    start: "50%, 70%"
+    end: "50%, 95%"
+    duration: 400
+- swipe:
+    start: "50%, 70%"
+    end: "50%, 95%"
+    duration: 400
+- swipe:
+    start: "50%, 70%"
+    end: "50%, 95%"
     duration: 400
 - extendedWaitUntil:
     visible:
-      text: "Backpack"
+      id: "tag_row_test-beacon-001-aaa"
     timeout: 25000
-- swipe:
-    start: "15%, 75%"
-    end: "85%, 75%"
-    duration: 400
 - extendedWaitUntil:
     visible:
       text: "Car Keys"
     timeout: 25000
 
-# Boundary slams: extra right swipe at Car Keys must not advance.
+# Repeat once — second round-trip equally stable.
 - swipe:
-    start: "15%, 75%"
-    end: "85%, 75%"
-    duration: 300
+    start: "50%, 88%"
+    end: "50%, 55%"
+    duration: 400
 - swipe:
-    start: "15%, 75%"
-    end: "85%, 75%"
-    duration: 300
+    start: "50%, 88%"
+    end: "50%, 55%"
+    duration: 400
+- extendedWaitUntil:
+    visible:
+      id: "tag_row_test-beacon-003-ccc"
+    timeout: 25000
+- extendedWaitUntil:
+    visible:
+      text: "Bike"
+    timeout: 25000
+- swipe:
+    start: "50%, 70%"
+    end: "50%, 95%"
+    duration: 400
+- swipe:
+    start: "50%, 70%"
+    end: "50%, 95%"
+    duration: 400
+- swipe:
+    start: "50%, 70%"
+    end: "50%, 95%"
+    duration: 400
+- extendedWaitUntil:
+    visible:
+      id: "tag_row_test-beacon-001-aaa"
+    timeout: 25000
 - extendedWaitUntil:
     visible:
       text: "Car Keys"
     timeout: 25000
-- assertNotVisible:
-    text: "Backpack"
 - extendedWaitUntil:
     visible:
       id: "btn_settings"

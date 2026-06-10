@@ -116,7 +116,7 @@ name: "Stress: swiping between cards does not reset map camera to world"
     timeout: 25000
 - extendedWaitUntil:
     visible:
-      id: "btn_card_details"
+      id: "btn_card_details.*"
     timeout: 25000
 - swipe:
     start: "15%, 75%"
@@ -128,7 +128,7 @@ name: "Stress: swiping between cards does not reset map camera to world"
     timeout: 25000
 - extendedWaitUntil:
     visible:
-      id: "btn_card_details"
+      id: "btn_card_details.*"
     timeout: 25000
 - extendedWaitUntil:
     visible:

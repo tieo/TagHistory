@@ -33,7 +33,7 @@ name: Map screen — settings button opens settings screen
 - assertNotVisible:
     text: "Car Keys"
 - assertNotVisible:
-    id: "btn_card_details"
+    id: "btn_card_details.*"
 
 - back
 

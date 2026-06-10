@@ -10,7 +10,7 @@ name: History — list scrolls without crashing across day switches
     file: 00_seed_test_data.yaml
 
 - tapOn:
-    id: "btn_card_history"
+    id: "btn_card_history.*"
 - extendedWaitUntil:
     visible:
       text: "Today"

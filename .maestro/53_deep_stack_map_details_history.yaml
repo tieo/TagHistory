@@ -9,7 +9,7 @@ name: Navigation — Map -> Details -> History, three back-presses lands on Map
 
 # Map -> Details
 - tapOn:
-    id: "btn_card_details"
+    id: "btn_card_details.*"
 - extendedWaitUntil:
     visible:
       id: "btn_view_history"
@@ -53,17 +53,21 @@ name: Navigation — Map -> Details -> History, three back-presses lands on Map
 - assertNotVisible:
     id: "btn_day_prev"
 
-# Repeat with Backpack to ensure the depth holds across pager swipes.
+# Repeat with Backpack to ensure the depth holds for other rows.
 - swipe:
-    start: "85%, 75%"
-    end: "15%, 75%"
+    start: "50%, 88%"
+    end: "50%, 55%"
+    duration: 400
+- swipe:
+    start: "50%, 88%"
+    end: "50%, 55%"
     duration: 400
 - extendedWaitUntil:
     visible:
-      text: "Backpack"
+      id: "tag_row_test-beacon-002-bbb"
     timeout: 25000
 - tapOn:
-    id: "btn_card_details"
+    id: "btn_card_details_test-beacon-002-bbb"
 - extendedWaitUntil:
     visible:
       id: "btn_view_history"
@@ -96,5 +100,7 @@ name: Navigation — Map -> Details -> History, three back-presses lands on Map
     visible:
       text: "Backpack"
     timeout: 25000
-- assertNotVisible:
-    text: "Car Keys"
+- extendedWaitUntil:
+    visible:
+      id: "btn_refresh_all"
+    timeout: 25000

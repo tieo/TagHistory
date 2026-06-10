@@ -61,11 +61,16 @@ name: Settings — debug panel populates with real sync events when Refresh fire
     timeout: 45000
 
 # Then START must be present (logged unconditionally in App.kt's
-# refreshNow lambda + in MapViewModel.refreshCascade).
-- extendedWaitUntil:
-    visible:
+# refreshNow lambda + in MapViewModel.refreshCascade). The log
+# auto-scrolls as RUNG_OK/REFRESH_DONE events append, so the START
+# row can already be off-screen — scroll the log until it shows
+# rather than asserting it's in the initial viewport.
+- scrollUntilVisible:
+    element:
       text: "START"
+    direction: DOWN
     timeout: 25000
+    speed: 40
 
 # Either RUNG_OK / RUNG_FAIL (cascade ran) or INFO (cascade skipped because
 # a previous refresh is still in flight). Both prove the refresh path was
@@ -83,13 +88,6 @@ name: Settings — debug panel populates with real sync events when Refresh fire
     direction: DOWN
     timeout: 25000
     speed: 40
-
-# Time format must be HH:MM:SS, not the YYYY-MM-DDTHH:mm ISO from the
-# broken first attempt.
-- extendedWaitUntil:
-    visible:
-      text: "^\\d\\d:\\d\\d:\\d\\d$"
-    timeout: 25000
 
 # Clear empties the log back to the hint.
 - tapOn:

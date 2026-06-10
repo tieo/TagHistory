@@ -9,7 +9,7 @@ name: "Stress: rename dialog open→cancel×3 then save — correct final name"
     file: 00_seed_test_data.yaml
 
 - tapOn:
-    id: "btn_card_details"
+    id: "btn_card_details.*"
 - extendedWaitUntil:
     visible:
       id: "btn_rename"
@@ -145,7 +145,7 @@ name: "Stress: rename dialog open→cancel×3 then save — correct final name"
 
 # Reopen details: name still Final Name.
 - tapOn:
-    id: "btn_card_details"
+    id: "btn_card_details.*"
 - extendedWaitUntil:
     visible:
       id: "btn_rename"

@@ -8,7 +8,7 @@ name: History — pressing day-next at Today (boundary) is a no-op, day stays To
     file: 00_seed_test_data.yaml
 
 - tapOn:
-    id: "btn_card_history"
+    id: "btn_card_history.*"
 - extendedWaitUntil:
     visible:
       text: "Today"

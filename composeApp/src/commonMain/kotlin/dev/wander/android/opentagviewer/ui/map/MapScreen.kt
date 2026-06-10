@@ -534,7 +534,10 @@ private fun TagGlassRow(
                     icon = Icons.Filled.Info,
                     contentDescription = "Details",
                     onClick = onOpenInfo,
-                    tag = "btn_card_details",
+                    // Per-row suffix so E2E flows can target a specific
+                    // tag's action deterministically (generic prefix
+                    // matching still works via regex ids).
+                    tag = "btn_card_details_${card.beaconId}",
                 )
                 RowActionIcon(
                     // Calendar matches the day picker icon used in the
@@ -543,7 +546,7 @@ private fun TagGlassRow(
                     icon = Icons.Filled.CalendarMonth,
                     contentDescription = "History",
                     onClick = onOpenHistory,
-                    tag = "btn_card_history",
+                    tag = "btn_card_history_${card.beaconId}",
                 )
                 RowActionIcon(
                     icon = Icons.Filled.Directions,
@@ -591,218 +594,6 @@ private fun RowActionIcon(
     }
 }
 
-/**
- * HorizontalPager — one swipe advances exactly one card. Selected card
- * is always centered (via `contentPadding` = half-gap on each side). Cards
- * occupy [CARD_WIDTH_FRACTION] of the parent. Scroll → onSelect; external
- * onSelect → animateScrollToPage for two-way binding with the map.
- */
-@OptIn(ExperimentalTime::class)
-@Composable
-internal fun TagCardPager(
-    cards: List<TagCardUi>,
-    selectedBeaconId: String?,
-    onSelect: (String) -> Unit,
-    onOpenInfo: (String) -> Unit,
-    onOpenHistory: (String, String) -> Unit,
-    onRoute: (Double, Double, String) -> Unit,
-    fetchingBeaconIds: Set<String> = emptySet(),
-    modifier: Modifier = Modifier,
-) {
-    BoxWithConstraints(modifier = modifier.height(CARD_HEIGHT)) {
-        val parentWidth = maxWidth
-        val pageWidth = parentWidth * CARD_WIDTH_FRACTION
-        val sidePadding = (parentWidth - pageWidth) / 2
-
-        val initialIndex = cards.indexOfFirst { it.beaconId == selectedBeaconId }
-            .takeIf { it >= 0 } ?: 0
-        val pagerState = rememberPagerState(
-            initialPage = initialIndex,
-            pageCount = { cards.size },
-        )
-
-        // Re-key only on the page index of the selected beacon, not the cards
-        // list. Geocoding/refresh updates produce a new cards list reference
-        // every tick — keying on cards restarted this effect (and the snapshot
-        // collector below), causing spurious onSelect → haptic → animate loops.
-        val selectedBeaconPage = remember(selectedBeaconId, cards) {
-            if (selectedBeaconId == null) -1
-            else cards.indexOfFirst { it.beaconId == selectedBeaconId }
-        }
-        // Track which beaconId triggered the last scroll so we can tell a
-        // user-initiated selection change (animate) apart from a card list
-        // reshuffle that moved the same beacon to a different index (snap).
-        val lastScrolledBeaconId = remember { mutableStateOf<String?>(null) }
-        LaunchedEffect(selectedBeaconPage, selectedBeaconId) {
-            if (selectedBeaconPage < 0 || selectedBeaconPage == pagerState.currentPage) {
-                return@LaunchedEffect
-            }
-            if (lastScrolledBeaconId.value == selectedBeaconId) {
-                // Same beacon, different index → cards reordered. Snap, no animation,
-                // so the user keeps seeing their selected card without the visual
-                // shuffle of cards sliding past.
-                pagerState.scrollToPage(selectedBeaconPage)
-            } else {
-                pagerState.animateScrollToPage(selectedBeaconPage)
-                lastScrolledBeaconId.value = selectedBeaconId
-            }
-        }
-
-        val currentCards = androidx.compose.runtime.rememberUpdatedState(cards)
-        val currentSelectedId = androidx.compose.runtime.rememberUpdatedState(selectedBeaconId)
-        val currentOnSelect = androidx.compose.runtime.rememberUpdatedState(onSelect)
-        val haptics = LocalHapticFeedback.current
-        LaunchedEffect(pagerState) {
-            snapshotFlow { pagerState.currentPage }
-                .distinctUntilChanged()
-                .collect { page ->
-                    currentCards.value.getOrNull(page)?.beaconId?.let { id ->
-                        if (id != currentSelectedId.value) {
-                            haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                            currentOnSelect.value(id)
-                        }
-                    }
-                }
-        }
-
-        HorizontalPager(
-            state = pagerState,
-            pageSize = PageSize.Fixed(pageWidth),
-            contentPadding = PaddingValues(horizontal = sidePadding),
-            pageSpacing = 10.dp,
-            modifier = Modifier.fillMaxSize(),
-        ) { index ->
-            val card = cards[index]
-            // Border tracks the visually current page directly — no ViewModel
-            // roundtrip. selectedBeaconId lags during rapid swipes so using it
-            // here caused the border to appear on an off-screen card.
-            TagCard(
-                card = card,
-                isSelected = index == pagerState.currentPage,
-                isFetching = card.beaconId in fetchingBeaconIds,
-                onOpenInfo = { onOpenInfo(card.beaconId) },
-                onOpenHistory = { onOpenHistory(card.beaconId, card.displayName) },
-                onRoute = {
-                    val lat = card.latitude
-                    val lon = card.longitude
-                    if (lat != null && lon != null) onRoute(lat, lon, card.displayName)
-                },
-                modifier = Modifier.fillMaxSize(),
-            )
-        }
-    }
-}
-
-@OptIn(ExperimentalTime::class)
-@Composable
-private fun TagCard(
-    card: TagCardUi,
-    isSelected: Boolean,
-    onOpenInfo: () -> Unit,
-    onOpenHistory: () -> Unit,
-    onRoute: () -> Unit,
-    isFetching: Boolean = false,
-    modifier: Modifier = Modifier,
-) {
-    val hasLocation = card.latitude != null && card.longitude != null
-    val containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f)
-    val shadowElevation = if (isSelected) 28.dp else 8.dp
-    val shadowColor = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
-    val border = if (isSelected) BorderStroke(2.dp, MaterialTheme.colorScheme.primary) else null
-
-    Card(
-        modifier = modifier.shadow(
-            elevation = shadowElevation,
-            shape = RoundedCornerShape(24.dp),
-            ambientColor = shadowColor.copy(alpha = if (isSelected) 0.5f else 0.2f),
-            spotColor = shadowColor.copy(alpha = if (isSelected) 0.6f else 0.3f),
-        ),
-        shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.elevatedCardColors(containerColor = containerColor),
-        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 0.dp),
-        border = border,
-    ) {
-      Box(modifier = Modifier.fillMaxSize()) {
-        if (isFetching) {
-            AlwaysSpinningIndicator(
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(top = 16.dp, end = 18.dp)
-                    .size(22.dp)
-                    .testTag("card_fetching_${card.beaconId}"),
-                strokeWidth = 2.5.dp,
-                color = MaterialTheme.colorScheme.primary,
-            )
-        }
-        Column(modifier = Modifier.fillMaxSize()) {
-            // Top: emoji left, name/address/time right — matches original 85dp top row
-            Row(
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxWidth()
-                    .padding(start = 15.dp, end = 15.dp, top = 10.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Box(
-                    modifier = Modifier.width(70.dp).height(53.dp),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    val glyph = card.emoji ?: card.displayName.firstOrNull()?.uppercase() ?: "●"
-                    Text(glyph, fontSize = 28.sp)
-                }
-                Column(
-                    modifier = Modifier.weight(1f).padding(start = 15.dp),
-                    verticalArrangement = Arrangement.spacedBy(2.dp),
-                ) {
-                    Text(
-                        card.displayName,
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                    AddressLine(card.addressLine, hasLocation)
-                    Text(
-                        lastUpdatedLabel(card.lastUpdatedMs),
-                        fontSize = 12.sp,
-                        color = MaterialTheme.colorScheme.outline,
-                    )
-                }
-            }
-
-            // Bottom: 3 filled-circle buttons centered — matches original 85dp bottom row
-            Row(
-                modifier = Modifier
-                    .height(85.dp)
-                    .fillMaxWidth()
-                    .padding(bottom = 10.dp),
-                horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                CardCircleAction(
-                    icon = Icons.AutoMirrored.Filled.List,
-                    label = "History",
-                    onClick = onOpenHistory,
-                    tag = "btn_card_history",
-                )
-                CardCircleAction(
-                    icon = Icons.Filled.Info,
-                    label = "Details",
-                    onClick = onOpenInfo,
-                    tag = "btn_card_details",
-                )
-                CardCircleAction(
-                    icon = Icons.Filled.Directions,
-                    label = "Route",
-                    onClick = onRoute,
-                    enabled = hasLocation,
-                )
-            }
-        }
-      }
-    }
-}
-
 @Composable
 private fun AddressLine(addressLine: String?, hasLocation: Boolean) {
     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -824,51 +615,6 @@ private fun AddressLine(addressLine: String?, hasLocation: Boolean) {
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
-        )
-    }
-}
-
-@Composable
-private fun CardCircleAction(
-    icon: ImageVector,
-    label: String,
-    onClick: () -> Unit,
-    enabled: Boolean = true,
-    tag: String? = null,
-) {
-    val circleColor = if (enabled) MaterialTheme.colorScheme.onBackground
-                      else MaterialTheme.colorScheme.outlineVariant
-    val iconColor = if (enabled) MaterialTheme.colorScheme.background
-                    else MaterialTheme.colorScheme.outline
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
-        modifier = Modifier
-            .width(80.dp)
-            .clickable(enabled = enabled) { onClick() }
-            .then(if (tag != null) Modifier.testTag(tag) else Modifier),
-    ) {
-        Box(
-            modifier = Modifier
-                .size(46.dp)
-                .background(color = circleColor, shape = CircleShape),
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = label,
-                modifier = Modifier.size(24.dp),
-                tint = iconColor,
-            )
-        }
-        Spacer(Modifier.height(4.dp))
-        Text(
-            label,
-            fontSize = 10.sp,
-            textAlign = TextAlign.Center,
-            color = if (enabled) MaterialTheme.colorScheme.onSurface
-                    else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
-            maxLines = 1,
         )
     }
 }

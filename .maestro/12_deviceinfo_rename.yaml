@@ -9,7 +9,7 @@ name: Device info — rename dialog opens, cancel dismisses, save persists acros
 
 # Open device info for the first beacon (Car Keys).
 - tapOn:
-    id: "btn_card_details"
+    id: "btn_card_details.*"
 - extendedWaitUntil:
     visible:
       id: "btn_rename"
@@ -106,7 +106,7 @@ name: Device info — rename dialog opens, cancel dismisses, save persists acros
 
 # Reopen details to confirm name is still persisted (no reset on reload).
 - tapOn:
-    id: "btn_card_details"
+    id: "btn_card_details.*"
 - extendedWaitUntil:
     visible:
       id: "btn_rename"

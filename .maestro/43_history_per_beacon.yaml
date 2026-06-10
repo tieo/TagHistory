@@ -13,7 +13,7 @@ name: History — open history for each of the three seeded beacons
       text: "Car Keys"
     timeout: 25000
 - tapOn:
-    id: "btn_card_history"
+    id: "btn_card_history.*"
 - extendedWaitUntil:
     visible:
       id: "btn_day_prev"
@@ -38,7 +38,7 @@ name: History — open history for each of the three seeded beacons
       text: "Backpack"
     timeout: 25000
 - tapOn:
-    id: "btn_card_history"
+    id: "btn_card_history.*"
 - extendedWaitUntil:
     visible:
       id: "btn_day_prev"
@@ -63,7 +63,7 @@ name: History — open history for each of the three seeded beacons
       text: "Bike"
     timeout: 25000
 - tapOn:
-    id: "btn_card_history"
+    id: "btn_card_history.*"
 - extendedWaitUntil:
     visible:
       id: "btn_day_prev"
@@ -94,7 +94,7 @@ name: History — open history for each of the three seeded beacons
       text: "Backpack"
     timeout: 25000
 - tapOn:
-    id: "btn_card_history"
+    id: "btn_card_history.*"
 - extendedWaitUntil:
     visible:
       id: "btn_day_prev"
@@ -130,7 +130,7 @@ name: History — open history for each of the three seeded beacons
       text: "Car Keys"
     timeout: 25000
 - tapOn:
-    id: "btn_card_history"
+    id: "btn_card_history.*"
 - extendedWaitUntil:
     visible:
       id: "btn_day_prev"

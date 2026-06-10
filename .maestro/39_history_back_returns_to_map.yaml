@@ -5,7 +5,7 @@ name: History — back from history returns to map (btn_settings reappears)
     file: 00_seed_test_data.yaml
 
 - tapOn:
-    id: "btn_card_history"
+    id: "btn_card_history.*"
 - extendedWaitUntil:
     visible:
       id: "btn_day_prev"
@@ -39,7 +39,7 @@ name: History — back from history returns to map (btn_settings reappears)
 
 # Re-enter history a second time, verify same flow works again.
 - tapOn:
-    id: "btn_card_history"
+    id: "btn_card_history.*"
 - extendedWaitUntil:
     visible:
       id: "btn_day_prev"
@@ -47,7 +47,7 @@ name: History — back from history returns to map (btn_settings reappears)
 - assertNotVisible:
     id: "btn_settings"
 - assertNotVisible:
-    id: "btn_card_details"
+    id: "btn_card_details.*"
 - back
 - extendedWaitUntil:
     visible:
@@ -70,7 +70,7 @@ name: History — back from history returns to map (btn_settings reappears)
       text: "Backpack"
     timeout: 25000
 - tapOn:
-    id: "btn_card_history"
+    id: "btn_card_history.*"
 - extendedWaitUntil:
     visible:
       id: "btn_day_prev"

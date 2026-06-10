@@ -18,7 +18,7 @@ name: History list scrolls inside sheet without first expanding the sheet
     file: 00_seed_test_data.yaml
 
 - tapOn:
-    id: "btn_card_history"
+    id: "btn_card_history.*"
 - extendedWaitUntil:
     visible:
       text: "Today"

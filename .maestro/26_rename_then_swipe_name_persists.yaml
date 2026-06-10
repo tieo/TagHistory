@@ -1,17 +1,22 @@
 appId: io.github.tieo.taghistory
-name: "Stress: rename three beacons — new names survive card swipes and reopens"
+name: "Stress: rename three beacons — new names survive scrolling and reopens"
 ---
-# Renames all three beacons (one each), swipes away and back, and confirms the
-# names persisted. Catches write-through bugs where UI state is cached but DB
-# wasn't updated, or the card reloads stale data after pager animation.
-# Dialog content uses text selectors because Compose AlertDialog testTags are
-# not reachable from Maestro.
+# Renames all three beacons (one each) via their own row's details
+# action, scrolls the list away and back, and confirms the names
+# persisted. Catches write-through bugs where UI state is cached but
+# the DB wasn't updated, or rows reload stale data after recycling.
+# Dialog content uses text selectors because Compose AlertDialog
+# testTags are not reachable from Maestro.
 - runFlow:
     file: 00_seed_test_data.yaml
 
-# ── Rename Car Keys → "Alpha Tag" ────────────────────────────────────────────
+# ── Rename Car Keys → "Alpha Tag" ─────────────────────────────────────
+- extendedWaitUntil:
+    visible:
+      id: "tag_row_test-beacon-001-aaa"
+    timeout: 25000
 - tapOn:
-    id: "btn_card_details"
+    id: "btn_card_details_test-beacon-001-aaa"
 - extendedWaitUntil:
     visible:
       id: "btn_rename"
@@ -46,17 +51,21 @@ name: "Stress: rename three beacons — new names survive card swipes and reopen
 - assertNotVisible:
     text: "Car Keys"
 
-# ── Swipe to Backpack, rename → "Beta Tag" ───────────────────────────────────
+# ── Rename Backpack → "Beta Tag" ──────────────────────────────────────
 - swipe:
-    start: "85%, 75%"
-    end: "15%, 75%"
+    start: "50%, 88%"
+    end: "50%, 55%"
+    duration: 400
+- swipe:
+    start: "50%, 88%"
+    end: "50%, 55%"
     duration: 400
 - extendedWaitUntil:
     visible:
-      text: "Backpack"
+      id: "tag_row_test-beacon-002-bbb"
     timeout: 25000
 - tapOn:
-    id: "btn_card_details"
+    id: "btn_card_details_test-beacon-002-bbb"
 - extendedWaitUntil:
     visible:
       id: "btn_rename"
@@ -89,17 +98,21 @@ name: "Stress: rename three beacons — new names survive card swipes and reopen
 - assertNotVisible:
     text: "Backpack"
 
-# ── Swipe to Bike, rename → "Gamma Tag" ──────────────────────────────────────
+# ── Rename Bike → "Gamma Tag" ─────────────────────────────────────────
 - swipe:
-    start: "85%, 75%"
-    end: "15%, 75%"
+    start: "50%, 88%"
+    end: "50%, 55%"
+    duration: 400
+- swipe:
+    start: "50%, 88%"
+    end: "50%, 55%"
     duration: 400
 - extendedWaitUntil:
     visible:
-      text: "Bike"
+      id: "tag_row_test-beacon-003-ccc"
     timeout: 25000
 - tapOn:
-    id: "btn_card_details"
+    id: "btn_card_details_test-beacon-003-ccc"
 - extendedWaitUntil:
     visible:
       id: "btn_rename"
@@ -125,6 +138,15 @@ name: "Stress: rename three beacons — new names survive card swipes and reopen
     visible:
       id: "btn_settings"
     timeout: 25000
+# Back-nav resets list scroll; swipe down to the renamed row.
+- swipe:
+    start: "50%, 88%"
+    end: "50%, 55%"
+    duration: 400
+- swipe:
+    start: "50%, 88%"
+    end: "50%, 55%"
+    duration: 400
 - extendedWaitUntil:
     visible:
       text: "Gamma Tag"
@@ -132,42 +154,41 @@ name: "Stress: rename three beacons — new names survive card swipes and reopen
 - assertNotVisible:
     text: "Bike"
 
-# ── Swipe wildly and back — all three names must survive ─────────────────────
+# ── Scroll wildly and back — all three new names must survive ─────────
 - swipe:
-    start: "15%, 75%"
-    end: "85%, 75%"
-    duration: 300
+    start: "50%, 70%"
+    end: "50%, 95%"
+    duration: 400
+- swipe:
+    start: "50%, 70%"
+    end: "50%, 95%"
+    duration: 400
+- swipe:
+    start: "50%, 70%"
+    end: "50%, 95%"
+    duration: 400
 - extendedWaitUntil:
     visible:
-      text: "Beta Tag"
+      id: "tag_row_test-beacon-001-aaa"
     timeout: 25000
-- assertNotVisible:
-    text: "Backpack"
-
-- swipe:
-    start: "15%, 75%"
-    end: "85%, 75%"
-    duration: 300
 - extendedWaitUntil:
     visible:
       text: "Alpha Tag"
     timeout: 25000
 - assertNotVisible:
     text: "Car Keys"
-
 - swipe:
-    start: "85%, 75%"
-    end: "15%, 75%"
-    duration: 300
+    start: "50%, 88%"
+    end: "50%, 55%"
+    duration: 400
+- swipe:
+    start: "50%, 88%"
+    end: "50%, 55%"
+    duration: 400
 - extendedWaitUntil:
     visible:
-      text: "Beta Tag"
+      id: "tag_row_test-beacon-003-ccc"
     timeout: 25000
-
-- swipe:
-    start: "85%, 75%"
-    end: "15%, 75%"
-    duration: 300
 - extendedWaitUntil:
     visible:
       text: "Gamma Tag"
@@ -175,9 +196,9 @@ name: "Stress: rename three beacons — new names survive card swipes and reopen
 - assertNotVisible:
     text: "Bike"
 
-# ── Reopen each via details to confirm names persist on reload ───────────────
+# ── Reopen one via details to confirm names persist on reload ─────────
 - tapOn:
-    id: "btn_card_details"
+    id: "btn_card_details_test-beacon-003-ccc"
 - extendedWaitUntil:
     visible:
       id: "btn_rename"
@@ -191,6 +212,15 @@ name: "Stress: rename three beacons — new names survive card swipes and reopen
     visible:
       id: "btn_settings"
     timeout: 25000
+# List scroll resets after back; swipe down to the renamed row again.
+- swipe:
+    start: "50%, 88%"
+    end: "50%, 55%"
+    duration: 400
+- swipe:
+    start: "50%, 88%"
+    end: "50%, 55%"
+    duration: 400
 - extendedWaitUntil:
     visible:
       text: "Gamma Tag"

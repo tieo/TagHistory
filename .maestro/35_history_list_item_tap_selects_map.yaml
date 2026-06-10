@@ -5,7 +5,7 @@ name: History — tapping a list item selects the point (highlighted entry)
     file: 00_seed_test_data.yaml
 
 - tapOn:
-    id: "btn_card_history"
+    id: "btn_card_history.*"
 - extendedWaitUntil:
     visible:
       text: "Today"

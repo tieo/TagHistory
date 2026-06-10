@@ -6,7 +6,7 @@ name: History — bottom sheet shows day nav, point list, and "Fetch older"
 
 # Open history from card (Car Keys has 6 seeded points across 3 days)
 - tapOn:
-    id: "btn_card_history"
+    id: "btn_card_history.*"
 - extendedWaitUntil:
     visible:
       text: "Today"

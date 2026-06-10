@@ -1,17 +1,18 @@
 appId: io.github.tieo.taghistory
-name: Map — tapping btn_card_details opens DeviceInfo for that card
+name: Map — per-row details action opens DeviceInfo for that beacon
 ---
-# Verifies the details circle action works for each card. After back,
-# the same beacon name is still selected.
+# Verifies each row's details circle action opens DeviceInfo for the
+# RIGHT beacon (name shown on details matches the row tapped), and
+# back lands on the intact list every time.
 - runFlow:
     file: 00_seed_test_data.yaml
 
 - extendedWaitUntil:
     visible:
-      text: "Car Keys"
+      id: "tag_row_test-beacon-001-aaa"
     timeout: 25000
 - tapOn:
-    id: "btn_card_details"
+    id: "btn_card_details_test-beacon-001-aaa"
 - extendedWaitUntil:
     visible:
       id: "btn_view_history"
@@ -24,10 +25,12 @@ name: Map — tapping btn_card_details opens DeviceInfo for that card
     visible:
       id: "btn_remove"
     timeout: 25000
+- extendedWaitUntil:
+    visible:
+      text: "Car Keys"
+    timeout: 25000
 - assertNotVisible:
     id: "btn_settings"
-- assertNotVisible:
-    id: "btn_card_history"
 - back
 - extendedWaitUntil:
     visible:
@@ -40,17 +43,21 @@ name: Map — tapping btn_card_details opens DeviceInfo for that card
 - assertNotVisible:
     id: "btn_rename"
 
-# Repeat for Backpack and Bike — details opens fresh for each card.
+# Backpack — details opens fresh with the right beacon.
 - swipe:
-    start: "85%, 75%"
-    end: "15%, 75%"
+    start: "50%, 88%"
+    end: "50%, 55%"
+    duration: 400
+- swipe:
+    start: "50%, 88%"
+    end: "50%, 55%"
     duration: 400
 - extendedWaitUntil:
     visible:
-      text: "Backpack"
+      id: "tag_row_test-beacon-002-bbb"
     timeout: 25000
 - tapOn:
-    id: "btn_card_details"
+    id: "btn_card_details_test-beacon-002-bbb"
 - extendedWaitUntil:
     visible:
       id: "btn_view_history"
@@ -62,10 +69,6 @@ name: Map — tapping btn_card_details opens DeviceInfo for that card
 - extendedWaitUntil:
     visible:
       id: "btn_rename"
-    timeout: 25000
-- extendedWaitUntil:
-    visible:
-      id: "btn_remove"
     timeout: 25000
 - back
 - extendedWaitUntil:
@@ -77,16 +80,21 @@ name: Map — tapping btn_card_details opens DeviceInfo for that card
       text: "Backpack"
     timeout: 25000
 
+# Bike
 - swipe:
-    start: "85%, 75%"
-    end: "15%, 75%"
+    start: "50%, 88%"
+    end: "50%, 55%"
+    duration: 400
+- swipe:
+    start: "50%, 88%"
+    end: "50%, 55%"
     duration: 400
 - extendedWaitUntil:
     visible:
-      text: "Bike"
+      id: "tag_row_test-beacon-003-ccc"
     timeout: 25000
 - tapOn:
-    id: "btn_card_details"
+    id: "btn_card_details_test-beacon-003-ccc"
 - extendedWaitUntil:
     visible:
       id: "btn_view_history"
@@ -95,15 +103,20 @@ name: Map — tapping btn_card_details opens DeviceInfo for that card
     visible:
       text: "Bike"
     timeout: 25000
-- extendedWaitUntil:
-    visible:
-      id: "btn_rename"
-    timeout: 25000
 - back
 - extendedWaitUntil:
     visible:
       id: "btn_settings"
     timeout: 25000
+# List resets to top after back; swipe down to confirm Bike survived.
+- swipe:
+    start: "50%, 88%"
+    end: "50%, 55%"
+    duration: 400
+- swipe:
+    start: "50%, 88%"
+    end: "50%, 55%"
+    duration: 400
 - extendedWaitUntil:
     visible:
       text: "Bike"

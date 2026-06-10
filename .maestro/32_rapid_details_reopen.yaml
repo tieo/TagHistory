@@ -8,7 +8,7 @@ name: "Stress: open details ×3 in a row for same beacon — no state corruption
 
 # ── open 1 ───────────────────────────────────────────────────────────────────
 - tapOn:
-    id: "btn_card_details"
+    id: "btn_card_details.*"
 - extendedWaitUntil:
     visible:
       id: "btn_rename"
@@ -25,7 +25,7 @@ name: "Stress: open details ×3 in a row for same beacon — no state corruption
 
 # ── open 2 ───────────────────────────────────────────────────────────────────
 - tapOn:
-    id: "btn_card_details"
+    id: "btn_card_details.*"
 - extendedWaitUntil:
     visible:
       id: "btn_rename"
@@ -42,7 +42,7 @@ name: "Stress: open details ×3 in a row for same beacon — no state corruption
 
 # ── open 3 ───────────────────────────────────────────────────────────────────
 - tapOn:
-    id: "btn_card_details"
+    id: "btn_card_details.*"
 - extendedWaitUntil:
     visible:
       id: "btn_rename"
@@ -59,7 +59,7 @@ name: "Stress: open details ×3 in a row for same beacon — no state corruption
 
 # ── open 4 ───────────────────────────────────────────────────────────────────
 - tapOn:
-    id: "btn_card_details"
+    id: "btn_card_details.*"
 - extendedWaitUntil:
     visible:
       id: "btn_rename"
@@ -76,7 +76,7 @@ name: "Stress: open details ×3 in a row for same beacon — no state corruption
 
 # ── open 5: do actual rename to confirm data integrity after rapid reopens ──
 - tapOn:
-    id: "btn_card_details"
+    id: "btn_card_details.*"
 - extendedWaitUntil:
     visible:
       id: "btn_rename"
@@ -113,7 +113,7 @@ name: "Stress: open details ×3 in a row for same beacon — no state corruption
 
 # ── reopen details once more: name still persisted, no reset ─────────────────
 - tapOn:
-    id: "btn_card_details"
+    id: "btn_card_details.*"
 - extendedWaitUntil:
     visible:
       id: "btn_rename"
