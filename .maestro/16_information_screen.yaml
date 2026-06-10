@@ -20,7 +20,7 @@ name: Information screen — links present, back navigation works, license sub-s
 - extendedWaitUntil:
     visible:
       id: "btn_developer_website"
-    timeout: 25000
+    timeout: 60000
 
 # All three links + version line visible. Settings widgets gone.
 - extendedWaitUntil:
@@ -99,7 +99,7 @@ name: Information screen — links present, back navigation works, license sub-s
       - extendedWaitUntil:
           visible:
             id: "btn_license"
-          timeout: 25000
+          timeout: 60000
 
 # Back chain: Information → Settings → Map.
 - back

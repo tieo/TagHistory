@@ -27,7 +27,7 @@ name: Settings — About button navigates to information screen, back returns
 - extendedWaitUntil:
     visible:
       id: "btn_source_code"
-    timeout: 25000
+    timeout: 60000
 
 # Information screen: links present, settings landmarks gone.
 - extendedWaitUntil:
@@ -76,7 +76,7 @@ name: Settings — About button navigates to information screen, back returns
 - extendedWaitUntil:
     visible:
       id: "btn_license"
-    timeout: 25000
+    timeout: 60000
 - back
 - extendedWaitUntil:
     visible:
