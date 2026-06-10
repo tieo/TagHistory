@@ -8,6 +8,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.lifecycle.lifecycleScope
 import io.github.tieo.taghistory.host.AndroidAppHost
 import kotlinx.coroutines.CompletableDeferred
 
@@ -34,6 +35,11 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
         val host = AndroidAppHost.create(applicationContext)
+        // Schedule (or cancel, per settings) the WorkManager background
+        // sync, and keep the schedule following settings changes. Without
+        // this the periodic fetch never runs and the app reopens onto
+        // data as old as its last foreground session.
+        host.startBackgroundSync(lifecycleScope)
         val versionName = try {
             packageManager.getPackageInfo(packageName, 0).versionName.orEmpty()
         } catch (_: PackageManager.NameNotFoundException) {

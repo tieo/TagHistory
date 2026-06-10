@@ -27,6 +27,7 @@ import io.github.tieo.taghistory.data.storage.SettingsFactory
 import io.github.tieo.taghistory.db.DatabaseDriverFactory
 import io.github.tieo.taghistory.db.TagHistoryDatabase
 import io.github.tieo.taghistory.sync.BeaconSyncOrchestrator
+import io.github.tieo.taghistory.sync.BeaconSyncWorker
 import io.github.tieo.taghistory.ui.deviceinfo.DeviceInfoViewModel
 import io.github.tieo.taghistory.ui.history.HistoryViewModel
 import io.github.tieo.taghistory.ui.login.AppleLoginViewModel
@@ -37,6 +38,8 @@ import kotlin.time.ExperimentalTime
 import kotlin.time.Instant
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -142,7 +145,6 @@ class AndroidAppHost private constructor(
      */
     fun createMapViewModelOrNull(): MapViewModel? {
         if (userAuthRepo.getUserAuth() == null) return null
-        val reportsClient = LocationReportsClient(http, anisette)
 
         // Cache the decrypted account across cascade rungs (rung 1→6→24 all fire
         // within seconds). Keystore decrypt can take 100–300 ms per call; without
@@ -170,8 +172,8 @@ class AndroidAppHost private constructor(
                 }
                 val accessories = loadAccessoriesVerbose(beaconsById.mapValues { it.value.ownedBeaconInfo })
                 if (accessories.isEmpty()) return@MapViewModel emptyMap()
-                AppleReportsService(reportsClient, account)
-                    .fetchLastReportsByBeacon(accessories, hoursBack)
+                // Same fetch seam as refresh-now + the background worker.
+                appleReportsFetcher.fetch(account, accessories, hoursBack)
             },
             reverseGeocode = { lat, lon -> reverseGeocode(lat, lon) },
             currentLocation = { lastKnownDeviceLocation() },
@@ -257,12 +259,38 @@ class AndroidAppHost private constructor(
     }
 
     /**
-     * Build the "Refresh now" callback used by Settings. Fetches recent
-     * reports for every owned beacon via [AppleReportsService] and stores
-     * them. Returns a user-facing status line: a success summary on OK,
-     * `"Sign in first"` when auth is missing, or an error sentence on
-     * failure. Reuses the lambda shape used by MapViewModel so the two
-     * refresh paths share the same network/auth logic.
+     * Single Apple-reports fetch seam, shared by every code path that
+     * pulls fixes (Settings refresh-now, the background sync worker, and
+     * — via [AppHostFactories.onRefreshNow] — anything else). Previously
+     * each path constructed its own [AppleReportsService] + decrypt +
+     * accessory-load sequence; centralising it here is the one place
+     * network/auth logic lives.
+     */
+    private val appleReportsFetcher = BeaconSyncOrchestrator.ReportsFetcher { account, accessories, hoursBack ->
+        AppleReportsService(LocationReportsClient(http, anisette), account)
+            .fetchLastReportsByBeacon(accessories, hoursBack)
+    }
+
+    /**
+     * The headless sync pass. Wired into both the WorkManager worker
+     * (background) and used to source [createRefreshNowCallback] so the
+     * fetch+store path is not duplicated. The worker checks
+     * `settings.backgroundSyncEnabled` itself.
+     */
+    fun createSyncOrchestrator(): BeaconSyncOrchestrator = BeaconSyncOrchestrator(
+        settingsRepo = userSettingsRepo,
+        authRepo = userAuthRepo,
+        beaconRepo = beaconRepo,
+        fetchReports = appleReportsFetcher,
+        hoursBack = 24 * 7,
+    )
+
+    /**
+     * Build the "Refresh now" callback used by Settings. Forces a fetch
+     * regardless of the background-sync setting (the orchestrator's
+     * own `backgroundSyncEnabled` gate is for the periodic worker, not a
+     * manual press), reusing [appleReportsFetcher] so there is a single
+     * fetch implementation.
      */
     fun createRefreshNowCallback(): suspend () -> String? = label@{
         // Crypto + network must NOT run on Main. The Settings screen launches
@@ -278,11 +306,32 @@ class AndroidAppHost private constructor(
                 beacons.associate { it.beaconId to it.ownedBeaconInfo },
             )
             if (accessories.isEmpty()) return@withContext "No beacons to refresh"
-            val reports = AppleReportsService(LocationReportsClient(http, anisette), account)
-                .fetchLastReportsByBeacon(accessories, hoursBack = 24 * 7)
+            val reports = appleReportsFetcher.fetch(account, accessories, hoursBack = 24 * 7)
             if (reports.isNotEmpty()) beaconRepo.storeToLocationCache(reports)
             val total = reports.values.sumOf { it.size }
             "Refreshed ${reports.size} beacons • $total reports"
+        }
+    }
+
+    /**
+     * Install the background-sync worker. Sets the static
+     * [BeaconSyncWorker.orchestratorProvider] so the WorkManager-created
+     * worker can reach back into this host's DI graph, schedules /
+     * cancels the periodic job per the current settings, and keeps it
+     * in sync with future settings changes by collecting the settings
+     * StateFlow on [scope]. Idempotent — WorkManager's UPDATE policy
+     * dedupes repeat applies, and re-creating the host (activity
+     * recreation) just re-arms the same unique work.
+     */
+    fun startBackgroundSync(scope: kotlinx.coroutines.CoroutineScope) {
+        BeaconSyncWorker.orchestratorProvider = { createSyncOrchestrator() }
+        scope.launch {
+            userSettingsRepo.flow
+                .map { it.backgroundSyncEnabled to it.backgroundSyncIntervalMinutes }
+                .distinctUntilChanged()
+                .collect {
+                    BeaconSyncWorker.apply(context, userSettingsRepo.getUserSettings())
+                }
         }
     }
 

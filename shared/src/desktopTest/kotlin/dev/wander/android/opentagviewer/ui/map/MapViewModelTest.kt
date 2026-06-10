@@ -10,6 +10,7 @@ import io.github.tieo.taghistory.data.repo.UserDataRepository
 import io.github.tieo.taghistory.data.storage.SecureBlobStore
 import io.github.tieo.taghistory.db.TagHistoryDatabase
 import java.util.Properties
+import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -17,7 +18,10 @@ import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -36,6 +40,13 @@ class MapViewModelTest {
     private lateinit var beaconRepo: BeaconRepository
     private lateinit var userDataRepo: UserDataRepository
     private lateinit var authRepo: UserAuthRepository
+    private var vmScope: CoroutineScope? = null
+
+    @AfterTest
+    fun tearDown() {
+        vmScope?.cancel()
+        vmScope = null
+    }
 
     @BeforeTest
     fun setUp() {
@@ -79,15 +90,30 @@ class MapViewModelTest {
         fetchReports: suspend (Map<String, io.github.tieo.taghistory.data.model.BeaconData>, Int) -> Map<String, List<BeaconLocationReport>> =
             { _, _ -> emptyMap() },
         reverseGeocode: suspend (Double, Double) -> String? = { _, _ -> null },
-    ): MapViewModel = MapViewModel(
-        beaconRepo = beaconRepo,
-        userDataRepo = userDataRepo,
-        authRepo = authRepo,
-        fetchReports = fetchReports,
-        reverseGeocode = reverseGeocode,
-        scope = this,
-        ioDispatcher = StandardTestDispatcher(testScheduler),
-    )
+    ): MapViewModel {
+        // The VM owns never-ending work (the periodic refresh loop and
+        // the reactive last-locations collector). Hosting it on the
+        // test's own scope leaks those past the test body and runTest
+        // aborts with UncompletedCoroutinesError; TestScope.backgroundScope
+        // doesn't advance nested withContext hops reliably. So: a
+        // dedicated scope on the SAME scheduler (advanceUntilIdle still
+        // drives it) that tearDown cancels explicitly.
+        val scope = CoroutineScope(StandardTestDispatcher(testScheduler) + Job())
+        vmScope = scope
+        return MapViewModel(
+            beaconRepo = beaconRepo,
+            userDataRepo = userDataRepo,
+            authRepo = authRepo,
+            fetchReports = fetchReports,
+            reverseGeocode = reverseGeocode,
+            // 0 disables the init-block's periodic while(true) loop — under
+            // the test scheduler's virtual time, advanceUntilIdle would
+            // otherwise spin through delay(60s) iterations forever.
+            refreshIntervalMs = 0L,
+            scope = scope,
+            ioDispatcher = StandardTestDispatcher(testScheduler),
+        )
+    }
 
     @Test
     fun `boot without auth flips requireLogin`() = runTest {
@@ -469,6 +495,68 @@ class MapViewModelTest {
         advanceUntilIdle()
         assertEquals("a", vm.state.value.selectedBeaconId,
             "Second refresh must NOT auto-promote to 'b' — auto-promote is one-shot")
+    }
+
+    @Test
+    fun `external DB write propagates into map state without a manual refresh`() = runTest {
+        // The "history screen fetched new fixes / background worker
+        // synced / Settings refresh-now stored reports" case: a write to
+        // the LocationReport table by ANYONE must show up on the map.
+        // Before the reactive collector landed, the map only displayed
+        // locations its own refresh had fetched and stayed stale.
+        seedBeacon("b1", "Keys", "🔑")
+        seedLocation("b1", lat = 1.0, lon = 1.0, ts = 100L)
+        val vm = buildVm()
+        vm.boot()
+        advanceUntilIdle()
+        assertEquals(100L, vm.state.value.markers.single().lastUpdatedMs)
+
+        // Simulate another component writing a newer fix straight to
+        // the repo — exactly what HistoryViewModel / the sync worker do.
+        beaconRepo.storeToLocationCache(
+            mapOf(
+                "b1" to listOf(
+                    BeaconLocationReport(
+                        publishedAt = 500L, description = "", timestamp = 500L,
+                        confidence = 1, latitude = 9.0, longitude = 9.0,
+                        horizontalAccuracy = 5, status = 0,
+                    ),
+                ),
+            ),
+        )
+        advanceUntilIdle()
+
+        val marker = vm.state.value.markers.single()
+        assertEquals(500L, marker.lastUpdatedMs, "map must adopt the externally-written newer fix")
+        assertEquals(9.0, marker.latitude)
+        val card = vm.state.value.cards.single()
+        assertEquals(500L, card.lastUpdatedMs, "cards rebuild from the same reactive emission")
+    }
+
+    @Test
+    fun `external write with an older timestamp does not regress the marker`() = runTest {
+        seedBeacon("b1", "Keys", "🔑")
+        seedLocation("b1", lat = 1.0, lon = 1.0, ts = 1_000L)
+        val vm = buildVm()
+        vm.boot()
+        advanceUntilIdle()
+
+        beaconRepo.storeToLocationCache(
+            mapOf(
+                "b1" to listOf(
+                    BeaconLocationReport(
+                        publishedAt = 50L, description = "", timestamp = 50L,
+                        confidence = 1, latitude = 4.0, longitude = 4.0,
+                        horizontalAccuracy = 5, status = 0,
+                    ),
+                ),
+            ),
+        )
+        advanceUntilIdle()
+
+        val marker = vm.state.value.markers.single()
+        assertEquals(1_000L, marker.lastUpdatedMs, "older external fix must not clobber the newer one")
+        assertEquals(1.0, marker.latitude)
     }
 
 }

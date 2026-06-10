@@ -167,19 +167,37 @@ class BeaconRepository(
      */
     fun getLastLocationsForAll(): Map<String, BeaconLocationReport> {
         val rows = db.locationReportQueries.getLastForAllBeacons().executeAsList()
-        return rows.associate { r ->
-            r.beacon_id to BeaconLocationReport(
-                publishedAt = r.published_at,
-                description = r.description.orEmpty(),
-                timestamp = r.timestamp!!,
-                confidence = r.confidence,
-                latitude = r.latitude,
-                longitude = r.longitude,
-                horizontalAccuracy = r.horizontal_accuracy,
-                status = r.status,
-            )
-        }
+        return rows.associate { r -> r.beacon_id to r.toReport() }
     }
+
+    /**
+     * Reactive [getLastLocationsForAll]. Re-emits whenever the
+     * LocationReport table changes — so ANY writer (the map's own
+     * refresh, the history screen's fetch, the background sync worker,
+     * Settings' refresh-now) updates every subscriber's view of the
+     * latest fix per beacon. This is the single source of truth the
+     * map collects; without it the map only saw locations it fetched
+     * itself and went stale when another path wrote fresh reports.
+     */
+    fun observeLastLocationsForAll(
+        context: CoroutineContext = Dispatchers.Default,
+    ): Flow<Map<String, BeaconLocationReport>> =
+        db.locationReportQueries.getLastForAllBeacons()
+            .asFlow()
+            .mapToList(context)
+            .map { rows -> rows.associate { r -> r.beacon_id to r.toReport() } }
+
+    private fun io.github.tieo.taghistory.db.GetLastForAllBeacons.toReport() =
+        BeaconLocationReport(
+            publishedAt = published_at,
+            description = description.orEmpty(),
+            timestamp = timestamp!!,
+            confidence = confidence,
+            latitude = latitude,
+            longitude = longitude,
+            horizontalAccuracy = horizontal_accuracy,
+            status = status,
+        )
 
     fun getLocationsFor(
         beaconId: String,

@@ -119,6 +119,14 @@ class MapViewModel(
         // composition time before the network request starts.
         runScope.launch {
             boot().join()
+            // Subscribe to the DB AFTER boot so the first emission merges
+            // into already-populated beacon metadata. From here on, ANY
+            // writer to the LocationReport table — this VM's refresh, the
+            // history screen's fetch, Settings' refresh-now, the
+            // background sync worker — flows back into markers/cards
+            // automatically. The map is no longer a stale snapshot that
+            // only saw locations it fetched itself.
+            observeLocations()
             refresh()
             // Periodic refresh lives on the VM (not on MapScreen) so the
             // app keeps pulling new reports while the user is on
@@ -129,6 +137,40 @@ class MapViewModel(
                     kotlinx.coroutines.delay(refreshIntervalMs)
                     refresh()
                 }
+            }
+        }
+    }
+
+    /**
+     * Collect the reactive last-location-per-beacon stream and fold each
+     * emission into [latestLocationByBeacon] + re-emit markers/cards.
+     * Only adopts a report when it is strictly newer than what we hold,
+     * so a concurrent in-flight refresh that already wrote the same row
+     * doesn't cause a visible flicker from older-then-newer ordering.
+     */
+    private fun observeLocations() {
+        runScope.launch {
+            beaconRepo.observeLastLocationsForAll(ioDispatcher).collect { latest ->
+                var changed = false
+                for ((id, report) in latest) {
+                    val existing = latestLocationByBeacon[id]
+                    if (existing == null || report.timestamp > existing.timestamp) {
+                        latestLocationByBeacon[id] = report
+                        changed = true
+                    }
+                }
+                if (!changed) return@collect
+                val (markers, cards) = withContext(ioDispatcher) {
+                    buildMarkers() to buildCards()
+                }
+                _state.update { current ->
+                    current.copy(
+                        markers = markers,
+                        cards = cards,
+                        selectedBeaconId = pickSelection(current.selectedBeaconId, markers),
+                    )
+                }
+                kickoffGeocoding()
             }
         }
     }
