@@ -29,18 +29,14 @@ name: Settings — About button navigates to information screen, back returns
       id: "btn_source_code"
     timeout: 60000
 
-# Information screen: links present, settings landmarks gone.
-- extendedWaitUntil:
-    visible:
-      id: "btn_source_code"
-    timeout: 25000
+# Information screen: links present (source_code asserted above at the
+# 60s landing wait), settings landmarks gone. btn_license is the third
+# link row and sits at the fold edge on the short CI viewport — the two
+# rows above it already prove the screen rendered, so it isn't asserted
+# standalone here (16_information_screen covers tapping it).
 - extendedWaitUntil:
     visible:
       id: "btn_developer_website"
-    timeout: 25000
-- extendedWaitUntil:
-    visible:
-      id: "btn_license"
     timeout: 25000
 - assertNotVisible:
     text: "Appearance"
