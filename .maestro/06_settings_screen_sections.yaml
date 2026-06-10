@@ -57,6 +57,7 @@ name: Settings screen — all section headers visible and reachable by scroll
       text: "Appearance"
     direction: UP
     timeout: 25000
+    centerElement: true
 - extendedWaitUntil:
     visible:
       text: "Appearance"

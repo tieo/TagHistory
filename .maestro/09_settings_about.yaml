@@ -17,18 +17,21 @@ name: Settings — About button navigates to information screen, back returns
       id: "btn_about"
     direction: DOWN
     timeout: 25000
+    centerElement: true
 - extendedWaitUntil:
     visible:
       id: "btn_about"
     timeout: 25000
 
-- tapOn:
-    id: "btn_about"
-- scrollUntilVisible:
-    element:
-      id: "btn_source_code"
-    direction: DOWN
-    timeout: 60000
+- retry:
+    maxRetries: 4
+    commands:
+      - tapOn:
+          id: "btn_about"
+      - extendedWaitUntil:
+          visible:
+            id: "btn_source_code"
+          timeout: 20000
 
 # Information screen: links present (source_code asserted above at the
 # 60s landing wait), settings landmarks gone. btn_license is the third
@@ -68,13 +71,16 @@ name: Settings — About button navigates to information screen, back returns
       id: "btn_about"
     direction: DOWN
     timeout: 25000
-- tapOn:
-    id: "btn_about"
-- scrollUntilVisible:
-    element:
-      id: "btn_source_code"
-    direction: DOWN
-    timeout: 60000
+    centerElement: true
+- retry:
+    maxRetries: 4
+    commands:
+      - tapOn:
+          id: "btn_about"
+      - extendedWaitUntil:
+          visible:
+            id: "btn_source_code"
+          timeout: 20000
 - back
 - extendedWaitUntil:
     visible:

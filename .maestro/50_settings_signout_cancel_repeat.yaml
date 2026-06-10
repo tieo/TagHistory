@@ -20,6 +20,7 @@ name: Settings — sign-out cancel ×3 keeps user on settings (regression)
       id: "btn_sign_out"
     direction: DOWN
     timeout: 25000
+    centerElement: true
 # Dialog buttons render in a separate window — must use text selectors
 - tapOn:
     id: "btn_sign_out"
@@ -124,6 +125,7 @@ name: Settings — sign-out cancel ×3 keeps user on settings (regression)
       id: "btn_sign_out"
     direction: DOWN
     timeout: 25000
+    centerElement: true
 - tapOn:
     id: "btn_sign_out"
 - extendedWaitUntil:

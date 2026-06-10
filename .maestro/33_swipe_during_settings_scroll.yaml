@@ -33,6 +33,7 @@ name: "Stress: settings deep scroll + theme change then back — map list intact
       id: "btn_theme_dark"
     direction: DOWN
     timeout: 25000
+    centerElement: true
 - tapOn:
     id: "btn_theme_dark"
 - tapOn:
@@ -63,6 +64,7 @@ name: "Stress: settings deep scroll + theme change then back — map list intact
       id: "btn_theme_light"
     direction: DOWN
     timeout: 25000
+    centerElement: true
 - tapOn:
     id: "btn_theme_light"
 - tapOn:

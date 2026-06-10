@@ -16,6 +16,7 @@ name: Settings — sign out dialog cancel keeps user signed in
       id: "btn_sign_out"
     direction: DOWN
     timeout: 25000
+    centerElement: true
 
 # Pre: dialog hidden.
 - assertNotVisible:

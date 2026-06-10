@@ -33,6 +33,7 @@ name: "Stress: wild list scrolling — rows + actions survive chaotic input"
       id: "tag_row_test-beacon-001-aaa"
     direction: UP
     timeout: 25000
+    centerElement: true
 - extendedWaitUntil:
     visible:
       text: "Car Keys"
@@ -73,6 +74,7 @@ name: "Stress: wild list scrolling — rows + actions survive chaotic input"
       id: "tag_row_test-beacon-003-ccc"
     direction: DOWN
     timeout: 25000
+    centerElement: true
 - extendedWaitUntil:
     visible:
       text: "Bike"

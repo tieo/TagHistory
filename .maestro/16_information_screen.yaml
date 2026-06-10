@@ -15,13 +15,16 @@ name: Information screen — links present, back navigation works, license sub-s
       id: "btn_about"
     direction: DOWN
     timeout: 25000
-- tapOn:
-    id: "btn_about"
-- scrollUntilVisible:
-    element:
-      id: "btn_developer_website"
-    direction: DOWN
-    timeout: 60000
+    centerElement: true
+- retry:
+    maxRetries: 4
+    commands:
+      - tapOn:
+          id: "btn_about"
+      - extendedWaitUntil:
+          visible:
+            id: "btn_developer_website"
+          timeout: 20000
 
 # All three links + version line visible. Settings widgets gone.
 - extendedWaitUntil:
@@ -40,6 +43,7 @@ name: Information screen — links present, back navigation works, license sub-s
       id: "btn_license"
     direction: DOWN
     timeout: 25000
+    centerElement: true
 - assertNotVisible:
     text: "Appearance"
 - assertNotVisible:
@@ -60,6 +64,7 @@ name: Information screen — links present, back navigation works, license sub-s
       id: "btn_license"
     direction: DOWN
     timeout: 25000
+    centerElement: true
 - extendedWaitUntil:
     visible:
       id: "btn_source_code"
@@ -100,6 +105,7 @@ name: Information screen — links present, back navigation works, license sub-s
             id: "btn_about"
           direction: DOWN
           timeout: 25000
+          centerElement: true
       - tapOn:
           id: "btn_about"
       - scrollUntilVisible:
@@ -107,6 +113,7 @@ name: Information screen — links present, back navigation works, license sub-s
             id: "btn_license"
           direction: DOWN
           timeout: 60000
+          centerElement: true
 
 # Back chain: Information → Settings → Map.
 - back

@@ -20,6 +20,7 @@ name: Navigation — Settings -> Information -> back twice lands on Map
       id: "btn_about"
     direction: DOWN
     timeout: 25000
+    centerElement: true
 - tapOn:
     id: "btn_about"
 - extendedWaitUntil:
@@ -68,6 +69,7 @@ name: Navigation — Settings -> Information -> back twice lands on Map
       id: "btn_about"
     direction: DOWN
     timeout: 25000
+    centerElement: true
 - tapOn:
     id: "btn_about"
 - extendedWaitUntil:
@@ -84,6 +86,7 @@ name: Navigation — Settings -> Information -> back twice lands on Map
       id: "btn_about"
     direction: DOWN
     timeout: 25000
+    centerElement: true
 - tapOn:
     id: "btn_about"
 - extendedWaitUntil:

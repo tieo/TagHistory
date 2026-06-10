@@ -68,6 +68,7 @@ name: Settings — Refresh now shows a non-empty result message
       text: ".*Refresh started.*"
     direction: DOWN
     timeout: 25000
+    centerElement: true
     speed: 40
 - extendedWaitUntil:
     visible:
