@@ -87,6 +87,7 @@ class MapScreenTest {
         userDataRepo = userDataRepo,
         authRepo = authRepo,
         fetchReports = fetchReports,
+        refreshIntervalMs = 0L,
         scope = CoroutineScope(Dispatchers.Default + SupervisorJob()),
         hoursBack = 24,
     )
@@ -104,7 +105,6 @@ class MapScreenTest {
                 Surface(color = MaterialTheme.colorScheme.background) {
                     MapScreen(
                         viewModel = vm,
-                        refreshIntervalMs = Long.MAX_VALUE,
                     )
                 }
             }
@@ -121,7 +121,7 @@ class MapScreenTest {
         setContent {
             TagHistoryTheme {
                 Surface {
-                    MapScreen(viewModel = vm, refreshIntervalMs = Long.MAX_VALUE)
+                    MapScreen(viewModel = vm)
                 }
             }
         }
@@ -137,7 +137,7 @@ class MapScreenTest {
         setContent {
             TagHistoryTheme {
                 Surface {
-                    MapScreen(viewModel = vm, refreshIntervalMs = Long.MAX_VALUE)
+                    MapScreen(viewModel = vm)
                 }
             }
         }
@@ -153,7 +153,7 @@ class MapScreenTest {
         setContent {
             TagHistoryTheme {
                 Surface {
-                    MapScreen(viewModel = vm, refreshIntervalMs = Long.MAX_VALUE)
+                    MapScreen(viewModel = vm)
                 }
             }
         }
@@ -170,7 +170,7 @@ class MapScreenTest {
         setContent {
             TagHistoryTheme {
                 Surface {
-                    MapScreen(viewModel = vm, refreshIntervalMs = Long.MAX_VALUE)
+                    MapScreen(viewModel = vm)
                 }
             }
         }
@@ -188,7 +188,6 @@ class MapScreenTest {
                 Surface {
                     MapScreen(
                         viewModel = vm,
-                        refreshIntervalMs = Long.MAX_VALUE,
                         onImport = { null },
                     )
                 }
@@ -206,7 +205,6 @@ class MapScreenTest {
                 Surface {
                     MapScreen(
                         viewModel = vm,
-                        refreshIntervalMs = Long.MAX_VALUE,
                         onImport = null,
                     )
                 }
