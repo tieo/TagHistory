@@ -24,9 +24,10 @@ name: Settings — About button navigates to information screen, back returns
 
 - tapOn:
     id: "btn_about"
-- extendedWaitUntil:
-    visible:
+- scrollUntilVisible:
+    element:
       id: "btn_source_code"
+    direction: DOWN
     timeout: 60000
 
 # Information screen: links present (source_code asserted above at the
@@ -69,9 +70,10 @@ name: Settings — About button navigates to information screen, back returns
     timeout: 25000
 - tapOn:
     id: "btn_about"
-- extendedWaitUntil:
-    visible:
+- scrollUntilVisible:
+    element:
       id: "btn_source_code"
+    direction: DOWN
     timeout: 60000
 - back
 - extendedWaitUntil:

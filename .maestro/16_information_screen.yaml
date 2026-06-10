@@ -17,9 +17,10 @@ name: Information screen — links present, back navigation works, license sub-s
     timeout: 25000
 - tapOn:
     id: "btn_about"
-- extendedWaitUntil:
-    visible:
+- scrollUntilVisible:
+    element:
       id: "btn_developer_website"
+    direction: DOWN
     timeout: 60000
 
 # All three links + version line visible. Settings widgets gone.
@@ -101,9 +102,10 @@ name: Information screen — links present, back navigation works, license sub-s
           timeout: 25000
       - tapOn:
           id: "btn_about"
-      - extendedWaitUntil:
-          visible:
+      - scrollUntilVisible:
+          element:
             id: "btn_license"
+          direction: DOWN
           timeout: 60000
 
 # Back chain: Information → Settings → Map.

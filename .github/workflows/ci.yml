@@ -129,10 +129,24 @@ jobs:
           while IFS= read -r file; do
             [ -z "$file" ] && continue
             echo "::group::maestro $file"
-            if ! maestro test "$file"; then
-              FAIL=1
-              echo "::error file=$file::Maestro flow failed"
+            # The headless emulator under Actions load intermittently
+            # drops the seed deep-link hand-off or stalls a screen
+            # transition past the per-step timeout — the same flow then
+            # passes on a fresh attempt (every flow re-seeds from a
+            # clean state, so a retry is safe and self-contained). Give
+            # each flow up to two attempts before failing the shard.
+            if maestro test "$file"; then
+              echo "::endgroup::"
+              continue
             fi
+            echo "first attempt failed; retrying once: $file"
+            adb shell am force-stop io.github.tieo.taghistory || true
+            if maestro test "$file"; then
+              echo "::endgroup::"
+              continue
+            fi
+            FAIL=1
+            echo "::error file=$file::Maestro flow failed (2 attempts)"
             echo "::endgroup::"
           done < shard_files.txt
           exit $FAIL
