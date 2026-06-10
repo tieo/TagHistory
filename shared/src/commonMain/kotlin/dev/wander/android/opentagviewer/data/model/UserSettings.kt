@@ -13,5 +13,12 @@ data class UserSettings(
     val backgroundSyncIntervalMinutes: Int? = null,
 ) {
     fun hasDarkThemeEnabled(): Boolean = useDarkTheme == true
-    fun isBackgroundSyncEnabled(): Boolean = backgroundSyncEnabled == true
+
+    /**
+     * Background sync is ON unless the user explicitly turned it off.
+     * Null means "never touched the toggle" — and the app's core value
+     * (location history) needs periodic background fetches, so unset
+     * defaults to enabled rather than silently collecting nothing.
+     */
+    fun isBackgroundSyncEnabled(): Boolean = backgroundSyncEnabled != false
 }

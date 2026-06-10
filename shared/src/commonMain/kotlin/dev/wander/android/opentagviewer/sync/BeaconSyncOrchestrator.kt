@@ -51,7 +51,7 @@ class BeaconSyncOrchestrator(
 
     suspend fun run(): Outcome {
         val settings = settingsRepo.getUserSettings()
-        if (settings.backgroundSyncEnabled != true) {
+        if (!settings.isBackgroundSyncEnabled()) {
             return Outcome.Success(persistedReports = 0, beaconCount = 0)
         }
 

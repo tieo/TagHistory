@@ -104,11 +104,11 @@ fun SettingsScreen(
             SwitchRow(
                 label = "Auto-refresh when in background",
                 subtitle = "Sync beacon reports without opening the app",
-                checked = state.current.backgroundSyncEnabled == true,
+                checked = state.current.isBackgroundSyncEnabled(),
                 onChange = viewModel::setBackgroundSyncEnabled,
                 tag = "toggle_background_sync",
             )
-            if (state.current.backgroundSyncEnabled == true) {
+            if (state.current.isBackgroundSyncEnabled()) {
                 HorizontalDivider()
                 SyncIntervalSlider(
                     current = state.current.backgroundSyncIntervalMinutes ?: DEFAULT_INTERVAL_MIN,

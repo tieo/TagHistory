@@ -69,7 +69,7 @@ class BeaconSyncWorker(
 
         fun apply(context: Context, settings: UserSettings) {
             val wm = WorkManager.getInstance(context.applicationContext)
-            if (settings.backgroundSyncEnabled != true) {
+            if (!settings.isBackgroundSyncEnabled()) {
                 wm.cancelUniqueWork(UNIQUE_WORK_NAME)
                 return
             }
