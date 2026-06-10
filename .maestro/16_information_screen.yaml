@@ -19,7 +19,7 @@ name: Information screen — links present, back navigation works, license sub-s
     id: "btn_about"
 - extendedWaitUntil:
     visible:
-      text: "TagHistory"
+      id: "btn_developer_website"
     timeout: 25000
 
 # All three links + version line visible. Settings widgets gone.
@@ -48,7 +48,7 @@ name: Information screen — links present, back navigation works, license sub-s
 - back
 - extendedWaitUntil:
     visible:
-      text: "TagHistory"
+      id: "btn_developer_website"
     timeout: 25000
 - extendedWaitUntil:
     visible:

@@ -26,7 +26,7 @@ name: Settings — About button navigates to information screen, back returns
     id: "btn_about"
 - extendedWaitUntil:
     visible:
-      text: "TagHistory"
+      id: "btn_source_code"
     timeout: 25000
 
 # Information screen: links present, settings landmarks gone.
