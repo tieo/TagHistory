@@ -59,6 +59,7 @@ import org.maplibre.android.camera.CameraPosition
 import org.maplibre.android.camera.CameraUpdateFactory
 import org.maplibre.android.geometry.LatLng
 import org.maplibre.android.maps.MapLibreMap
+import org.maplibre.android.maps.MapLibreMapOptions
 import org.maplibre.android.maps.MapView
 import org.maplibre.android.maps.Style
 import org.maplibre.android.style.layers.FillLayer
@@ -128,7 +129,13 @@ actual fun PlatformMapView(
 
     val mapView = remember {
         MapLibre.getInstance(context)
-        MapView(context).apply { onCreate(Bundle()) }
+        // TextureView, not the default SurfaceView. A SurfaceView lives in its
+        // own window layer; with the translucent glass tag list composited on
+        // top, real-GPU devices fail to blend the layers and paint the whole
+        // window blank white (SwiftShader on the emulator masks it). TextureView
+        // renders into the view hierarchy so Compose can alpha-blend over it.
+        MapView(context, MapLibreMapOptions.createFromAttributes(context).textureMode(true))
+            .apply { onCreate(Bundle()) }
     }
     var mapRef by remember { mutableStateOf<MapLibreMap?>(null) }
     // Every camera move (pan, zoom, rotate, fling) increments this — Compose
