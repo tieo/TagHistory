@@ -67,6 +67,14 @@ sealed class ImportPreview {
 data class AppHostFactories(
     val createLogin: () -> AppleLoginViewModel,
     val createMap: () -> MapViewModel?,
+    /**
+     * Cheap auth probe for the login gate. Must NOT construct a
+     * MapViewModel: that VM's init launches boot + an infinite periodic
+     * refresh loop, so using createMap() just to null-check login spawns
+     * a second ghost VM that double-logs every refresh and doubles the
+     * anisette/decrypt churn.
+     */
+    val isLoggedIn: () -> Boolean,
     val createSettings: () -> SettingsViewModel,
     val createDeviceInfo: (String) -> DeviceInfoViewModel,
     val createHistory: (String) -> HistoryViewModel,
@@ -130,7 +138,7 @@ fun App(factories: AppHostFactories) {
 
     TagHistoryTheme(darkTheme = darkTheme) {
         Surface(modifier = Modifier.fillMaxSize().withTestTagsAsResourceId()) {
-            var showLogin by remember { mutableStateOf(factories.createMap() == null) }
+            var showLogin by remember { mutableStateOf(!factories.isLoggedIn()) }
             if (showLogin) {
                 val vm = remember { factories.createLogin() }
                 LaunchedEffect(vm) {

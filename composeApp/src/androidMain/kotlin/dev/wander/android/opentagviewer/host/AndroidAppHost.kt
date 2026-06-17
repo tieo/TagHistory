@@ -423,6 +423,7 @@ class AndroidAppHost private constructor(
     ): AppHostFactories = AppHostFactories(
         createLogin = { createLoginViewModel() },
         createMap = { createMapViewModelOrNull() },
+        isLoggedIn = { userAuthRepo.getUserAuth() != null },
         createSettings = { createSettingsViewModel() },
         createDeviceInfo = { beaconId -> createDeviceInfoViewModel(beaconId) },
         createHistory = { beaconId -> createHistoryViewModel(beaconId) },

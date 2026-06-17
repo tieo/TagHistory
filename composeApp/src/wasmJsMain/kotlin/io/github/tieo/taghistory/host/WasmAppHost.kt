@@ -116,6 +116,7 @@ class WasmAppHost(
                 refreshIntervalMs = 0L,
             )
         },
+        isLoggedIn = { userAuthRepo.getUserAuth() != null },
         createSettings = { SettingsViewModel(userSettingsRepo, userAuthRepo) },
         createDeviceInfo = { beaconId -> DeviceInfoViewModel(beaconRepo, beaconId) },
         createHistory = { beaconId ->
