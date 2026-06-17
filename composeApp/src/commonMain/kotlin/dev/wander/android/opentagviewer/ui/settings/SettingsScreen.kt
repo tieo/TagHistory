@@ -49,8 +49,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.runtime.collectAsState
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import io.github.tieo.taghistory.sync.SyncEvent
-import io.github.tieo.taghistory.sync.SyncLog
 import io.github.tieo.taghistory.ui.history.formatLocalTimeWithSeconds
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -114,20 +112,6 @@ fun SettingsScreen(
                     current = state.current.backgroundSyncIntervalMinutes ?: DEFAULT_INTERVAL_MIN,
                     onChange = viewModel::setBackgroundSyncIntervalMinutes,
                 )
-            }
-        }
-
-        // ---------- Advanced ----------
-        SettingsSection("Advanced") {
-            SwitchRow(
-                label = "Show debug data",
-                subtitle = "Show recent sync activity below",
-                checked = state.current.enableDebugData == true,
-                onChange = viewModel::setEnableDebugData,
-            )
-            if (state.current.enableDebugData == true) {
-                HorizontalDivider()
-                SyncLogPanel()
             }
         }
 
@@ -422,173 +406,6 @@ private fun ThemeChoice(
         Button(onClick = onClick, modifier = modifier) { Text(label) }
     } else {
         OutlinedButton(onClick = onClick, modifier = modifier) { Text(label) }
-    }
-}
-
-@Composable
-private fun SyncLogPanel() {
-    val events by SyncLog.events.collectAsState()
-    val env by SyncLog.environment.collectAsState()
-    val clipboard = androidx.compose.ui.platform.LocalClipboardManager.current
-    var copyAck by remember { mutableStateOf(false) }
-    val expanded = remember { mutableStateMapOf<Long, Boolean>() }
-
-    Column(
-        modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(4.dp),
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(
-                "Sync log",
-                style = MaterialTheme.typography.titleSmall,
-                modifier = Modifier.testTag("sync_log_header"),
-            )
-            Row {
-                TextButton(
-                    onClick = {
-                        clipboard.setText(
-                            androidx.compose.ui.text.AnnotatedString(
-                                buildSyncLogExport(env, events),
-                            ),
-                        )
-                        copyAck = true
-                    },
-                    modifier = Modifier.testTag("btn_copy_sync_log"),
-                ) {
-                    Text(if (copyAck) "Copied" else "Copy")
-                }
-                LaunchedEffect(copyAck) {
-                    if (copyAck) {
-                        delay(2500)
-                        copyAck = false
-                    }
-                }
-                TextButton(
-                    onClick = { SyncLog.clear() },
-                    modifier = Modifier.testTag("btn_clear_sync_log"),
-                ) {
-                    Text("Clear")
-                }
-            }
-        }
-
-        if (env.isNotEmpty()) {
-            Text(
-                env.entries.joinToString("  •  ") { "${it.key}=${it.value}" },
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.outline,
-            )
-        }
-
-        if (events.isEmpty()) {
-            Text(
-                "No sync events yet — open the map to trigger a refresh.",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        } else {
-            // Bounded-height scroll viewport. Without this the panel
-            // grew with every event and pushed Account / About off the
-            // bottom of Settings; on a small screen the whole Settings
-            // scroll became "sync log" plus a tiny strip of other rows.
-            val visible = events.asReversed().take(60)
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(SYNC_LOG_PANEL_HEIGHT),
-            ) {
-                // No `key` on items intentionally: SyncEvent.timestampMs
-                // collides when two events fire in the same millisecond
-                // (cascade rungs do this), which crashes LazyColumn with
-                // "key was already used". Position-based identity is
-                // fine here — the list is append-only.
-                items(visible.size) { idx ->
-                    val event = visible[idx]
-                    val isOpen = expanded[event.timestampMs] == true
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable(enabled = event.details.isNotEmpty()) {
-                                expanded[event.timestampMs] = !isOpen
-                            }
-                            .padding(vertical = 2.dp),
-                    ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        ) {
-                            Text(
-                                io.github.tieo.taghistory.ui.history
-                                    .formatLocalTimeWithSeconds(event.timestampMs),
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.outline,
-                            )
-                            Text(
-                                event.kind.name,
-                                style = MaterialTheme.typography.labelSmall,
-                                color = when (event.kind) {
-                                    SyncEvent.Kind.RUNG_FAIL ->
-                                        MaterialTheme.colorScheme.error
-                                    SyncEvent.Kind.REFRESH_DONE ->
-                                        MaterialTheme.colorScheme.primary
-                                    else -> MaterialTheme.colorScheme.outline
-                                },
-                            )
-                            Text(
-                                event.message,
-                                style = MaterialTheme.typography.bodySmall,
-                                modifier = Modifier.weight(1f),
-                            )
-                            if (event.details.isNotEmpty()) {
-                                Text(
-                                    if (isOpen) "▾" else "▸",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.outline,
-                                )
-                            }
-                        }
-                        if (isOpen) {
-                            for ((k, v) in event.details) {
-                                Text(
-                                    "  $k = $v",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
-private val SYNC_LOG_PANEL_HEIGHT = 280.dp
-
-@OptIn(kotlin.time.ExperimentalTime::class)
-private fun buildSyncLogExport(
-    env: Map<String, String>,
-    events: List<SyncEvent>,
-): String = buildString {
-    appendLine("# TagHistory sync log export")
-    appendLine("# generated " + formatLocalTimeWithSeconds(kotlin.time.Clock.System.now().toEpochMilliseconds()))
-    appendLine()
-    if (env.isNotEmpty()) {
-        appendLine("## environment")
-        for ((k, v) in env) appendLine("$k = $v")
-        appendLine()
-    }
-    appendLine("## events (most recent first)")
-    for (event in events.asReversed()) {
-        val ts = formatLocalTimeWithSeconds(event.timestampMs)
-        appendLine("[$ts] ${event.kind.name}: ${event.message}")
-        for ((k, v) in event.details) {
-            appendLine("    $k = $v")
-        }
     }
 }
 
