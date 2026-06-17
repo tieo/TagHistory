@@ -1,6 +1,8 @@
 package io.github.tieo.taghistory.apple.anisette
 
 import io.github.tieo.taghistory.anisette.AnisetteProvider
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlin.io.encoding.Base64
 import kotlin.io.encoding.ExperimentalEncodingApi
 import kotlin.time.Clock
@@ -36,6 +38,12 @@ class AnisetteClient(
 ) {
     private var cachedHeaders: Map<String, String>? = null
     private var cacheExpiresAtMs: Long = 0L
+    // Serializes the expensive provider call. A map refresh fans out one
+    // fetch per beacon in parallel; without this gate every concurrent
+    // caller misses the empty cache at the same instant and each spins a
+    // fresh on-device ADI run (~240MB under Unicorn emulation), saturating
+    // the heap and freezing the UI. The lock collapses a burst to one call.
+    private val refreshLock = Mutex()
 
     /** Bare header set suitable for the outer HTTP request. */
     suspend fun getHeaders(userId: String, deviceId: String, serial: String): Map<String, String> =
@@ -97,14 +105,19 @@ class AnisetteClient(
     fun clientInfo(): String = CLIENT_INFO
 
     private suspend fun fetchAnisetteDict(): Map<String, String> {
-        val now = clockMillis()
-        val cached = cachedHeaders
-        if (cached != null && now < cacheExpiresAtMs) return cached
+        cachedHeaders?.let { if (clockMillis() < cacheExpiresAtMs) return it }
 
-        val fresh = provider.getHeaders()
-        cachedHeaders = fresh
-        cacheExpiresAtMs = now + CACHE_TTL_SECONDS * 1000L
-        return fresh
+        return refreshLock.withLock {
+            // Re-check under the lock: a caller that won the race may have
+            // already populated the cache while we were waiting, so the
+            // rest of the burst reuses its result instead of re-running.
+            cachedHeaders?.let { if (clockMillis() < cacheExpiresAtMs) return@withLock it }
+
+            val fresh = provider.getHeaders()
+            cachedHeaders = fresh
+            cacheExpiresAtMs = clockMillis() + CACHE_TTL_SECONDS * 1000L
+            fresh
+        }
     }
 
     private fun currentIsoTimestamp(): String {
