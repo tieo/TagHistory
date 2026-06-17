@@ -9,7 +9,6 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.lifecycle.lifecycleScope
-import io.github.tieo.taghistory.host.AndroidAppHost
 import kotlinx.coroutines.CompletableDeferred
 
 private const val TAG = "OTV/MainAct"
@@ -34,7 +33,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
-        val host = AndroidAppHost.create(applicationContext)
+        val host = (application as TagHistoryApp).host
         // Schedule (or cancel, per settings) the WorkManager background
         // sync, and keep the schedule following settings changes. Without
         // this the periodic fetch never runs and the app reopens onto
