@@ -15,5 +15,13 @@
                     android:path="/seed" />
             </intent-filter>
         </activity>
+
+        <!-- Debug-only state dump surface. Read with:
+             adb shell dumpsys activity provider io.github.tieo.taghistory/.DebugDumpProvider
+             exported=false: only the shell/local process needs it. -->
+        <provider
+            android:name="io.github.tieo.taghistory.DebugDumpProvider"
+            android:authorities="io.github.tieo.taghistory.debug"
+            android:exported="false" />
     </application>
 </manifest>

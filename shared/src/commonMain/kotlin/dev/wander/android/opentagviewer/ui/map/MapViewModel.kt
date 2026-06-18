@@ -17,6 +17,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -69,6 +70,13 @@ class MapViewModel(
      * MapScreen). Set to 0 in tests to disable.
      */
     private val refreshIntervalMs: Long = DEFAULT_REFRESH_INTERVAL_MS,
+    /**
+     * Foreground gate: loop only ticks when this is true. Android wires
+     * ProcessLifecycleOwner so refreshes stop when the app is backgrounded
+     * (the hourly WorkManager job covers background freshness). Default
+     * MutableStateFlow(true) keeps existing behaviour for tests + wasm.
+     */
+    private val foreground: StateFlow<Boolean> = MutableStateFlow(true),
     private val scope: CoroutineScope? = null,
     /** All DB/IO work hops to this. Tests can inject the test scheduler's dispatcher. */
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.Default,
@@ -134,8 +142,14 @@ class MapViewModel(
             // when the user signs out or the process dies.
             if (refreshIntervalMs > 0) {
                 while (true) {
+                    // Wait until foreground, then tick. If the app goes to the
+                    // background mid-delay the tick fires on next resume rather
+                    // than in the background — the hourly worker covers freshness
+                    // while backgrounded, so this avoids redundant fetches and
+                    // battery drain when the screen is off.
+                    foreground.first { it }
                     kotlinx.coroutines.delay(refreshIntervalMs)
-                    refresh()
+                    if (foreground.value) refresh()
                 }
             }
         }
@@ -277,6 +291,7 @@ class MapViewModel(
         val effective = if (isPeriodic) listOf(hoursBack) else windows
         runScope.launch {
             var lastError: String? = null
+            try {
             for (window in effective) {
                 // During the cascade (first-run), only re-query beacons without
                 // a recent fix yet. Once a beacon is located in an early rung it
@@ -306,7 +321,13 @@ class MapViewModel(
                 val rungStartMs = kotlin.time.Clock.System.now().toEpochMilliseconds()
                 val reports = try {
                     withContext(ioDispatcher) { fetchReports(toFetch, window) }
-                } catch (e: Exception) {
+                } catch (e: Throwable) {
+                    // Catch Throwable, not Exception: an anisette decrypt can
+                    // OutOfMemoryError on the ~240 MB transient heap spike, which
+                    // is an Error. If that escapes, the whole launch dies before
+                    // the isRefreshing reset in `finally`, so the flag sticks true
+                    // and every later refresh self-skips ("locating" forever).
+                    if (e is kotlinx.coroutines.CancellationException) throw e
                     val rungMs = kotlin.time.Clock.System.now().toEpochMilliseconds() - rungStartMs
                     lastError = e.message
                     SyncLog.record(
@@ -379,16 +400,22 @@ class MapViewModel(
                     break
                 }
             }
-            _state.update {
-                it.copy(
-                    isRefreshing = false,
-                    refreshError = lastError,
-                    fetchingBeaconIds = emptySet(),
-                    // Cascade has finished; even if no rung located a
-                    // beacon, the shimmer card has to come down so the
-                    // user sees the (empty) state instead of waiting.
-                    isInitialFetchComplete = true,
-                )
+            } finally {
+                // ALWAYS reset here, even on a thrown Error or cancellation.
+                // This is the single owner of the isRefreshing latch — if it
+                // fails to run the re-entry guard locks out every future
+                // refresh and the UI stays stuck on "locating".
+                _state.update {
+                    it.copy(
+                        isRefreshing = false,
+                        refreshError = lastError,
+                        fetchingBeaconIds = emptySet(),
+                        // Cascade has finished; even if no rung located a
+                        // beacon, the shimmer card has to come down so the
+                        // user sees the (empty) state instead of waiting.
+                        isInitialFetchComplete = true,
+                    )
+                }
             }
             val locatedCount = _state.value.markers.size
             SyncLog.record(
@@ -568,7 +595,12 @@ class MapViewModel(
 
     private fun kickoffGeocoding() {
         runScope.launch {
-            for (marker in _state.value.markers) {
+            // Selected marker first — the user sees its address immediately
+            // while others fill in behind it. Geocoder can take 100-500 ms
+            // per call on a cold hit so ordering matters.
+            val selected = _state.value.selectedBeaconId
+            val prioritized = _state.value.markers.sortedByDescending { it.beaconId == selected }
+            for (marker in prioritized) {
                 val key = geocodeKey(marker.latitude, marker.longitude)
                 if (geocodeCache.containsKey(key)) continue
                 val line = try {

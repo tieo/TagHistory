@@ -100,6 +100,8 @@ kotlin {
             // androidx.lifecycle.ViewModel — the consumer module needs the
             // base class on its classpath to reference the subtype.
             implementation(libs.androidx.lifecycle.viewmodel)
+            // ProcessLifecycleOwner — foreground/background gate for MapViewModel's refresh loop.
+            implementation(libs.androidx.lifecycle.process)
             // Needed because `SettingsFactory.create` (called from the
             // android host) returns `com.russhwolf.settings.Settings`, and
             // the consumer needs it to name the repo constructors.

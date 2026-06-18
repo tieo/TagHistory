@@ -116,6 +116,7 @@ multiplatform-settings-coroutines = { group = "com.russhwolf", name = "multiplat
 # build time; all variants are in the local cache at 2.10.0.
 androidx-lifecycle-viewmodel = { group = "androidx.lifecycle", name = "lifecycle-viewmodel", version.ref = "lifecycleKmp" }
 androidx-lifecycle-runtime-compose = { group = "androidx.lifecycle", name = "lifecycle-runtime-compose", version.ref = "lifecycleKmp" }
+androidx-lifecycle-process = { group = "androidx.lifecycle", name = "lifecycle-process", version.ref = "lifecycleKmp" }
 
 # ---------------------------------------------------------------
 # Android / Compose host

@@ -7,6 +7,10 @@ import android.location.Geocoder
 import android.location.LocationManager
 import android.net.Uri
 import android.util.Log
+import androidx.lifecycle.DefaultLifecycleObserver
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.ProcessLifecycleOwner
 import io.github.tieo.taghistory.AppHostFactories
 import io.github.tieo.taghistory.anisette.NativeAnisetteProvider
 import io.github.tieo.taghistory.apple.account.AppleAccount
@@ -37,6 +41,9 @@ import java.util.Locale
 import kotlin.time.ExperimentalTime
 import kotlin.time.Instant
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
@@ -101,6 +108,20 @@ class AndroidAppHost private constructor(
     private suspend fun reverseGeocode(lat: Double, lon: Double): String? =
         reverseGeocodeWithCache(lat, lon)
 
+    // Foreground/background signal for MapViewModel's periodic refresh loop.
+    // ProcessLifecycleOwner fires ON_START when any Activity enters foreground
+    // and ON_STOP when the last one leaves — process-wide, not per-Activity.
+    private val foregroundFlow: StateFlow<Boolean> by lazy {
+        val current = ProcessLifecycleOwner.get().lifecycle.currentState
+            .isAtLeast(Lifecycle.State.STARTED)
+        val flow = MutableStateFlow(current)
+        ProcessLifecycleOwner.get().lifecycle.addObserver(object : DefaultLifecycleObserver {
+            override fun onStart(owner: LifecycleOwner) { flow.value = true }
+            override fun onStop(owner: LifecycleOwner) { flow.value = false }
+        })
+        flow.asStateFlow()
+    }
+
     private val beaconRepo by lazy { BeaconRepository(db) }
     private val userSettingsRepo by lazy {
         io.github.tieo.taghistory.data.repo.UserSettingsRepository(
@@ -153,7 +174,7 @@ class AndroidAppHost private constructor(
         var cachedAccount: AppleAccount? = null
         var cachedAccountExpiryMs: Long = 0L
 
-        return MapViewModel(
+        val vm = MapViewModel(
             beaconRepo = beaconRepo,
             userDataRepo = userDataRepo,
             authRepo = userAuthRepo,
@@ -177,7 +198,27 @@ class AndroidAppHost private constructor(
             },
             reverseGeocode = { lat, lon -> reverseGeocode(lat, lon) },
             currentLocation = { lastKnownDeviceLocation() },
+            foreground = foregroundFlow,
         )
+        // Expose the live UI state for `adb shell dumpsys activity provider
+        // io.github.tieo.taghistory/.DebugDumpProvider`. Lambda is evaluated
+        // at dump time so it always reads the current StateFlow value.
+        DebugStateRegistry.register("map") {
+            val s = vm.state.value
+            buildString {
+                appendLine("  isRefreshing=${s.isRefreshing}")
+                appendLine("  isInitialFetchComplete=${s.isInitialFetchComplete}")
+                appendLine("  requireLogin=${s.requireLogin}")
+                appendLine("  refreshError=${s.refreshError}")
+                appendLine("  fetchingBeaconIds=${s.fetchingBeaconIds.size} ${s.fetchingBeaconIds}")
+                appendLine("  markers=${s.markers.size} cards=${s.cards.size}")
+                appendLine("  selectedBeaconId=${s.selectedBeaconId}")
+                append("  markerSummary=" + s.markers.joinToString(";") {
+                    "${it.beaconId.take(8)}@${it.latitude},${it.longitude}+${it.lastUpdatedMs}"
+                })
+            }
+        }
+        return vm
     }
 
     /**

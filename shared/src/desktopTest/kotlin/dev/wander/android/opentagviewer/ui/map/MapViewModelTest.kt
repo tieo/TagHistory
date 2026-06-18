@@ -180,6 +180,38 @@ class MapViewModelTest {
     }
 
     @Test
+    fun `an Error during fetch still resets isRefreshing so the next refresh runs`() = runTest {
+        // The "locating forever" bug: an anisette decrypt can throw
+        // OutOfMemoryError (an Error, NOT an Exception). The old catch
+        // (e: Exception) let it escape, the launch died before the
+        // isRefreshing reset, the latch stuck true, and every later
+        // refresh self-skipped. fetchReports here throws an Error on the
+        // first call, then succeeds — the second refresh must actually run.
+        seedBeacon("b1", "Keys", null)
+        var call = 0
+        val vm = buildVm(fetchReports = { _, _ ->
+            call++
+            if (call == 1) throw OutOfMemoryError("simulated anisette heap spike")
+            mapOf("b1" to listOf(BeaconLocationReport(
+                publishedAt = 500L, description = "", timestamp = 500L,
+                confidence = 1, latitude = 42.0, longitude = -73.0,
+                horizontalAccuracy = 10, status = 0,
+            )))
+        })
+        vm.boot(); advanceUntilIdle()
+        vm.refresh(); advanceUntilIdle()
+        // The Error did not leave the latch stuck.
+        assertFalse(vm.state.value.isRefreshing,
+            "isRefreshing must reset even when fetch throws an Error, not just an Exception")
+
+        // And a follow-up refresh is NOT self-skipped — it fetches and locates.
+        vm.refresh(); advanceUntilIdle()
+        assertFalse(vm.state.value.isRefreshing)
+        assertEquals(42.0, vm.state.value.markers.single().latitude,
+            "second refresh must run; a stuck latch would have skipped it")
+    }
+
+    @Test
     fun `concurrent refresh calls do not double-fetch`() = runTest {
         seedBeacon("b1", "Keys", null)
         var fetchCount = 0
