@@ -90,6 +90,7 @@ class MapViewModelTest {
         fetchReports: suspend (Map<String, io.github.tieo.taghistory.data.model.BeaconData>, Int) -> Map<String, List<BeaconLocationReport>> =
             { _, _ -> emptyMap() },
         reverseGeocode: suspend (Double, Double) -> String? = { _, _ -> null },
+        minRefreshIntervalMs: Long = 0L,
     ): MapViewModel {
         // The VM owns never-ending work (the periodic refresh loop and
         // the reactive last-locations collector). Hosting it on the
@@ -106,10 +107,9 @@ class MapViewModelTest {
             authRepo = authRepo,
             fetchReports = fetchReports,
             reverseGeocode = reverseGeocode,
-            // 0 disables the init-block's periodic while(true) loop — under
-            // the test scheduler's virtual time, advanceUntilIdle would
-            // otherwise spin through delay(60s) iterations forever.
-            refreshIntervalMs = 0L,
+            // 0 = no throttle, so tests that call refresh() repeatedly under
+            // virtual time aren't rate-limited. Throttle tests override it.
+            minRefreshIntervalMs = minRefreshIntervalMs,
             scope = scope,
             ioDispatcher = StandardTestDispatcher(testScheduler),
         )
@@ -209,6 +209,28 @@ class MapViewModelTest {
         assertFalse(vm.state.value.isRefreshing)
         assertEquals(42.0, vm.state.value.markers.single().latitude,
             "second refresh must run; a stuck latch would have skipped it")
+    }
+
+    @Test
+    fun `refresh within the min interval is throttled`() = runTest {
+        // No periodic auto-refresh anymore; the only rapid trigger is a user
+        // mashing Refresh-now. The throttle must drop a fetch requested less
+        // than minRefreshIntervalMs after the last one so we don't hammer
+        // Apple's endpoint. Uses wall-clock, so the init refresh + the
+        // explicit refresh below land milliseconds apart, well inside 60s.
+        seedBeacon("b1", "Keys", null)
+        var fetchCount = 0
+        val vm = buildVm(
+            minRefreshIntervalMs = 60_000L,
+            fetchReports = { _, _ -> fetchCount++; emptyMap() },
+        )
+        advanceUntilIdle() // init runs boot + the one allowed refresh
+        val afterInit = fetchCount
+        assertTrue(afterInit >= 1, "init's first refresh should fetch")
+
+        vm.refresh() // within 60s of init's refresh -> must be throttled
+        advanceUntilIdle()
+        assertEquals(afterInit, fetchCount, "second refresh within min interval must not fetch")
     }
 
     @Test

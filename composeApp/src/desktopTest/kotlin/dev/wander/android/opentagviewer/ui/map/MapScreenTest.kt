@@ -87,7 +87,7 @@ class MapScreenTest {
         userDataRepo = userDataRepo,
         authRepo = authRepo,
         fetchReports = fetchReports,
-        refreshIntervalMs = 0L,
+        minRefreshIntervalMs = 0L,
         scope = CoroutineScope(Dispatchers.Default + SupervisorJob()),
         hoursBack = 24,
     )

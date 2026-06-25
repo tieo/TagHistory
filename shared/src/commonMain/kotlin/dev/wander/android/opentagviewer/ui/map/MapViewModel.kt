@@ -17,7 +17,6 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -63,20 +62,15 @@ class MapViewModel(
     private val currentLocation: () -> Pair<Double, Double>? = { null },
     private val hoursBack: Int = DEFAULT_HOURS_BACK,
     /**
-     * Interval between background refresh ticks. Runs in viewModelScope
-     * so it stays active for the whole logged-in session — independent
-     * of which screen is currently composed (History, Settings, etc.
-     * used to silently pause auto-refresh because the timer lived on
-     * MapScreen). Set to 0 in tests to disable.
+     * Minimum gap between report fetches. There is NO periodic auto-refresh
+     * anymore: the only fetch triggers are the one-shot boot cascade, an
+     * explicit user Refresh-now, and the hourly background worker. This is
+     * a rate limiter — a refresh requested sooner than this since the last
+     * one is dropped, so the UI can't hammer Apple's acsnservice endpoint
+     * (one all-beacon sweep is ~16 POSTs) and risk throttling/ban. 0
+     * disables the limiter (tests).
      */
-    private val refreshIntervalMs: Long = DEFAULT_REFRESH_INTERVAL_MS,
-    /**
-     * Foreground gate: loop only ticks when this is true. Android wires
-     * ProcessLifecycleOwner so refreshes stop when the app is backgrounded
-     * (the hourly WorkManager job covers background freshness). Default
-     * MutableStateFlow(true) keeps existing behaviour for tests + wasm.
-     */
-    private val foreground: StateFlow<Boolean> = MutableStateFlow(true),
+    private val minRefreshIntervalMs: Long = DEFAULT_MIN_REFRESH_INTERVAL_MS,
     private val scope: CoroutineScope? = null,
     /** All DB/IO work hops to this. Tests can inject the test scheduler's dispatcher. */
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.Default,
@@ -94,6 +88,11 @@ class MapViewModel(
     // refresh stops auto-promoting selection to the most-recently-located beacon.
     // Reset by `reboot()` (post-import) so a fresh import gets the auto-pick again.
     private var userHasExplicitlySelected: Boolean = false
+
+    // Epoch ms when the last fetch was allowed to start. The throttle in
+    // [refreshCascade] drops a refresh requested less than
+    // [minRefreshIntervalMs] after this. 0 = no fetch has run yet.
+    private var lastRefreshStartMs: Long = 0L
 
     // Auto-promote of selection to the freshest located beacon is a ONE-SHOT
     // on the first refresh that surfaces any marker. Subsequent refreshes
@@ -136,22 +135,11 @@ class MapViewModel(
             // only saw locations it fetched itself.
             observeLocations()
             refresh()
-            // Periodic refresh lives on the VM (not on MapScreen) so the
-            // app keeps pulling new reports while the user is on
-            // History / Settings / DeviceInfo too. Cancels with the VM
-            // when the user signs out or the process dies.
-            if (refreshIntervalMs > 0) {
-                while (true) {
-                    // Wait until foreground, then tick. If the app goes to the
-                    // background mid-delay the tick fires on next resume rather
-                    // than in the background — the hourly worker covers freshness
-                    // while backgrounded, so this avoids redundant fetches and
-                    // battery drain when the screen is off.
-                    foreground.first { it }
-                    kotlinx.coroutines.delay(refreshIntervalMs)
-                    if (foreground.value) refresh()
-                }
-            }
+            // NO periodic auto-refresh. The boot cascade above is the only
+            // automatic fetch; after that, fresh reports arrive via the
+            // hourly background worker or an explicit user Refresh-now. This
+            // avoids the old 60s loop that re-fetched all beacons every
+            // minute (~16+ Apple POSTs per sweep) and risked throttling.
         }
     }
 
@@ -251,9 +239,9 @@ class MapViewModel(
     fun refresh() {
         refreshCascade(
             windows = listOf(1, 6, 24),
-            // Refresh tick (re-entry every 60 s) picks the widest rung since
-            // we already displayed initial data. Only first-run benefits
-            // from the 1 h / 6 h / 24 h ladder.
+            // After the first-run ladder, a user Refresh-now picks the widest
+            // single window since data is already displayed. Only first-run
+            // benefits from the 1 h / 6 h / 24 h ladder.
             skipCascadeIfInitialDone = true,
         )
     }
@@ -282,6 +270,25 @@ class MapViewModel(
             )
             return
         }
+        // Rate limit: never fetch more than once per [minRefreshIntervalMs].
+        // Protects Apple's endpoint from rapid Refresh-now taps. The first
+        // refresh (lastRefreshStartMs == 0) always passes.
+        val nowMs = kotlin.time.Clock.System.now().toEpochMilliseconds()
+        if (minRefreshIntervalMs > 0 &&
+            lastRefreshStartMs != 0L &&
+            nowMs - lastRefreshStartMs < minRefreshIntervalMs
+        ) {
+            SyncLog.record(
+                SyncEvent.Kind.INFO,
+                "Skipped: throttled (min ${minRefreshIntervalMs}ms between fetches)",
+                mapOf(
+                    "since_last_ms" to (nowMs - lastRefreshStartMs).toString(),
+                    "min_ms" to minRefreshIntervalMs.toString(),
+                ),
+            )
+            return
+        }
+        lastRefreshStartMs = nowMs
         _state.update { it.copy(isRefreshing = true, refreshError = null) }
         // Periodic refresh (after initial fetch done): always re-fetch every
         // beacon with a full window. The cascade's "skip already-located tags"
@@ -632,6 +639,8 @@ class MapViewModel(
          * refreshes. History screen uses its own wider window.
          */
         const val DEFAULT_HOURS_BACK: Int = 2
-        const val DEFAULT_REFRESH_INTERVAL_MS: Long = 60_000L
+
+        /** Minimum gap between fetches. Rate-limits Apple's endpoint. */
+        const val DEFAULT_MIN_REFRESH_INTERVAL_MS: Long = 60_000L
     }
 }

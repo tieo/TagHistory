@@ -113,7 +113,7 @@ class WasmAppHost(
                     AppleReportsService(reportsClient, account)
                         .fetchLastReportsByBeacon(accessories, hoursBack)
                 },
-                refreshIntervalMs = 0L,
+                minRefreshIntervalMs = 0L,
             )
         },
         isLoggedIn = { userAuthRepo.getUserAuth() != null },

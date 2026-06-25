@@ -7,10 +7,6 @@ import android.location.Geocoder
 import android.location.LocationManager
 import android.net.Uri
 import android.util.Log
-import androidx.lifecycle.DefaultLifecycleObserver
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleOwner
-import androidx.lifecycle.ProcessLifecycleOwner
 import io.github.tieo.taghistory.AppHostFactories
 import io.github.tieo.taghistory.anisette.NativeAnisetteProvider
 import io.github.tieo.taghistory.apple.account.AppleAccount
@@ -41,9 +37,6 @@ import java.util.Locale
 import kotlin.time.ExperimentalTime
 import kotlin.time.Instant
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
@@ -108,18 +101,27 @@ class AndroidAppHost private constructor(
     private suspend fun reverseGeocode(lat: Double, lon: Double): String? =
         reverseGeocodeWithCache(lat, lon)
 
-    // Foreground/background signal for MapViewModel's periodic refresh loop.
-    // ProcessLifecycleOwner fires ON_START when any Activity enters foreground
-    // and ON_STOP when the last one leaves — process-wide, not per-Activity.
-    private val foregroundFlow: StateFlow<Boolean> by lazy {
-        val current = ProcessLifecycleOwner.get().lifecycle.currentState
-            .isAtLeast(Lifecycle.State.STARTED)
-        val flow = MutableStateFlow(current)
-        ProcessLifecycleOwner.get().lifecycle.addObserver(object : DefaultLifecycleObserver {
-            override fun onStart(owner: LifecycleOwner) { flow.value = true }
-            override fun onStop(owner: LifecycleOwner) { flow.value = false }
-        })
-        flow.asStateFlow()
+    // Cache of parsed FindMyAccessory instances keyed by beaconId, with the
+    // plist content's hash so a re-import (changed content) rebuilds. Without
+    // this, every fetch re-parsed the plist AND threw away the accessory's
+    // per-index key cache (AccessoryKeyGenerator.keyAt memoization), forcing
+    // a full SHA-256/EC key re-derivation on every refresh. Reusing the
+    // instance keeps that memoization alive across refreshes.
+    private val accessoryCache =
+        java.util.concurrent.ConcurrentHashMap<String, Pair<Int, io.github.tieo.taghistory.apple.findmy.FindMyAccessory>>()
+
+    private fun cachedAccessory(
+        id: String,
+        owned: io.github.tieo.taghistory.db.OwnedBeacons,
+    ): io.github.tieo.taghistory.apple.findmy.FindMyAccessory? {
+        val content = owned.content ?: return null
+        val hash = content.hashCode()
+        accessoryCache[id]?.let { (h, acc) -> if (h == hash) return acc }
+        val acc = runCatching {
+            io.github.tieo.taghistory.apple.findmy.FindMyAccessory.fromPlist(content.encodeToByteArray())
+        }.getOrNull() ?: return null
+        accessoryCache[id] = hash to acc
+        return acc
     }
 
     private val beaconRepo by lazy { BeaconRepository(db) }
@@ -198,7 +200,6 @@ class AndroidAppHost private constructor(
             },
             reverseGeocode = { lat, lon -> reverseGeocode(lat, lon) },
             currentLocation = { lastKnownDeviceLocation() },
-            foreground = foregroundFlow,
         )
         // Expose the live UI state for `adb shell dumpsys activity provider
         // io.github.tieo.taghistory/.DebugDumpProvider`. Lambda is evaluated
@@ -517,14 +518,10 @@ class AndroidAppHost private constructor(
                 Log.w(TAG, "beacon=$id skipped: no OwnedBeacons.content blob on record")
                 continue
             }
-            val result = runCatching {
-                BeaconSyncOrchestrator.DefaultAccessoryLoader(owned!!)
-            }
-            val accessory = result.getOrNull()
+            val accessory = cachedAccessory(id, owned!!)
             if (accessory == null) {
                 parseFailed++
-                val e = result.exceptionOrNull()
-                Log.w(TAG, "beacon=$id skipped: ${e?.javaClass?.simpleName}: ${e?.message}")
+                Log.w(TAG, "beacon=$id skipped: accessory parse failed")
                 continue
             }
             put(id, accessory)

@@ -65,22 +65,73 @@ class AppleReportsService(
     }
 
     /**
-     * Per-tag fetch runs in parallel — key derivation is CPU-bound
-     * (SHA-256 × slot-count × tag-count) and serialising it was a big
-     * chunk of first-paint latency. coroutineScope gives structured
-     * concurrency; any tag's failure cancels the batch.
+     * Multi-tag fetch. Two efficiency wins over the old per-tag path:
+     *
+     *  1. Keys from ALL tags are packed into ONE set of 256-key chunks, so
+     *     the number of HTTPS round-trips to Apple is governed by the total
+     *     key count, not the tag count. The old code chunked per tag, which
+     *     multiplied requests (13 tags ≈ 26 POSTs vs ≈ 16 batched) and made
+     *     it easy to trip Apple's rate limiter.
+     *  2. Reports whose server `publishedAt` is older than [from] are skipped
+     *     before the expensive EC decrypt. publishedAt is always >= the
+     *     report's true timestamp (a fix is uploaded after it's observed), so
+     *     publishedAt < from guarantees the decrypted timestamp is out of
+     *     window too — sound, no slack needed.
+     *
+     * Key derivation (SHA-256, CPU-bound) still runs per tag in parallel.
+     * coroutineScope gives structured concurrency; any failure cancels the
+     * batch.
      */
     suspend fun fetchReportsByBeacon(
         beacons: Map<String, FindMyAccessory>,
         from: Instant,
         to: Instant,
     ): Map<String, List<BeaconLocationReport>> = coroutineScope {
-        val deferred = beacons.map { (id, accessory) ->
-            async {
-                id to toBeaconReports(fetchReports(accessory, from, to))
+        val result = LinkedHashMap<String, MutableList<LocationReport>>()
+        for (id in beacons.keys) result[id] = mutableListOf()
+        if (beacons.isEmpty()) return@coroutineScope emptyMap()
+
+        // Derive each tag's keys in parallel, then index every hashed key back
+        // to its owning beacon + KeyPair so a batched response can be routed.
+        val hashedToBeacon = HashMap<String, String>()
+        val hashedToKey = HashMap<String, KeyPair>()
+        beacons.map { (id, accessory) ->
+            async { id to accessory.keysBetween(from - KEY_MARGIN, to + KEY_MARGIN).toList() }
+        }.awaitAll().forEach { (id, keys) ->
+            for (k in keys) {
+                val h = k.hashedAdvKeyB64()
+                hashedToBeacon[h] = id
+                hashedToKey[h] = k
             }
         }
-        deferred.awaitAll().toMap(linkedMapOf())
+        if (hashedToBeacon.isEmpty()) return@coroutineScope result.mapValues { emptyList() }
+
+        // Apple ignores the date filter, so send the widest supported range
+        // and re-filter client-side.
+        val n = now()
+        val startMs = (n - FETCH_LOOKBACK).toEpochMilliseconds()
+        val endMs = (n + FETCH_MARGIN).toEpochMilliseconds()
+
+        // ONE batched set of 256-key chunks across all tags. Each chunk is a
+        // single POST; fan them out concurrently.
+        val rawResults = hashedToBeacon.keys.toList().chunked(CHUNK_SIZE).map { ids ->
+            async { client.fetchRaw(account, startMs, endMs, ids) }
+        }.awaitAll()
+
+        for (raw in rawResults) {
+            for (rep in LocationReportsClient.parseReports(raw)) {
+                val h = rep.hashedAdvKeyB64()
+                val beaconId = hashedToBeacon[h] ?: continue
+                val key = hashedToKey[h] ?: continue
+                // Cheap pre-filter before the costly decrypt (see kdoc #2).
+                if (rep.publishedAt < from) continue
+                rep.decrypt(key)
+                val ts = rep.timestamp()
+                if (ts < from || ts > to) continue
+                result.getValue(beaconId).add(rep)
+            }
+        }
+        result.mapValues { (_, reps) -> toBeaconReports(reps) }
     }
 
     private suspend fun fetchByKeys(
