@@ -6,6 +6,8 @@ import io.github.tieo.taghistory.apple.account.LoginState
 import io.github.tieo.taghistory.apple.anisette.AnisetteClient
 import io.github.tieo.taghistory.apple.http.HttpRequest
 import io.github.tieo.taghistory.apple.http.HttpTransport
+import io.github.tieo.taghistory.sync.SyncEvent
+import io.github.tieo.taghistory.sync.SyncLog
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
@@ -101,6 +103,18 @@ class LocationReportsClient(
                 headers = headers,
                 body = payload,
             )
+        )
+        // Log EVERY fetch's HTTP status so 5xx/4xx from acsnservice are
+        // visible in logcat, not just swallowed into an exception message.
+        SyncLog.record(
+            if (resp.isOk()) SyncEvent.Kind.INFO else SyncEvent.Kind.RUNG_FAIL,
+            "acsnservice/fetch HTTP ${resp.statusCode}",
+            mapOf(
+                "status" to resp.statusCode.toString(),
+                "keys" to hashedAdvKeysB64.size.toString(),
+                "window_ms" to (endEpochMs - startEpochMs).toString(),
+                "body_bytes" to resp.body.size.toString(),
+            ),
         )
         if (resp.statusCode == 401) {
             throw AppleLoginException(

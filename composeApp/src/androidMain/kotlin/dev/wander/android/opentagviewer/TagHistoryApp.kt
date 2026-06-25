@@ -2,8 +2,10 @@ package io.github.tieo.taghistory
 
 import android.app.Application
 import android.os.Build
+import android.util.Log
 import io.github.tieo.taghistory.host.AndroidAppHost
 import io.github.tieo.taghistory.sync.BeaconSyncWorker
+import io.github.tieo.taghistory.sync.SyncLog
 import org.maplibre.android.MapLibre
 
 class TagHistoryApp : Application() {
@@ -16,6 +18,13 @@ class TagHistoryApp : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        // Route ALL SyncLog output to logcat. println() -> System.out is
+        // silently dropped on some Android builds (was on this device), so
+        // network errors like HTTP 503 never showed up in `adb logcat`.
+        // android.util.Log always lands. Set this FIRST so nothing logs to
+        // the void before the sink is installed.
+        SyncLog.sink = { line -> Log.i("TagHistory", line) }
+
         // Pre-init MapLibre native libs so the first MapView open doesn't pay
         // the cold native-load cost.
         MapLibre.getInstance(this)
@@ -28,7 +37,8 @@ class TagHistoryApp : Application() {
         BeaconSyncWorker.orchestratorProvider = { host.createSyncOrchestrator() }
 
         val pkg = runCatching { packageManager.getPackageInfo(packageName, 0) }.getOrNull()
-        println(
+        Log.i(
+            "TagHistory",
             "[SyncLog] env:" +
                 " app_version=${pkg?.versionName ?: "?"}" +
                 " app_version_code=${pkg?.longVersionCode?.toString() ?: "?"}" +

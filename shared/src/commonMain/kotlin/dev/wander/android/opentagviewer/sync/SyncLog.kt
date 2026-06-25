@@ -1,24 +1,34 @@
 package io.github.tieo.taghistory.sync
 
 /**
- * Sync activity logger. Writes to the platform log ONLY — on Android
- * println() lands in logcat under the System.out tag. There is
- * deliberately no in-app buffer or Settings panel: an app can't read
- * its own logcat without the privileged READ_LOGS permission, so a
- * second in-app log can only diverge from logcat. One log. Read it with
- * `adb logcat | grep '\[SyncLog\]'`.
+ * Sync activity logger. One log, read it with `adb logcat | grep TagHistory`.
+ *
+ * IMPORTANT: do NOT println() here. On many Android builds System.out is
+ * NOT routed to logcat — it was silently dropped on the user's Pixel, so
+ * snackbars showed errors (e.g. HTTP 503) that never appeared in
+ * `adb logcat`. Instead the platform installs a real [sink] at startup:
+ * Android wires android.util.Log, which always lands in logcat. Default
+ * sink stays println for desktop/test/wasm where stdout IS the log.
  */
 class SyncEvent {
     enum class Kind { START, RUNG_OK, RUNG_FAIL, REFRESH_DONE, INFO }
 }
 
 object SyncLog {
+    /**
+     * Platform log sink. Android sets this to android.util.Log.i in
+     * Application.onCreate so every record lands in logcat. Volatile so the
+     * startup write is visible to the background worker thread.
+     */
+    @Volatile
+    var sink: (String) -> Unit = { println(it) }
+
     fun record(kind: SyncEvent.Kind, message: String, details: Map<String, String> = emptyMap()) {
         val detail = if (details.isEmpty()) {
             ""
         } else {
             " " + details.entries.joinToString(" ") { "${it.key}=${it.value}" }
         }
-        println("[SyncLog] $kind: $message$detail")
+        sink("[SyncLog] $kind: $message$detail")
     }
 }
