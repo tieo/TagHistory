@@ -65,18 +65,12 @@ class AppleReportsService(
     }
 
     /**
-     * Multi-tag fetch. Two efficiency wins over the old per-tag path:
-     *
-     *  1. Keys from ALL tags are packed into ONE set of 256-key chunks, so
-     *     the number of HTTPS round-trips to Apple is governed by the total
-     *     key count, not the tag count. The old code chunked per tag, which
-     *     multiplied requests (13 tags ≈ 26 POSTs vs ≈ 16 batched) and made
-     *     it easy to trip Apple's rate limiter.
-     *  2. Reports whose server `publishedAt` is older than [from] are skipped
-     *     before the expensive EC decrypt. publishedAt is always >= the
-     *     report's true timestamp (a fix is uploaded after it's observed), so
-     *     publishedAt < from guarantees the decrypted timestamp is out of
-     *     window too — sound, no slack needed.
+     * Multi-tag fetch. Efficiency win over the old per-tag path: keys from
+     * ALL tags are packed into ONE set of 256-key chunks, so the number of
+     * HTTPS round-trips to Apple is governed by the total key count, not the
+     * tag count. The old code chunked per tag, which multiplied requests
+     * (13 tags ≈ 26 POSTs vs ≈ 16 batched) and made it easy to trip Apple's
+     * rate limiter.
      *
      * Key derivation (SHA-256, CPU-bound) still runs per tag in parallel.
      * coroutineScope gives structured concurrency; any failure cancels the
@@ -123,8 +117,12 @@ class AppleReportsService(
                 val h = rep.hashedAdvKeyB64()
                 val beaconId = hashedToBeacon[h] ?: continue
                 val key = hashedToKey[h] ?: continue
-                // Cheap pre-filter before the costly decrypt (see kdoc #2).
-                if (rep.publishedAt < from) continue
+                // NOTE: do NOT pre-filter on publishedAt. Apple's response
+                // here carries no usable datePublished, so it parses to 0 for
+                // every report — a publishedAt-based skip drops everything and
+                // the map goes stale. The real time is inside the encrypted
+                // payload, so we must decrypt, then filter on the decrypted
+                // timestamp.
                 rep.decrypt(key)
                 val ts = rep.timestamp()
                 if (ts < from || ts > to) continue
