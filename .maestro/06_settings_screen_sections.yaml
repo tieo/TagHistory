@@ -24,14 +24,11 @@ name: Settings screen — all section headers visible and reachable by scroll
 - assertNotVisible:
     text: "About"
 
-# Scroll down: Advanced/Account/About become visible.
+# Scroll down: Account/About become visible. (The Advanced section was
+# removed along with the in-app sync-log panel — logs are logcat-only now.)
 - swipe:
     direction: UP
     duration: 600
-- extendedWaitUntil:
-    visible:
-      text: "Advanced"
-    timeout: 25000
 - extendedWaitUntil:
     visible:
       text: "Account"

@@ -51,38 +51,8 @@ name: Settings — Refresh now shows a non-empty result message
       text: "Settings"
     timeout: 25000
 
-# Open the debug panel to verify the refresh actually fired and produced
-# log events (catches the historical bug where Refresh didn't log).
-- tapOn:
-    text: "Show debug data"
-- extendedWaitUntil:
-    visible:
-      id: "sync_log_header"
-    timeout: 25000
-# Refresh adds a flurry of INFO entries that quickly push the
-# original "Refresh started" START line out of the visible window
-# of the log's LazyColumn (off-screen rows aren't composed). Scroll
-# the log up until the START row reappears.
-- scrollUntilVisible:
-    element:
-      text: ".*Refresh started.*"
-    direction: DOWN
-    timeout: 25000
-    centerElement: true
-    speed: 40
-- extendedWaitUntil:
-    visible:
-      text: "START"
-    timeout: 25000
-# Hide debug panel.
-- tapOn:
-    text: "Show debug data"
-- extendedWaitUntil:
-    visible:
-      text: "Show debug data"
-    timeout: 25000
-- assertNotVisible:
-    id: "sync_log_header"
+# (The in-app debug sync-log panel was removed; sync logs are logcat-only
+# now, read with `adb logcat -s TagHistory`. No in-app panel to assert.)
 
 - back
 - extendedWaitUntil:
