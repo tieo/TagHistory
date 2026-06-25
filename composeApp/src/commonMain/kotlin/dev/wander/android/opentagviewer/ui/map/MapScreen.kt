@@ -303,13 +303,13 @@ internal fun TagGlassList(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     letterSpacing = 1.sp,
                 )
-                Spacer(Modifier.weight(1f))
+                Spacer(Modifier.width(6.dp))
                 Text(
                     "${cards.size}",
                     fontSize = 13.sp,
                     color = MaterialTheme.colorScheme.outline,
                 )
-                Spacer(Modifier.width(4.dp))
+                Spacer(Modifier.weight(1f))
                 RefreshSpinButton(
                     isRefreshing = isRefreshing,
                     hasError = hasError,
