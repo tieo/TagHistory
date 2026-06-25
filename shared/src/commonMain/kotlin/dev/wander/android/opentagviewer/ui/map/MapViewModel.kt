@@ -89,9 +89,10 @@ class MapViewModel(
     // Reset by `reboot()` (post-import) so a fresh import gets the auto-pick again.
     private var userHasExplicitlySelected: Boolean = false
 
-    // Epoch ms when the last fetch was allowed to start. The throttle in
-    // [refreshCascade] drops a refresh requested less than
-    // [minRefreshIntervalMs] after this. 0 = no fetch has run yet.
+
+    // Epoch ms of the last fetch that was allowed to start. The 60s rate
+    // limit in [refreshCascade] drops any refresh requested sooner than
+    // [minRefreshIntervalMs] after this. 0 = nothing fetched yet.
     private var lastRefreshStartMs: Long = 0L
 
     // Auto-promote of selection to the freshest located beacon is a ONE-SHOT
@@ -213,6 +214,11 @@ class MapViewModel(
                 initialCamera = bootData.camera,
                 markers = markers,
                 cards = cards,
+                // If we already have cached positions, treat the initial fetch
+                // as done so the refresh that follows boot fetches ALL beacons
+                // (isPeriodic) and updates every located tag on open — not just
+                // the unlocated stragglers the cold-start cascade covers.
+                isInitialFetchComplete = it.isInitialFetchComplete || markers.isNotEmpty(),
                 // Always auto-select the most-recent located beacon (even
                 // when a camera position was persisted). Camera restore and
                 // tag selection aren't mutually exclusive — the user wants
@@ -270,9 +276,9 @@ class MapViewModel(
             )
             return
         }
-        // Rate limit: never fetch more than once per [minRefreshIntervalMs].
-        // Protects Apple's endpoint from rapid Refresh-now taps. The first
-        // refresh (lastRefreshStartMs == 0) always passes.
+        // Rate limit: at most one fetch per [minRefreshIntervalMs], no matter
+        // how often Refresh-now is tapped. The first fetch (lastRefreshStartMs
+        // == 0) always runs; a press 60s+ after the last fetch always runs.
         val nowMs = kotlin.time.Clock.System.now().toEpochMilliseconds()
         if (minRefreshIntervalMs > 0 &&
             lastRefreshStartMs != 0L &&
@@ -280,11 +286,8 @@ class MapViewModel(
         ) {
             SyncLog.record(
                 SyncEvent.Kind.INFO,
-                "Skipped: throttled (min ${minRefreshIntervalMs}ms between fetches)",
-                mapOf(
-                    "since_last_ms" to (nowMs - lastRefreshStartMs).toString(),
-                    "min_ms" to minRefreshIntervalMs.toString(),
-                ),
+                "Skipped: rate-limited (one fetch per ${minRefreshIntervalMs}ms)",
+                mapOf("since_last_ms" to (nowMs - lastRefreshStartMs).toString()),
             )
             return
         }
@@ -336,7 +339,8 @@ class MapViewModel(
                     // and every later refresh self-skips ("locating" forever).
                     if (e is kotlinx.coroutines.CancellationException) throw e
                     val rungMs = kotlin.time.Clock.System.now().toEpochMilliseconds() - rungStartMs
-                    lastError = e.message
+                    val offline = isConnectivityError(e)
+                    lastError = if (offline) "No internet connection" else e.message
                     SyncLog.record(
                         SyncEvent.Kind.RUNG_FAIL,
                         "${window}h rung failed: ${e::class.simpleName}: ${e.message}",
@@ -347,9 +351,20 @@ class MapViewModel(
                             "duration_ms" to rungMs.toString(),
                             "error_class" to (e::class.simpleName ?: "?"),
                             "error_msg" to (e.message ?: "?"),
+                            "offline" to offline.toString(),
                         ),
                     )
                     _state.update { it.copy(fetchingBeaconIds = emptySet()) }
+                    // No network / DNS down: the next rungs hit the same dead
+                    // endpoint and would just burn another ~10 s each spinning.
+                    // Abort the cascade now and surface the error immediately.
+                    // Also clear the rate-limit stamp: a fetch that never
+                    // reached Apple shouldn't lock out a retry, so the user can
+                    // press Refresh again the moment connectivity is back.
+                    if (offline) {
+                        lastRefreshStartMs = 0L
+                        break
+                    }
                     continue
                 }
                 val (markers, cards) = withContext(ioDispatcher) {
@@ -435,11 +450,28 @@ class MapViewModel(
                     "error" to (lastError ?: ""),
                 ),
             )
-            SyncLog.record(
-                SyncEvent.Kind.INFO,
-                "Idle — next periodic refresh in 60s",
-            )
+            SyncLog.record(SyncEvent.Kind.INFO, "Idle")
         }
+    }
+
+    /**
+     * True when [e] is a no-connectivity failure (DNS can't resolve, no route,
+     * connect refused/timed out) rather than a server/app error. Matched on
+     * class name + message so it works in commonMain without referencing
+     * JVM-only exception types. Lets the cascade abort fast instead of
+     * retrying the same dead endpoint through every rung.
+     */
+    private fun isConnectivityError(e: Throwable): Boolean {
+        val name = e::class.simpleName ?: ""
+        val msg = e.message ?: ""
+        return name == "UnknownHostException" ||
+            name == "ConnectException" ||
+            name == "SocketTimeoutException" ||
+            name == "NoRouteToHostException" ||
+            msg.contains("Unable to resolve host") ||
+            msg.contains("No address associated with hostname") ||
+            msg.contains("Failed to connect") ||
+            msg.contains("Network is unreachable")
     }
 
     fun selectBeacon(beaconId: String?) {
