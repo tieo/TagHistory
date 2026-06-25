@@ -374,11 +374,18 @@ private fun RefreshSpinButton(
     onClick: () -> Unit,
 ) {
     // visibleSpin = isRefreshing OR a forced min-duration after each tap.
+    // The min-duration loop MUST read the live isRefreshing, not the value
+    // captured when the effect launched. LaunchedEffect is keyed only on
+    // forceSpin, so a plain `while (isRefreshing)` froze the value at launch:
+    // if it was true, the loop never exited, forceSpin stuck true, and the
+    // button span forever AND went un-tappable (enabled = !spinning) even
+    // after the refresh had finished. rememberUpdatedState fixes the capture.
+    val liveRefreshing = androidx.compose.runtime.rememberUpdatedState(isRefreshing)
     var forceSpin by remember { mutableStateOf(false) }
     LaunchedEffect(forceSpin) {
         if (forceSpin) {
             kotlinx.coroutines.delay(900)
-            while (isRefreshing) kotlinx.coroutines.delay(150)
+            while (liveRefreshing.value) kotlinx.coroutines.delay(150)
             forceSpin = false
         }
     }
