@@ -7,6 +7,7 @@ import io.github.tieo.taghistory.data.repo.BeaconRepository
 import io.github.tieo.taghistory.data.repo.UserAuthRepository
 import io.github.tieo.taghistory.data.repo.UserSettingsRepository
 import io.github.tieo.taghistory.db.OwnedBeacons
+// SyncEvent / SyncLog are in this same package; no import needed.
 
 /**
  * Headless sync pass shared between the Android WorkManager worker and
@@ -52,11 +53,15 @@ class BeaconSyncOrchestrator(
     suspend fun run(): Outcome {
         val settings = settingsRepo.getUserSettings()
         if (!settings.isBackgroundSyncEnabled()) {
+            SyncLog.record(SyncEvent.Kind.INFO, "Background sync: disabled in settings, skipping")
             return Outcome.Success(persistedReports = 0, beaconCount = 0)
         }
 
         val userAuth = authRepo.getUserAuth()
-            ?: return Outcome.Success(persistedReports = 0, beaconCount = 0)
+        if (userAuth == null) {
+            SyncLog.record(SyncEvent.Kind.INFO, "Background sync: no auth, skipping")
+            return Outcome.Success(persistedReports = 0, beaconCount = 0)
+        }
 
         val beacons = beaconRepo.getAllBeacons()
         val accessoriesById = mutableMapOf<String, FindMyAccessory>()
@@ -70,16 +75,39 @@ class BeaconSyncOrchestrator(
             if (accessory != null) accessoriesById[owned.id] = accessory
         }
         if (accessoriesById.isEmpty()) {
+            SyncLog.record(SyncEvent.Kind.INFO, "Background sync: no loadable accessories, skipping")
             return Outcome.Success(persistedReports = 0, beaconCount = 0)
         }
 
+        SyncLog.record(
+            SyncEvent.Kind.START,
+            "Background sync started (${accessoriesById.size} accessories, ${hoursBack}h)",
+            mapOf("accessories" to accessoriesById.size.toString(), "hours_back" to hoursBack.toString()),
+        )
         return try {
             val account = rehydrateAccount(userAuth.data)
             val reports = fetchReports.fetch(account, accessoriesById, hoursBack)
             beaconRepo.storeToLocationCache(reports)
             val total = reports.values.sumOf { it.size }
+            SyncLog.record(
+                SyncEvent.Kind.REFRESH_DONE,
+                "Background sync persisted $total reports across ${reports.size} beacons",
+                mapOf("persisted" to total.toString(), "beacons" to reports.size.toString()),
+            )
             Outcome.Success(persistedReports = total, beaconCount = reports.size)
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
+            // Throwable, not Exception: an anisette decrypt can OutOfMemoryError
+            // (an Error). If that escaped, the worker died uninstrumented and
+            // WorkManager just bumped run_attempt_count with no log of why.
+            if (e is kotlinx.coroutines.CancellationException) throw e
+            SyncLog.record(
+                SyncEvent.Kind.RUNG_FAIL,
+                "Background sync failed: ${e::class.simpleName}: ${e.message}",
+                mapOf(
+                    "error_class" to (e::class.simpleName ?: "?"),
+                    "error_msg" to (e.message ?: "?"),
+                ),
+            )
             Outcome.Retry(e)
         }
     }
