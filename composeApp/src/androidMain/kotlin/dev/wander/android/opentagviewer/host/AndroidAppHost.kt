@@ -503,8 +503,13 @@ class AndroidAppHost private constructor(
     /** True when the OS is NOT battery-optimizing us (background work runs near schedule). */
     private fun isIgnoringBatteryOptimizations(): Boolean {
         val pm = context.getSystemService(Context.POWER_SERVICE) as? android.os.PowerManager
-            ?: return true
-        return pm.isIgnoringBatteryOptimizations(context.packageName)
+        val result = pm?.isIgnoringBatteryOptimizations(context.packageName) ?: true
+        io.github.tieo.taghistory.sync.SyncLog.record(
+            io.github.tieo.taghistory.sync.SyncEvent.Kind.INFO,
+            "Battery optimization check",
+            mapOf("ignoring" to result.toString(), "has_power_manager" to (pm != null).toString()),
+        )
+        return result
     }
 
     /**
@@ -520,9 +525,24 @@ class AndroidAppHost private constructor(
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         val fallback = Intent(android.provider.Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        val intent = if (direct.resolveActivity(context.packageManager) != null) direct else fallback
+        val useDirect = direct.resolveActivity(context.packageManager) != null
+        val intent = if (useDirect) direct else fallback
+        io.github.tieo.taghistory.sync.SyncLog.record(
+            io.github.tieo.taghistory.sync.SyncEvent.Kind.INFO,
+            "Requesting battery-optimization exemption",
+            mapOf(
+                "intent" to if (useDirect) "REQUEST_IGNORE (direct dialog)" else "IGNORE_SETTINGS (list fallback)",
+                "currently_ignoring" to isIgnoringBatteryOptimizations().toString(),
+            ),
+        )
         runCatching { context.startActivity(intent) }
-            .onFailure { Log.w(TAG, "Could not open battery-optimization settings: ${it.message}") }
+            .onFailure {
+                Log.w(TAG, "Could not open battery-optimization settings: ${it.message}")
+                io.github.tieo.taghistory.sync.SyncLog.record(
+                    io.github.tieo.taghistory.sync.SyncEvent.Kind.RUNG_FAIL,
+                    "Failed to open battery-optimization screen: ${it.message}",
+                )
+            }
     }
 
     /**

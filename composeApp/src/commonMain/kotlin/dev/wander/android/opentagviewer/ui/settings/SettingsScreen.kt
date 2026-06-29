@@ -45,6 +45,10 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
+import androidx.lifecycle.Lifecycle
+import io.github.tieo.taghistory.sync.SyncEvent
+import io.github.tieo.taghistory.sync.SyncLog
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -61,10 +65,20 @@ fun SettingsScreen(
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     LaunchedEffect(Unit) { viewModel.load() }
-    // Re-checked every time Settings is shown / resumed so the prompt clears
-    // once the user grants the exemption and comes back.
+    // Re-checked on every RESUME (not just first compose) so the warning
+    // clears the moment the user returns from granting the exemption in the
+    // system dialog. A plain LaunchedEffect(Unit) ran once and left the stale
+    // "still on" warning even after the grant succeeded.
     var batteryExempt by remember { mutableStateOf(isIgnoringBatteryOptimizations?.invoke() ?: true) }
-    LaunchedEffect(Unit) { batteryExempt = isIgnoringBatteryOptimizations?.invoke() ?: true }
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
+        val now = isIgnoringBatteryOptimizations?.invoke() ?: true
+        SyncLog.record(
+            SyncEvent.Kind.INFO,
+            "Settings resumed: battery exemption re-checked",
+            mapOf("ignoring_battery_optimizations" to now.toString(), "was" to batteryExempt.toString()),
+        )
+        batteryExempt = now
+    }
     var importMessage by remember { mutableStateOf<String?>(null) }
     var refreshMessage by remember { mutableStateOf<String?>(null) }
     var refreshInFlight by remember { mutableStateOf(false) }
@@ -119,7 +133,13 @@ fun SettingsScreen(
                 if (requestIgnoreBatteryOptimizations != null && !batteryExempt) {
                     HorizontalDivider()
                     BatteryOptimizationWarning(
-                        onFix = { requestIgnoreBatteryOptimizations() },
+                        onFix = {
+                            SyncLog.record(
+                                SyncEvent.Kind.INFO,
+                                "User tapped Allow background updates -> opening system battery dialog",
+                            )
+                            requestIgnoreBatteryOptimizations()
+                        },
                     )
                 }
             }
