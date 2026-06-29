@@ -212,6 +212,39 @@ class MapViewModelTest {
     }
 
     @Test
+    fun `periodic refresh window adapts to cached staleness, not assumed worker cadence`() = runTest {
+        // The map must NOT assume the background worker kept data fresh. The
+        // periodic/open refresh sizes its window to how stale the newest cached
+        // fix is. Uses wall-clock relative timestamps because the VM reads the
+        // real clock for the gap.
+        val nowReal = System.currentTimeMillis()
+        seedBeacon("b1", "Keys", null)
+        // Newest cached fix is 50h old -> window ~= 50 + 1h margin = 51h.
+        seedLocation("b1", lat = 1.0, lon = 2.0, ts = nowReal - 50L * 3_600_000L)
+        var seenHours = -1
+        val vm = buildVm(fetchReports = { _, h -> seenHours = h; emptyMap() })
+        vm.boot()
+        advanceUntilIdle()
+        assertEquals(
+            51, seenHours,
+            "a 50h-stale cache must widen the fetch window to backfill it",
+        )
+    }
+
+    @Test
+    fun `periodic refresh window collapses to the floor when cache is fresh`() = runTest {
+        val nowReal = System.currentTimeMillis()
+        seedBeacon("b1", "Keys", null)
+        // Fresh fix (~1.5h old) -> window floors at DEFAULT_HOURS_BACK (2h).
+        seedLocation("b1", lat = 1.0, lon = 2.0, ts = nowReal - 90L * 60_000L)
+        var seenHours = -1
+        val vm = buildVm(fetchReports = { _, h -> seenHours = h; emptyMap() })
+        vm.boot()
+        advanceUntilIdle()
+        assertEquals(2, seenHours, "fresh cache -> minimum window, fast")
+    }
+
+    @Test
     fun `refresh within the min interval is throttled`() = runTest {
         // No periodic auto-refresh anymore; the only rapid trigger is a user
         // mashing Refresh-now. The throttle must drop a fetch requested less

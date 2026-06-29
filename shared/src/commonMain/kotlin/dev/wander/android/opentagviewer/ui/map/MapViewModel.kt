@@ -293,12 +293,15 @@ class MapViewModel(
         }
         lastRefreshStartMs = nowMs
         _state.update { it.copy(isRefreshing = true, refreshError = null) }
-        // Periodic refresh (after initial fetch done): always re-fetch every
-        // beacon with a full window. The cascade's "skip already-located tags"
-        // filter only applies during the first-run ladder so stale cached
-        // positions get refreshed on every tick.
+        // Periodic / manual refresh (after initial fetch done): re-fetch every
+        // beacon with an ADAPTIVE window. Do NOT assume the background worker
+        // kept things fresh — it may be off, Doze-deferred, bugged, or on a
+        // long interval. Size the window to the actual staleness of cached
+        // data (newest fix across beacons) so opening the app after any gap
+        // backfills it, capped at Apple's ~7-day retention. Fresh data -> the
+        // small hoursBack floor (fast); long gap -> wide window.
         val isPeriodic = skipCascadeIfInitialDone && _state.value.isInitialFetchComplete
-        val effective = if (isPeriodic) listOf(hoursBack) else windows
+        val effective = if (isPeriodic) listOf(adaptiveWindowHours(nowMs)) else windows
         runScope.launch {
             var lastError: String? = null
             try {
@@ -452,6 +455,31 @@ class MapViewModel(
             )
             SyncLog.record(SyncEvent.Kind.INFO, "Idle")
         }
+    }
+
+    /**
+     * Adaptive fetch window for periodic/manual refresh, in hours. Anchored on
+     * the newest cached fix across beacons — never on an assumption that the
+     * background worker kept data fresh. No cached fix -> full cap (cold start
+     * / long downtime). Otherwise gap-since-newest + 1h margin, clamped to
+     * [hoursBack (floor), MAX_ADAPTIVE_WINDOW_HOURS]. Logged for visibility.
+     */
+    private fun adaptiveWindowHours(nowMs: Long): Int {
+        val newest = latestLocationByBeacon.values.maxOfOrNull { it.timestamp }
+        val hours = if (newest == null) {
+            MAX_ADAPTIVE_WINDOW_HOURS
+        } else {
+            (((nowMs - newest) / 3_600_000L).toInt() + 1).coerceIn(hoursBack, MAX_ADAPTIVE_WINDOW_HOURS)
+        }
+        SyncLog.record(
+            SyncEvent.Kind.INFO,
+            "Adaptive window: ${hours}h",
+            mapOf(
+                "window_h" to hours.toString(),
+                "newest_fix_age_h" to (newest?.let { ((nowMs - it) / 3_600_000L).toString() } ?: "none"),
+            ),
+        )
+        return hours
     }
 
     /**
@@ -671,6 +699,9 @@ class MapViewModel(
          * refreshes. History screen uses its own wider window.
          */
         const val DEFAULT_HOURS_BACK: Int = 2
+
+        /** Cap on the adaptive periodic window. Matches Apple's ~7-day report retention. */
+        const val MAX_ADAPTIVE_WINDOW_HOURS: Int = 24 * 7
 
         /** Minimum gap between fetches. Rate-limits Apple's endpoint. */
         const val DEFAULT_MIN_REFRESH_INTERVAL_MS: Long = 60_000L
