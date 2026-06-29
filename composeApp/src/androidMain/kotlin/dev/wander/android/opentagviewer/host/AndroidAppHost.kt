@@ -324,7 +324,12 @@ class AndroidAppHost private constructor(
         authRepo = userAuthRepo,
         beaconRepo = beaconRepo,
         fetchReports = appleReportsFetcher,
-        hoursBack = 24 * 7,
+        // Adaptive window (see BeaconSyncOrchestrator): normally tiny (~2h) so
+        // an hourly run is cheap and doesn't starve a concurrent manual reload;
+        // auto-widens up to this 7-day cap only after real downtime / a fresh
+        // install. The old fixed 7-day-every-hour sweep flooded network/CPU
+        // (a 2h manual reload measured 9.3s while a 168h sweep ran alongside).
+        maxHoursBack = 24 * 7,
     )
 
     /**

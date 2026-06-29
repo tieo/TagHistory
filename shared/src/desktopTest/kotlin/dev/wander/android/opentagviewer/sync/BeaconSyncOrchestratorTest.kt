@@ -224,7 +224,9 @@ class BeaconSyncOrchestratorTest {
                 stubReports.filterKeys { it in accessories.keys }
             },
             accessoryLoader = { stubAccessory() },
-            hoursBack = 12,
+            // Empty DB at run time (no cached fixes seeded) -> the adaptive
+            // window falls back to maxHoursBack for a full backfill.
+            maxHoursBack = 12,
         )
 
         val outcome = orchestrator.run()
@@ -240,6 +242,59 @@ class BeaconSyncOrchestratorTest {
         val beacon2Reports = beaconRepo.getLocationsFor("beacon-2", 0L, 10_000L)
         assertEquals(1, beacon2Reports.size)
         assertEquals(3.0, beacon2Reports.single().latitude)
+    }
+
+    private fun storeCachedFix(beaconId: String, timestampMs: Long) {
+        beaconRepo.storeToLocationCache(
+            mapOf(
+                beaconId to listOf(
+                    BeaconLocationReport(
+                        publishedAt = timestampMs, description = "", timestamp = timestampMs,
+                        confidence = 1L, latitude = 1.0, longitude = 1.0,
+                        horizontalAccuracy = 5L, status = 0L,
+                    ),
+                ),
+            ),
+        )
+    }
+
+    private fun captureWindow(): Pair<BeaconSyncOrchestrator, () -> Int?> {
+        var seen: Int? = null
+        val orch = BeaconSyncOrchestrator(
+            settingsRepo, authRepo, beaconRepo,
+            fetchReports = { _, _, hoursBack -> seen = hoursBack; emptyMap() },
+            accessoryLoader = { stubAccessory() },
+            maxHoursBack = 24 * 7,
+            minHoursBack = 2,
+            nowMs = { now },
+        )
+        return orch to { seen }
+    }
+
+    @Test
+    fun `adaptive window collapses to the floor when cached data is fresh`() : Unit = runBlocking {
+        settingsRepo.storeUserSettings(UserSettings(backgroundSyncEnabled = true))
+        storeValidAuthBlob()
+        seedBeacon("beacon-1")
+        // Newest fix is 1h old -> gap(1) + margin(1) = 2, the floor.
+        storeCachedFix("beacon-1", now - 3_600_000L)
+
+        val (orch, seen) = captureWindow()
+        assertIs<BeaconSyncOrchestrator.Outcome.Success>(orch.run())
+        assertEquals(2, seen(), "fresh cached data -> minimum window, not a 7-day sweep")
+    }
+
+    @Test
+    fun `adaptive window grows to cover a multi-day gap`() : Unit = runBlocking {
+        settingsRepo.storeUserSettings(UserSettings(backgroundSyncEnabled = true))
+        storeValidAuthBlob()
+        seedBeacon("beacon-1")
+        // Newest fix is 50h old -> gap(50) + margin(1) = 51, still under the 168 cap.
+        storeCachedFix("beacon-1", now - 50L * 3_600_000L)
+
+        val (orch, seen) = captureWindow()
+        assertIs<BeaconSyncOrchestrator.Outcome.Success>(orch.run())
+        assertEquals(51, seen(), "a 50h gap -> ~51h window to backfill it")
     }
 
     @Test
