@@ -15,6 +15,13 @@ name: Seed test data — fake auth + 3 beacons + location reports
     maxRetries: 4
     commands:
       - openLink: taghistory://test/seed
+      # The CI emulator is never battery-whitelisted, so the startup
+      # battery-exemption rationale dialog covers the map on every launch.
+      # Dismiss it ("Not now") if present so the flow can reach btn_settings.
+      # optional: it isn't shown on a device that's already exempt.
+      - tapOn:
+          text: "Not now"
+          optional: true
       - extendedWaitUntil:
           visible:
             id: "btn_settings"
