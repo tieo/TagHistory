@@ -11,21 +11,26 @@ import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.tieo.taghistory.data.model.UserSettings
 import io.github.tieo.taghistory.ui.deviceinfo.DeviceInfoScreen
@@ -160,9 +165,62 @@ fun App(factories: AppHostFactories) {
                 LoginScreen(viewModel = vm)
             } else {
                 AuthedNav(factories = factories, onSignedOut = { showLogin = true })
+                BatteryExemptionGate(factories)
             }
         }
     }
+}
+
+/**
+ * Startup rationale for the battery-optimization exemption. Android/Play
+ * guidance: show your OWN explanation before triggering the system action,
+ * never fire the system dialog unsolicited. Shows once per launch (until
+ * "Not now" or granted) when background sync is on and we're still
+ * optimized; re-checks on resume so it disappears after the grant. The
+ * Settings card is the always-available entry point for the same action.
+ */
+@Composable
+private fun BatteryExemptionGate(factories: AppHostFactories) {
+    val request = factories.requestIgnoreBatteryOptimizations ?: return
+    val check = factories.isIgnoringBatteryOptimizations ?: return
+    val settings by factories.settingsFlow.collectAsStateWithLifecycle()
+    var exempt by remember { mutableStateOf(check()) }
+    var dismissed by rememberSaveable { mutableStateOf(false) }
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { exempt = check() }
+
+    if (!settings.isBackgroundSyncEnabled() || exempt || dismissed) return
+    AlertDialog(
+        onDismissRequest = { dismissed = true },
+        title = { Text("Keep locations up to date") },
+        text = {
+            Text(
+                "To refresh your tags' locations in the background, Android needs " +
+                    "to exempt this app from battery optimization. Without it the " +
+                    "background sync is delayed for hours and the map goes stale.",
+            )
+        },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    SyncLog.record(
+                        SyncEvent.Kind.INFO,
+                        "Battery rationale: user chose Allow -> launching system action",
+                    )
+                    dismissed = true
+                    request()
+                },
+                modifier = Modifier.testTag("btn_battery_rationale_allow"),
+            ) { Text("Allow") }
+        },
+        dismissButton = {
+            TextButton(
+                onClick = {
+                    SyncLog.record(SyncEvent.Kind.INFO, "Battery rationale: user chose Not now")
+                    dismissed = true
+                },
+            ) { Text("Not now") }
+        },
+    )
 }
 
 @Composable

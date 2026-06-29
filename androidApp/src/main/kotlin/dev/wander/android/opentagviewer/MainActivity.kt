@@ -39,11 +39,10 @@ class MainActivity : ComponentActivity() {
         // this the periodic fetch never runs and the app reopens onto
         // data as old as its last foreground session.
         host.startBackgroundSync(lifecycleScope)
-        // On a fresh launch (not a rotation/recreation), prompt for the
-        // battery-optimization exemption if we still need it — otherwise Doze
-        // parks the periodic sync worker for hours. Guarded by
-        // savedInstanceState == null so it doesn't re-pop on config changes.
-        if (savedInstanceState == null) host.promptBatteryExemptionIfNeeded()
+        // Battery-exemption prompting is handled in Compose (App's
+        // BatteryExemptionGate): per Android/Play guidance we show our own
+        // rationale dialog first, then trigger the system action — never fire
+        // the system dialog unsolicited from here.
         val versionName = try {
             packageManager.getPackageInfo(packageName, 0).versionName.orEmpty()
         } catch (_: PackageManager.NameNotFoundException) {
