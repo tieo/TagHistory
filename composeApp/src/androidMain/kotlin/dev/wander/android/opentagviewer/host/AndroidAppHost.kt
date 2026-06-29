@@ -496,7 +496,34 @@ class AndroidAppHost private constructor(
             shareDayAsGpx(context, title, dayLabel, points)
         },
         onExportTags = { beaconIds -> runExportSelected(context, beaconIds, beaconRepo) },
+        isIgnoringBatteryOptimizations = { isIgnoringBatteryOptimizations() },
+        requestIgnoreBatteryOptimizations = { requestIgnoreBatteryOptimizations() },
     )
+
+    /** True when the OS is NOT battery-optimizing us (background work runs near schedule). */
+    private fun isIgnoringBatteryOptimizations(): Boolean {
+        val pm = context.getSystemService(Context.POWER_SERVICE) as? android.os.PowerManager
+            ?: return true
+        return pm.isIgnoringBatteryOptimizations(context.packageName)
+    }
+
+    /**
+     * Route the user to grant the battery-optimization exemption. Primary:
+     * the system "Allow [app] to run in the background?" dialog (one tap).
+     * Fallback: the exact battery-optimization list screen if the direct
+     * action isn't resolvable on this OEM. Launched with NEW_TASK because
+     * we only hold an application Context here.
+     */
+    private fun requestIgnoreBatteryOptimizations() {
+        val direct = Intent(android.provider.Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS)
+            .setData(Uri.parse("package:${context.packageName}"))
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        val fallback = Intent(android.provider.Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        val intent = if (direct.resolveActivity(context.packageManager) != null) direct else fallback
+        runCatching { context.startActivity(intent) }
+            .onFailure { Log.w(TAG, "Could not open battery-optimization settings: ${it.message}") }
+    }
 
     /**
      * Build FindMyAccessory for each owned beacon and surface why each one

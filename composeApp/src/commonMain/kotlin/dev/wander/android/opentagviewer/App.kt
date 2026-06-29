@@ -128,6 +128,19 @@ data class AppHostFactories(
      * a user-readable status line. Null = host doesn't support export.
      */
     val onExportTags: (suspend (beaconIds: List<String>) -> String)? = null,
+    /**
+     * True when the OS is NOT battery-optimizing this app (i.e. background
+     * work runs near schedule). Null on platforms without the concept.
+     * Recomputed on each Settings open so the prompt reflects current state.
+     */
+    val isIgnoringBatteryOptimizations: (() -> Boolean)? = null,
+    /**
+     * Ask the OS to exempt this app from battery optimization. Android fires
+     * the system "allow background activity" dialog, or falls back to the
+     * exact battery-optimization settings screen. Without the exemption the
+     * hourly sync worker gets parked by Doze for many hours.
+     */
+    val requestIgnoreBatteryOptimizations: (() -> Unit)? = null,
 )
 
 @Composable
@@ -281,6 +294,8 @@ private fun AuthedNav(
                         onOpenNearby = { nav = nav.push(Screen.Nearby) },
                         onImport = onImport,
                         onRefreshNow = refreshNow,
+                        isIgnoringBatteryOptimizations = factories.isIgnoringBatteryOptimizations,
+                        requestIgnoreBatteryOptimizations = factories.requestIgnoreBatteryOptimizations,
                     )
                 }
                 is Screen.Information -> {

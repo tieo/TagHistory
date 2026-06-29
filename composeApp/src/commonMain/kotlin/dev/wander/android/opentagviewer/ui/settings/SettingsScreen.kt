@@ -17,6 +17,7 @@ import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.FileUpload
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -54,10 +55,16 @@ fun SettingsScreen(
     onOpenNearby: (() -> Unit)? = null,
     onImport: (suspend () -> String?)? = null,
     onRefreshNow: (suspend () -> String?)? = null,
+    isIgnoringBatteryOptimizations: (() -> Boolean)? = null,
+    requestIgnoreBatteryOptimizations: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     LaunchedEffect(Unit) { viewModel.load() }
+    // Re-checked every time Settings is shown / resumed so the prompt clears
+    // once the user grants the exemption and comes back.
+    var batteryExempt by remember { mutableStateOf(isIgnoringBatteryOptimizations?.invoke() ?: true) }
+    LaunchedEffect(Unit) { batteryExempt = isIgnoringBatteryOptimizations?.invoke() ?: true }
     var importMessage by remember { mutableStateOf<String?>(null) }
     var refreshMessage by remember { mutableStateOf<String?>(null) }
     var refreshInFlight by remember { mutableStateOf(false) }
@@ -106,6 +113,15 @@ fun SettingsScreen(
                     current = state.current.backgroundSyncIntervalMinutes ?: DEFAULT_INTERVAL_MIN,
                     onChange = viewModel::setBackgroundSyncIntervalMinutes,
                 )
+                // Battery-optimization warning. Without the exemption Android
+                // Doze parks the periodic worker for many hours, so the chosen
+                // interval is effectively ignored when the app is closed.
+                if (requestIgnoreBatteryOptimizations != null && !batteryExempt) {
+                    HorizontalDivider()
+                    BatteryOptimizationWarning(
+                        onFix = { requestIgnoreBatteryOptimizations() },
+                    )
+                }
             }
         }
 
@@ -349,6 +365,46 @@ private fun SettingsSection(
                 modifier = Modifier.padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) { content() }
+        }
+    }
+}
+
+/**
+ * Shown under Background sync when the app is still battery-optimized.
+ * Explains the consequence and routes the user to the exact system screen
+ * to grant the exemption.
+ */
+@Composable
+private fun BatteryOptimizationWarning(onFix: () -> Unit) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Icon(
+                Icons.Filled.Warning,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.error,
+                modifier = Modifier.size(20.dp),
+            )
+            Text(
+                "Battery optimization is on",
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.error,
+            )
+        }
+        Text(
+            "Android parks background sync for hours unless this app is allowed " +
+                "to run in the background, so the interval above is ignored when " +
+                "the app is closed. Tap below, then pick \"Allow\" / \"Don't optimize\".",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        FilledTonalButton(
+            onClick = onFix,
+            modifier = Modifier.fillMaxWidth().testTag("btn_fix_battery_optim"),
+        ) {
+            Text("Allow background updates")
         }
     }
 }

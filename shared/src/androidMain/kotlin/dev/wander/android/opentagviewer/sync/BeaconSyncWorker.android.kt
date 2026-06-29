@@ -2,6 +2,7 @@ package io.github.tieo.taghistory.sync
 
 import android.content.Context
 import android.util.Log
+import androidx.work.BackoffPolicy
 import androidx.work.Constraints
 import androidx.work.CoroutineWorker
 import androidx.work.ExistingPeriodicWorkPolicy
@@ -81,6 +82,11 @@ class BeaconSyncWorker(
                 intervalMinutes.toLong(), TimeUnit.MINUTES,
             )
                 .setConstraints(constraints)
+                // LINEAR, not the default EXPONENTIAL: a run that fails because
+                // the network/DNS was down at fire time should retry in a fixed
+                // ~15 min, not double toward WorkManager's 5 h cap and leave the
+                // map stale for half a day.
+                .setBackoffCriteria(BackoffPolicy.LINEAR, 15, TimeUnit.MINUTES)
                 .build()
             wm.enqueueUniquePeriodicWork(
                 UNIQUE_WORK_NAME,
