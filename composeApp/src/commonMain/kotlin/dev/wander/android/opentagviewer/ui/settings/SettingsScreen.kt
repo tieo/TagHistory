@@ -420,7 +420,10 @@ private fun BatteryOptimizationWarning(onFix: () -> Unit) {
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-        FilledTonalButton(
+        // Filled (not FilledTonal): the tonal variant's secondaryContainer
+        // color reads as greyed-out/disabled. A solid primary button makes
+        // clear it's actionable.
+        Button(
             onClick = onFix,
             modifier = Modifier.fillMaxWidth().testTag("btn_fix_battery_optim"),
         ) {

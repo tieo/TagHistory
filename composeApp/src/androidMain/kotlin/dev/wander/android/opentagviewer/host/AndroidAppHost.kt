@@ -500,6 +500,22 @@ class AndroidAppHost private constructor(
         requestIgnoreBatteryOptimizations = { requestIgnoreBatteryOptimizations() },
     )
 
+    /**
+     * Fire the battery-exemption prompt at startup when background sync is on
+     * and we're still optimized. Stops appearing once granted (we become
+     * exempt). Called from MainActivity on a fresh launch only.
+     */
+    fun promptBatteryExemptionIfNeeded() {
+        val enabled = userSettingsRepo.getUserSettings().isBackgroundSyncEnabled()
+        val exempt = isIgnoringBatteryOptimizations()
+        io.github.tieo.taghistory.sync.SyncLog.record(
+            io.github.tieo.taghistory.sync.SyncEvent.Kind.INFO,
+            "Startup battery-exemption check",
+            mapOf("background_sync_enabled" to enabled.toString(), "exempt" to exempt.toString()),
+        )
+        if (enabled && !exempt) requestIgnoreBatteryOptimizations()
+    }
+
     /** True when the OS is NOT battery-optimizing us (background work runs near schedule). */
     private fun isIgnoringBatteryOptimizations(): Boolean {
         val pm = context.getSystemService(Context.POWER_SERVICE) as? android.os.PowerManager
