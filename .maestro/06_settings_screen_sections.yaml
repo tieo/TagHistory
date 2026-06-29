@@ -26,17 +26,21 @@ name: Settings screen — all section headers visible and reachable by scroll
 
 # Scroll down: Account/About become visible. (The Advanced section was
 # removed along with the in-app sync-log panel — logs are logcat-only now.)
-- swipe:
-    direction: UP
-    duration: 600
-- extendedWaitUntil:
-    visible:
+# Use scrollUntilVisible, not a fixed swipe: the Background-sync section's
+# height varies (a battery-optimization warning may render), so a single
+# swipe isn't guaranteed to reveal the bottom sections.
+- scrollUntilVisible:
+    element:
       text: "Account"
+    direction: DOWN
     timeout: 25000
-- extendedWaitUntil:
-    visible:
+    centerElement: true
+- scrollUntilVisible:
+    element:
       text: "About"
+    direction: DOWN
     timeout: 25000
+    centerElement: true
 
 # btn_about and btn_sign_out exist by ID near the bottom.
 - extendedWaitUntil:

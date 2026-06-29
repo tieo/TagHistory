@@ -14,10 +14,14 @@ name: Settings — Refresh now shows a non-empty result message
     visible:
       text: "Settings"
     timeout: 25000
-- extendedWaitUntil:
-    visible:
+# Scroll it into view first — the Background-sync section above can grow
+# (battery-optimization warning), pushing Refresh now below the fold.
+- scrollUntilVisible:
+    element:
       id: "btn_refresh_now"
+    direction: DOWN
     timeout: 25000
+    centerElement: true
 
 - tapOn:
     id: "btn_refresh_now"
