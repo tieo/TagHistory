@@ -11,9 +11,7 @@
       "relations": [],
       "notes": "",
       "states": [
-        "Loading",
-        "Empty",
-        "Failed"
+        "Empty"
       ],
       "renders": [
         {
@@ -23,14 +21,6 @@
         {
           "file": "map-phone-dark.png",
           "label": "phone dark"
-        },
-        {
-          "file": "map-wide-light.png",
-          "label": "wide light"
-        },
-        {
-          "file": "map-wide-dark.png",
-          "label": "wide dark"
         }
       ]
     },
@@ -43,7 +33,6 @@
       "relations": [],
       "notes": "",
       "states": [
-        "Loading",
         "Empty"
       ],
       "renders": [
@@ -54,14 +43,6 @@
         {
           "file": "history-phone-dark.png",
           "label": "phone dark"
-        },
-        {
-          "file": "history-wide-light.png",
-          "label": "wide light"
-        },
-        {
-          "file": "history-wide-dark.png",
-          "label": "wide dark"
         }
       ]
     },
@@ -243,37 +224,6 @@
   "states": [
     {
       "tag": "STATE",
-      "uid": "STATE-MAP-LOADING",
-      "title": "Loading",
-      "kind": "Loading",
-      "statement": "The first fetch is in flight and no card has arrived yet.",
-      "relations": [
-        {
-          "to": "VIEW-MAP",
-          "role": "State of"
-        }
-      ],
-      "renders": [
-        {
-          "file": "map-loading-phone-light.png",
-          "label": "phone light"
-        },
-        {
-          "file": "map-loading-phone-dark.png",
-          "label": "phone dark"
-        },
-        {
-          "file": "map-loading-wide-light.png",
-          "label": "wide light"
-        },
-        {
-          "file": "map-loading-wide-dark.png",
-          "label": "wide dark"
-        }
-      ]
-    },
-    {
-      "tag": "STATE",
       "uid": "STATE-MAP-EMPTY",
       "title": "Empty",
       "kind": "Empty",
@@ -292,76 +242,6 @@
         {
           "file": "map-empty-phone-dark.png",
           "label": "phone dark"
-        },
-        {
-          "file": "map-empty-wide-light.png",
-          "label": "wide light"
-        },
-        {
-          "file": "map-empty-wide-dark.png",
-          "label": "wide dark"
-        }
-      ]
-    },
-    {
-      "tag": "STATE",
-      "uid": "STATE-MAP-FAILED",
-      "title": "Failed",
-      "kind": "Failed",
-      "statement": "A fetch failed (most often no connection); the last known cards stay put with the error shown.",
-      "relations": [
-        {
-          "to": "VIEW-MAP",
-          "role": "State of"
-        }
-      ],
-      "renders": [
-        {
-          "file": "map-failed-phone-light.png",
-          "label": "phone light"
-        },
-        {
-          "file": "map-failed-phone-dark.png",
-          "label": "phone dark"
-        },
-        {
-          "file": "map-failed-wide-light.png",
-          "label": "wide light"
-        },
-        {
-          "file": "map-failed-wide-dark.png",
-          "label": "wide dark"
-        }
-      ]
-    },
-    {
-      "tag": "STATE",
-      "uid": "STATE-HISTORY-LOADING",
-      "title": "Loading",
-      "kind": "Loading",
-      "statement": "The range has been asked for and the points have not arrived.",
-      "relations": [
-        {
-          "to": "VIEW-HISTORY",
-          "role": "State of"
-        }
-      ],
-      "renders": [
-        {
-          "file": "history-loading-phone-light.png",
-          "label": "phone light"
-        },
-        {
-          "file": "history-loading-phone-dark.png",
-          "label": "phone dark"
-        },
-        {
-          "file": "history-loading-wide-light.png",
-          "label": "wide light"
-        },
-        {
-          "file": "history-loading-wide-dark.png",
-          "label": "wide dark"
         }
       ]
     },
@@ -385,14 +265,6 @@
         {
           "file": "history-empty-phone-dark.png",
           "label": "phone dark"
-        },
-        {
-          "file": "history-empty-wide-light.png",
-          "label": "wide light"
-        },
-        {
-          "file": "history-empty-wide-dark.png",
-          "label": "wide dark"
         }
       ]
     },

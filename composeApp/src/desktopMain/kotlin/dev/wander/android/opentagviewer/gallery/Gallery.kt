@@ -31,7 +31,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.delay
 import java.io.File
@@ -156,6 +155,7 @@ private fun deviceInfoVm(seed: TagHistoryDatabase.() -> Unit): DeviceInfoViewMod
         nowMs = { nowMs },
         scope = galleryScope(),
     )
+    vm.load()
     runBlocking { delay(80) }
     return vm
 }
@@ -199,18 +199,11 @@ private val SCENES: List<Scene> = buildList {
         )
     })
     add(Scene("map", "empty") { MapScreen(viewModel = mapVm(seed = {})) })
-    add(Scene("map", "loading") {
-        // A never-returning fetch leaves the initial fetch incomplete, which is
-        // the shimmer/loading state.
-        MapScreen(viewModel = mapVm(seed = { seedBeacon("a", "Car Keys", "🔑") }) { _, _ ->
-            kotlinx.coroutines.awaitCancellation()
-        })
-    })
-    add(Scene("map", "failed") {
-        MapScreen(viewModel = mapVm(seed = { seedBeacon("a", "Car Keys", "🔑") }) { _, _ ->
-            throw RuntimeException("No internet connection")
-        })
-    })
+    // Map Loading and Failed are not drawn: their only difference from "as it
+    // is" lives in the native map layer (a desktop stub here) and in a snackbar
+    // (hosted outside the screen), so on this renderer all three are the same
+    // picture. The app could surface them in-screen (a loading skeleton, an
+    // inline error) to make them visible; until then they are not modelled.
 
     // ── Manage tags ───────────────────────────────────────────────────────────
     add(Scene("manage-tags", "as-it-is") {
@@ -255,9 +248,10 @@ private val SCENES: List<Scene> = buildList {
             title = "Car Keys 🔑", onBack = {},
         )
     })
-    add(Scene("history", "loading") {
-        HistoryScreen(viewModel = historyVm(fetchRange = { _, _, _ -> awaitCancellation() }, fetch = true), title = "Car Keys 🔑", onBack = {})
-    })
+    // History Loading is not drawn: while it loads it shows the same "No data"
+    // sheet as Empty with only a small spinner added, so the two are one
+    // picture here. (That "No data" mid-load is itself worth fixing in the app,
+    // it reads as "nothing" before the fetch has answered.)
     add(Scene("history", "empty") {
         HistoryScreen(viewModel = historyVm(), title = "Car Keys 🔑", onBack = {})
     })
@@ -270,7 +264,8 @@ private val SCENES: List<Scene> = buildList {
         )
     })
     add(Scene("device-info", "empty") {
-        DeviceInfoScreen(viewModel = deviceInfoVm { seedBeacon("a", "Car Keys", "🔑") }, onBack = {}, onOpenHistory = {})
+        // Nothing seeded -> the beacon is not found (removed / never imported).
+        DeviceInfoScreen(viewModel = deviceInfoVm { }, onBack = {}, onOpenHistory = {})
     })
 
     // ── Login ─────────────────────────────────────────────────────────────────
@@ -303,6 +298,12 @@ fun main() {
         return
     }
 
+    // Full-bleed native-map screens have no wide/landscape layout: a wide
+    // render is just a bigger empty map placeholder with the card/sheet strip
+    // pushed off, so every state collapses to the same picture. Draw them
+    // upright only.
+    val phoneOnly = setOf("map", "history")
+
     var drawn = 0
     for (scene in wanted) {
         val stem = if (scene.state == "as-it-is") scene.view else "${scene.view}-${scene.state}"
@@ -311,7 +312,7 @@ fun main() {
                 if (theme !in themes) continue
                 val dark = theme == "dark"
                 if ("phone" in sizes) add(RenderJob("phone-$theme", PHONE_W, PHONE_H, dark, 2f))
-                if ("wide" in sizes) add(RenderJob("wide-$theme", WIDE_W, WIDE_H, dark, 1.5f))
+                if ("wide" in sizes && scene.view !in phoneOnly) add(RenderJob("wide-$theme", WIDE_W, WIDE_H, dark, 1.5f))
                 if ("card" in sizes && scene.state == "as-it-is") add(RenderJob("card-$theme", PHONE_W, CARD_H, dark, 2f))
             }
         }
