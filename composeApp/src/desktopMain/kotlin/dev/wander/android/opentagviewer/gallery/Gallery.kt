@@ -22,7 +22,6 @@ import io.github.tieo.taghistory.ui.manage.ManageTagsScreen
 import io.github.tieo.taghistory.ui.map.MapScreen
 import io.github.tieo.taghistory.ui.map.MapViewModel
 import io.github.tieo.taghistory.ui.map.TagCardUi
-import io.github.tieo.taghistory.ui.nearby.NearbyScanEvent
 import io.github.tieo.taghistory.ui.nearby.NearbyScreen
 import io.github.tieo.taghistory.ui.nearby.NearbyViewModel
 import io.github.tieo.taghistory.ui.nearby.OwnedTagInfo
@@ -38,7 +37,7 @@ import kotlinx.coroutines.delay
 import java.io.File
 import java.util.Properties
 
-/**
+/*
  * A gallery of the app's screens, drawn off-screen with sample data on the JVM
  * desktop target. Each view is drawn in the states it can be in; the state name
  * becomes part of the file name so the model reads as a list, not a lookup.
