@@ -512,7 +512,7 @@ private fun TagGlassRow(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
-                AddressLine(card.addressLine, hasLocation)
+                AddressLine(card.addressLine, hasLocation, card.latitude, card.longitude)
                 Text(
                     lastUpdatedLabel(card.lastUpdatedMs),
                     fontSize = 11.sp,
@@ -591,8 +591,24 @@ private fun RowActionIcon(
     }
 }
 
+/** "48.2094, 9.7203" — a location shown as coordinates when no street resolved. */
+private fun coarseCoords(lat: Double, lon: Double): String {
+    fun r(v: Double): String {
+        val n = kotlin.math.round(v * 10_000.0).toLong()
+        val whole = n / 10_000
+        val frac = (kotlin.math.abs(n) % 10_000).toString().padStart(4, '0')
+        return "$whole.$frac"
+    }
+    return "${r(lat)}, ${r(lon)}"
+}
+
 @Composable
-private fun AddressLine(addressLine: String?, hasLocation: Boolean) {
+private fun AddressLine(
+    addressLine: String?,
+    hasLocation: Boolean,
+    latitude: Double?,
+    longitude: Double?,
+) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         Icon(
             imageVector = if (hasLocation) Icons.Filled.Place else Icons.Filled.LocationOff,
@@ -606,6 +622,10 @@ private fun AddressLine(addressLine: String?, hasLocation: Boolean) {
             when {
                 !hasLocation -> "No recent location"
                 streetOnly != null -> streetOnly
+                // Located but the reverse-geocode has not come back (or the
+                // platform has no geocoder): show the coordinates. "Locating…"
+                // here reads as still-searching for a tag that is already found.
+                latitude != null && longitude != null -> coarseCoords(latitude, longitude)
                 else -> "Locating…"
             },
             fontSize = 12.sp,
