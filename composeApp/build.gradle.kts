@@ -100,8 +100,6 @@ kotlin {
             // androidx.lifecycle.ViewModel — the consumer module needs the
             // base class on its classpath to reference the subtype.
             implementation(libs.androidx.lifecycle.viewmodel)
-            // ProcessLifecycleOwner — foreground/background gate for MapViewModel's refresh loop.
-            implementation(libs.androidx.lifecycle.process)
             // Needed because `SettingsFactory.create` (called from the
             // android host) returns `com.russhwolf.settings.Settings`, and
             // the consumer needs it to name the repo constructors.
@@ -120,6 +118,8 @@ kotlin {
             dependencies {
                 implementation(compose.desktop.currentOs)
                 implementation(libs.kotlinx.coroutines.core)
+                // Gallery renderer builds real ViewModels over an in-memory DB.
+                implementation(libs.sqldelight.sqlite.driver)
             }
         }
 
@@ -258,3 +258,40 @@ tasks.matching { it.name.startsWith("merge") && it.name.endsWith("JniLibFolders"
 // Apple .so extraction to :androidApp (the legacy application plugin)
 // where `src/main/assets/` is picked up by mergeDebugAssets as it
 // always has been.
+
+// ---------------------------------------------------------------
+// Off-screen gallery renderer (viewbook)
+// ---------------------------------------------------------------
+// Draws the real composables to PNGs on the JVM desktop target with sample
+// data, no device or emulator. `./make-renders.sh` runs this and copies the
+// output into docs/model/img for the viewbook model.
+tasks.register<JavaExec>("renderGallery") {
+    group = "viewbook"
+    description = "Render every view to composeApp/build/gallery/*.png"
+    val desktopMain = kotlin.targets.getByName("desktop").compilations.getByName("main")
+    dependsOn(desktopMain.compileAllTaskName)
+    classpath = desktopMain.output.allOutputs +
+        configurations.getByName("desktopRuntimeClasspath")
+    mainClass.set(project.findProperty("galleryMain") as String? ?: "io.github.tieo.taghistory.gallery.GalleryKt")
+    systemProperty("gallery.out", layout.buildDirectory.dir("gallery").get().asFile.absolutePath)
+    (findProperty("only") as String?)?.let { systemProperty("gallery.only", it) }
+    (findProperty("sizes") as String?)?.let { systemProperty("gallery.sizes", it) }
+    (findProperty("themes") as String?)?.let { systemProperty("gallery.themes", it) }
+    systemProperty("java.awt.headless", "true")
+    systemProperty("skiko.renderApi", "SOFTWARE")
+    // Skiko's software renderer needs GL/X11/fontconfig/freetype at runtime,
+    // which NixOS does not put on the default library path.
+    environment(
+        "LD_LIBRARY_PATH",
+        listOf(
+            "/nix/store/fdqacryg2w9kiwb94c9rzfsyff4im8xj-libglvnd-1.7.0/lib",
+            "/nix/store/5m91jqg1526jzsahrgmd37k4ml3nc5l4-libx11-1.8.13/lib",
+            "/nix/store/fc1g44pg3i10wfzh3gb4m54pfgclsn76-libxcb-1.17.0/lib",
+            "/nix/store/2krkc90x3ch0mgkk48fxlglq14nqapdr-libxau-1.0.12/lib",
+            "/nix/store/yr83qw7bdfdxf5lb2xmfs70qb5hap0hj-libxdmcp-1.1.5/lib",
+            "/nix/store/bg6ms0vw071g1fdbx2my6bbzsk62p6vd-fontconfig-2.17.1-lib/lib",
+            "/nix/store/zr22ggqbv79yv4y4wv06r4grla9h59yx-freetype-2.14.2/lib",
+            "/nix/store/si4q3zks5mn5jhzzyri9hhd3cv789vlm-gcc-15.2.0-lib/lib",
+        ).joinToString(":"),
+    )
+}

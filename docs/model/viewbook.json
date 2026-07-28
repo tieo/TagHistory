@@ -1,0 +1,19 @@
+{
+  "title": "TagHistory",
+  "subtitle": "the model",
+  "states": [
+    "Loading",
+    "Empty",
+    "Failed"
+  ],
+  "renders": {
+    "command": [
+      "./make-renders.sh"
+    ],
+    "dir": "../..",
+    "env": {
+      "SKIKO_RENDER_API": "SOFTWARE"
+    },
+    "statement": "Draws every view off-screen with sample data on the JVM desktop target, from the same composables the app runs. No device, no emulator, no preview functions. The map layer is Android-native, so map and history renders show the real cards and chrome over a placeholder map."
+  }
+}

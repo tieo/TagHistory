@@ -1,0 +1,493 @@
+{
+  "requirements": [],
+  "stories": [],
+  "views": [
+    {
+      "tag": "VIEW",
+      "uid": "VIEW-MAP",
+      "title": "Map",
+      "statement": "The tags on a map with a swipeable strip of their cards below, and a way to refresh, edit, and open each one.",
+      "status": "Built",
+      "relations": [],
+      "notes": "",
+      "states": [
+        "Loading",
+        "Empty",
+        "Failed"
+      ],
+      "renders": [
+        {
+          "file": "map-phone-light.png",
+          "label": "phone light"
+        },
+        {
+          "file": "map-phone-dark.png",
+          "label": "phone dark"
+        },
+        {
+          "file": "map-wide-light.png",
+          "label": "wide light"
+        },
+        {
+          "file": "map-wide-dark.png",
+          "label": "wide dark"
+        }
+      ]
+    },
+    {
+      "tag": "VIEW",
+      "uid": "VIEW-HISTORY",
+      "title": "History",
+      "statement": "One tag's day as a map trace and a timeline of stops and moves, with distance and duration between them.",
+      "status": "Built",
+      "relations": [],
+      "notes": "",
+      "states": [
+        "Loading",
+        "Empty"
+      ],
+      "renders": [
+        {
+          "file": "history-phone-light.png",
+          "label": "phone light"
+        },
+        {
+          "file": "history-phone-dark.png",
+          "label": "phone dark"
+        },
+        {
+          "file": "history-wide-light.png",
+          "label": "wide light"
+        },
+        {
+          "file": "history-wide-dark.png",
+          "label": "wide dark"
+        }
+      ]
+    },
+    {
+      "tag": "VIEW",
+      "uid": "VIEW-DEVICE-INFO",
+      "title": "Device info",
+      "statement": "One tag's identity, model, and last known fix, with a way into its history.",
+      "status": "Built",
+      "relations": [],
+      "notes": "",
+      "states": [
+        "Empty"
+      ],
+      "renders": [
+        {
+          "file": "device-info-phone-light.png",
+          "label": "phone light"
+        },
+        {
+          "file": "device-info-phone-dark.png",
+          "label": "phone dark"
+        },
+        {
+          "file": "device-info-wide-light.png",
+          "label": "wide light"
+        },
+        {
+          "file": "device-info-wide-dark.png",
+          "label": "wide dark"
+        }
+      ]
+    },
+    {
+      "tag": "VIEW",
+      "uid": "VIEW-NEARBY",
+      "title": "Nearby",
+      "statement": "Live Bluetooth proximity to the owned tags, each with signal strength as it is heard.",
+      "status": "Built",
+      "relations": [],
+      "notes": "",
+      "states": [
+        "Empty"
+      ],
+      "renders": [
+        {
+          "file": "nearby-phone-light.png",
+          "label": "phone light"
+        },
+        {
+          "file": "nearby-phone-dark.png",
+          "label": "phone dark"
+        },
+        {
+          "file": "nearby-wide-light.png",
+          "label": "wide light"
+        },
+        {
+          "file": "nearby-wide-dark.png",
+          "label": "wide dark"
+        }
+      ]
+    },
+    {
+      "tag": "VIEW",
+      "uid": "VIEW-MANAGE-TAGS",
+      "title": "Manage tags",
+      "statement": "Rename, re-emoji, remove, import and export the tags the account owns, as a plain editable list.",
+      "status": "Built",
+      "relations": [],
+      "notes": "",
+      "states": [
+        "Empty"
+      ],
+      "renders": [
+        {
+          "file": "manage-tags-phone-light.png",
+          "label": "phone light"
+        },
+        {
+          "file": "manage-tags-phone-dark.png",
+          "label": "phone dark"
+        },
+        {
+          "file": "manage-tags-wide-light.png",
+          "label": "wide light"
+        },
+        {
+          "file": "manage-tags-wide-dark.png",
+          "label": "wide dark"
+        }
+      ]
+    },
+    {
+      "tag": "VIEW",
+      "uid": "VIEW-LOGIN",
+      "title": "Sign in",
+      "statement": "Apple ID email and password to reach the Find My network.",
+      "status": "Built",
+      "relations": [],
+      "notes": "",
+      "states": [],
+      "renders": [
+        {
+          "file": "login-phone-light.png",
+          "label": "phone light"
+        },
+        {
+          "file": "login-phone-dark.png",
+          "label": "phone dark"
+        },
+        {
+          "file": "login-wide-light.png",
+          "label": "wide light"
+        },
+        {
+          "file": "login-wide-dark.png",
+          "label": "wide dark"
+        }
+      ]
+    },
+    {
+      "tag": "VIEW",
+      "uid": "VIEW-SETTINGS",
+      "title": "Settings",
+      "statement": "Theme, background sync and its interval, the battery-exemption prompt, refresh-now, account, and about.",
+      "status": "Built",
+      "relations": [],
+      "notes": "",
+      "states": [],
+      "renders": [
+        {
+          "file": "settings-phone-light.png",
+          "label": "phone light"
+        },
+        {
+          "file": "settings-phone-dark.png",
+          "label": "phone dark"
+        },
+        {
+          "file": "settings-wide-light.png",
+          "label": "wide light"
+        },
+        {
+          "file": "settings-wide-dark.png",
+          "label": "wide dark"
+        }
+      ]
+    },
+    {
+      "tag": "VIEW",
+      "uid": "VIEW-INFORMATION",
+      "title": "About",
+      "statement": "What the app is, its version, links out, and the map attributions.",
+      "status": "Built",
+      "relations": [],
+      "notes": "",
+      "states": [],
+      "renders": [
+        {
+          "file": "information-phone-light.png",
+          "label": "phone light"
+        },
+        {
+          "file": "information-phone-dark.png",
+          "label": "phone dark"
+        },
+        {
+          "file": "information-wide-light.png",
+          "label": "wide light"
+        },
+        {
+          "file": "information-wide-dark.png",
+          "label": "wide dark"
+        }
+      ]
+    }
+  ],
+  "states": [
+    {
+      "tag": "STATE",
+      "uid": "STATE-MAP-LOADING",
+      "title": "Loading",
+      "kind": "Loading",
+      "statement": "The first fetch is in flight and no card has arrived yet.",
+      "relations": [
+        {
+          "to": "VIEW-MAP",
+          "role": "State of"
+        }
+      ],
+      "renders": [
+        {
+          "file": "map-loading-phone-light.png",
+          "label": "phone light"
+        },
+        {
+          "file": "map-loading-phone-dark.png",
+          "label": "phone dark"
+        },
+        {
+          "file": "map-loading-wide-light.png",
+          "label": "wide light"
+        },
+        {
+          "file": "map-loading-wide-dark.png",
+          "label": "wide dark"
+        }
+      ]
+    },
+    {
+      "tag": "STATE",
+      "uid": "STATE-MAP-EMPTY",
+      "title": "Empty",
+      "kind": "Empty",
+      "statement": "No tags on the account yet, so nothing to place or list.",
+      "relations": [
+        {
+          "to": "VIEW-MAP",
+          "role": "State of"
+        }
+      ],
+      "renders": [
+        {
+          "file": "map-empty-phone-light.png",
+          "label": "phone light"
+        },
+        {
+          "file": "map-empty-phone-dark.png",
+          "label": "phone dark"
+        },
+        {
+          "file": "map-empty-wide-light.png",
+          "label": "wide light"
+        },
+        {
+          "file": "map-empty-wide-dark.png",
+          "label": "wide dark"
+        }
+      ]
+    },
+    {
+      "tag": "STATE",
+      "uid": "STATE-MAP-FAILED",
+      "title": "Failed",
+      "kind": "Failed",
+      "statement": "A fetch failed (most often no connection); the last known cards stay put with the error shown.",
+      "relations": [
+        {
+          "to": "VIEW-MAP",
+          "role": "State of"
+        }
+      ],
+      "renders": [
+        {
+          "file": "map-failed-phone-light.png",
+          "label": "phone light"
+        },
+        {
+          "file": "map-failed-phone-dark.png",
+          "label": "phone dark"
+        },
+        {
+          "file": "map-failed-wide-light.png",
+          "label": "wide light"
+        },
+        {
+          "file": "map-failed-wide-dark.png",
+          "label": "wide dark"
+        }
+      ]
+    },
+    {
+      "tag": "STATE",
+      "uid": "STATE-HISTORY-LOADING",
+      "title": "Loading",
+      "kind": "Loading",
+      "statement": "The range has been asked for and the points have not arrived.",
+      "relations": [
+        {
+          "to": "VIEW-HISTORY",
+          "role": "State of"
+        }
+      ],
+      "renders": [
+        {
+          "file": "history-loading-phone-light.png",
+          "label": "phone light"
+        },
+        {
+          "file": "history-loading-phone-dark.png",
+          "label": "phone dark"
+        },
+        {
+          "file": "history-loading-wide-light.png",
+          "label": "wide light"
+        },
+        {
+          "file": "history-loading-wide-dark.png",
+          "label": "wide dark"
+        }
+      ]
+    },
+    {
+      "tag": "STATE",
+      "uid": "STATE-HISTORY-EMPTY",
+      "title": "Empty",
+      "kind": "Empty",
+      "statement": "No fixes for this tag in the chosen range.",
+      "relations": [
+        {
+          "to": "VIEW-HISTORY",
+          "role": "State of"
+        }
+      ],
+      "renders": [
+        {
+          "file": "history-empty-phone-light.png",
+          "label": "phone light"
+        },
+        {
+          "file": "history-empty-phone-dark.png",
+          "label": "phone dark"
+        },
+        {
+          "file": "history-empty-wide-light.png",
+          "label": "wide light"
+        },
+        {
+          "file": "history-empty-wide-dark.png",
+          "label": "wide dark"
+        }
+      ]
+    },
+    {
+      "tag": "STATE",
+      "uid": "STATE-DEVICE-INFO-EMPTY",
+      "title": "Empty",
+      "kind": "Empty",
+      "statement": "The tag is not found (removed, or never imported).",
+      "relations": [
+        {
+          "to": "VIEW-DEVICE-INFO",
+          "role": "State of"
+        }
+      ],
+      "renders": [
+        {
+          "file": "device-info-empty-phone-light.png",
+          "label": "phone light"
+        },
+        {
+          "file": "device-info-empty-phone-dark.png",
+          "label": "phone dark"
+        },
+        {
+          "file": "device-info-empty-wide-light.png",
+          "label": "wide light"
+        },
+        {
+          "file": "device-info-empty-wide-dark.png",
+          "label": "wide dark"
+        }
+      ]
+    },
+    {
+      "tag": "STATE",
+      "uid": "STATE-NEARBY-EMPTY",
+      "title": "Empty",
+      "kind": "Empty",
+      "statement": "No owned tags to look for.",
+      "relations": [
+        {
+          "to": "VIEW-NEARBY",
+          "role": "State of"
+        }
+      ],
+      "renders": [
+        {
+          "file": "nearby-empty-phone-light.png",
+          "label": "phone light"
+        },
+        {
+          "file": "nearby-empty-phone-dark.png",
+          "label": "phone dark"
+        },
+        {
+          "file": "nearby-empty-wide-light.png",
+          "label": "wide light"
+        },
+        {
+          "file": "nearby-empty-wide-dark.png",
+          "label": "wide dark"
+        }
+      ]
+    },
+    {
+      "tag": "STATE",
+      "uid": "STATE-MANAGE-TAGS-EMPTY",
+      "title": "Empty",
+      "kind": "Empty",
+      "statement": "Nothing owned yet, so the list is empty and only import is offered.",
+      "relations": [
+        {
+          "to": "VIEW-MANAGE-TAGS",
+          "role": "State of"
+        }
+      ],
+      "renders": [
+        {
+          "file": "manage-tags-empty-phone-light.png",
+          "label": "phone light"
+        },
+        {
+          "file": "manage-tags-empty-phone-dark.png",
+          "label": "phone dark"
+        },
+        {
+          "file": "manage-tags-empty-wide-light.png",
+          "label": "wide light"
+        },
+        {
+          "file": "manage-tags-empty-wide-dark.png",
+          "label": "wide dark"
+        }
+      ]
+    }
+  ]
+}
