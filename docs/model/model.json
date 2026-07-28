@@ -11,7 +11,9 @@
       "relations": [],
       "notes": "",
       "states": [
-        "Empty"
+        "Empty",
+        "Loading",
+        "Failed"
       ],
       "renders": [
         {
@@ -33,7 +35,8 @@
       "relations": [],
       "notes": "",
       "states": [
-        "Empty"
+        "Empty",
+        "Loading"
       ],
       "renders": [
         {
@@ -247,6 +250,36 @@
     },
     {
       "tag": "STATE",
+      "uid": "STATE-MAP-LOADING",
+      "title": "Loading",
+      "kind": "Loading",
+      "statement": "A fetch is in flight; the difference from the resting map is the native map layer and a refresh spinner, neither of which reaches this off-screen renderer.",
+      "relations": [
+        {
+          "to": "VIEW-MAP",
+          "role": "State of"
+        }
+      ],
+      "drawable": false,
+      "renders": []
+    },
+    {
+      "tag": "STATE",
+      "uid": "STATE-MAP-FAILED",
+      "title": "Failed",
+      "kind": "Failed",
+      "statement": "The fetch failed; the error is a snackbar hosted outside the screen and does not reach the PNG.",
+      "relations": [
+        {
+          "to": "VIEW-MAP",
+          "role": "State of"
+        }
+      ],
+      "drawable": false,
+      "renders": []
+    },
+    {
+      "tag": "STATE",
       "uid": "STATE-HISTORY-EMPTY",
       "title": "Empty",
       "kind": "Empty",
@@ -267,6 +300,21 @@
           "label": "phone dark"
         }
       ]
+    },
+    {
+      "tag": "STATE",
+      "uid": "STATE-HISTORY-LOADING",
+      "title": "Loading",
+      "kind": "Loading",
+      "statement": "While loading it shows the Empty \"No data\" sheet plus a small spinner; on a PNG that is the same picture as Empty. (The app should not say \"No data\" before the fetch has answered.)",
+      "relations": [
+        {
+          "to": "VIEW-HISTORY",
+          "role": "State of"
+        }
+      ],
+      "drawable": false,
+      "renders": []
     },
     {
       "tag": "STATE",
