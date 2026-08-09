@@ -145,8 +145,13 @@ fun HistoryScreen(
     // nobody ever called load() on it, hence "No data".
     LaunchedEffect(viewModel) {
         PerfTrace.start("history-open beacon=$title")
-        val end = Clock.System.now().toEpochMilliseconds()
-        viewModel.load(end - 7L * DAY_MS, end)
+        // Show every cached fix, not a trailing window. A fixed
+        // "last 7 days" hid older reports that are still in the DB, and
+        // an upper bound of "now" dropped a fix whose timestamp sits a
+        // little ahead of the device clock so the map showed a newer
+        // point than history did. The per-day list keeps this cheap: the
+        // UI still renders one day at a time regardless of range.
+        viewModel.load(0L, Long.MAX_VALUE)
     }
     LaunchedEffect(state.points.size) {
         PerfTrace.mark("HistoryScreen recompose points=${state.points.size}")
