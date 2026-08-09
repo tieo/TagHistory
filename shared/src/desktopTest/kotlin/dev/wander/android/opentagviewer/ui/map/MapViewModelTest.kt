@@ -621,6 +621,27 @@ class MapViewModelTest {
     }
 
     @Test
+    fun `isNewer adopts only strictly-newer fixes`() {
+        // The single rule both the DB observer and the refresh cascade use
+        // so a marker never moves backward in time. The cascade used to skip
+        // it and overwrote unconditionally, briefly showing an older fix
+        // when a wider rung's freshest report predated one already surfaced.
+        fun report(ts: Long) = BeaconLocationReport(
+            publishedAt = ts, description = "", timestamp = ts,
+            confidence = 1, latitude = 0.0, longitude = 0.0,
+            horizontalAccuracy = 10, status = 0,
+        )
+        // No prior fix: adopt.
+        assertTrue(MapViewModel.isNewer(report(100L), null))
+        // Strictly newer: adopt.
+        assertTrue(MapViewModel.isNewer(report(200L), report(100L)))
+        // Older: reject (the regression this guards).
+        assertFalse(MapViewModel.isNewer(report(50L), report(100L)))
+        // Equal timestamp: reject — not strictly newer, no churn.
+        assertFalse(MapViewModel.isNewer(report(100L), report(100L)))
+    }
+
+    @Test
     fun `external write with an older timestamp does not regress the marker`() = runTest {
         seedBeacon("b1", "Keys", "🔑")
         seedLocation("b1", lat = 1.0, lon = 1.0, ts = 1_000L)

@@ -145,22 +145,33 @@ class MapViewModel(
     }
 
     /**
+     * Adopt [report] as the shown fix for [id] only when it is strictly
+     * newer than what is already held, returning whether the held fix
+     * changed. Both the reactive DB observer and the refresh cascade go
+     * through here, so neither can move a marker backward in time: a
+     * wider cascade rung (or a late reactive emission) can carry a fix
+     * older than one an earlier path already surfaced, and adopting it
+     * unconditionally briefly showed the older position after the newer
+     * one — for seconds when a heavy decrypt backed up the io dispatcher
+     * that would otherwise correct it.
+     */
+    private fun adoptIfNewer(id: String, report: BeaconLocationReport): Boolean {
+        if (!isNewer(report, latestLocationByBeacon[id])) return false
+        latestLocationByBeacon[id] = report
+        return true
+    }
+
+    /**
      * Collect the reactive last-location-per-beacon stream and fold each
-     * emission into [latestLocationByBeacon] + re-emit markers/cards.
-     * Only adopts a report when it is strictly newer than what we hold,
-     * so a concurrent in-flight refresh that already wrote the same row
-     * doesn't cause a visible flicker from older-then-newer ordering.
+     * emission into [latestLocationByBeacon] via [adoptIfNewer] + re-emit
+     * markers/cards.
      */
     private fun observeLocations() {
         runScope.launch {
             beaconRepo.observeLastLocationsForAll(ioDispatcher).collect { latest ->
                 var changed = false
                 for ((id, report) in latest) {
-                    val existing = latestLocationByBeacon[id]
-                    if (existing == null || report.timestamp > existing.timestamp) {
-                        latestLocationByBeacon[id] = report
-                        changed = true
-                    }
+                    if (adoptIfNewer(id, report)) changed = true
                 }
                 if (!changed) return@collect
                 val (markers, cards) = withContext(ioDispatcher) {
@@ -374,7 +385,7 @@ class MapViewModel(
                     if (reports.isNotEmpty()) {
                         beaconRepo.storeToLocationCache(reports)
                         for ((id, list) in reports) {
-                            list.maxByOrNull { it.timestamp }?.let { latestLocationByBeacon[id] = it }
+                            list.maxByOrNull { it.timestamp }?.let { adoptIfNewer(id, it) }
                         }
                     }
                     buildMarkers() to buildCards()
@@ -705,5 +716,15 @@ class MapViewModel(
 
         /** Minimum gap between fetches. Rate-limits Apple's endpoint. */
         const val DEFAULT_MIN_REFRESH_INTERVAL_MS: Long = 60_000L
+
+        /**
+         * The "never move a marker backward in time" rule, shared by the
+         * DB observer and the refresh cascade. A fix is adopted only when
+         * strictly newer than the one already held (or when there is none).
+         */
+        internal fun isNewer(
+            candidate: BeaconLocationReport,
+            existing: BeaconLocationReport?,
+        ): Boolean = existing == null || candidate.timestamp > existing.timestamp
     }
 }
