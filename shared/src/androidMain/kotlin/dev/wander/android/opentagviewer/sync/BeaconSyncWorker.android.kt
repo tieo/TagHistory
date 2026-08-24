@@ -6,11 +6,16 @@ import androidx.work.BackoffPolicy
 import androidx.work.Constraints
 import androidx.work.CoroutineWorker
 import androidx.work.ExistingPeriodicWorkPolicy
+import androidx.work.ExistingWorkPolicy
 import androidx.work.NetworkType
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.OutOfQuotaPolicy
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
+import androidx.work.workDataOf
 import io.github.tieo.taghistory.data.model.UserSettings
+import io.github.tieo.taghistory.data.repo.SyncTrigger
 import java.util.concurrent.TimeUnit
 
 /**
@@ -33,7 +38,10 @@ class BeaconSyncWorker(
             Log.w(TAG, "BeaconSyncWorker fired without orchestratorProvider wired; skipping")
             return Result.success()
         }
-        return when (val outcome = orchestrator.run()) {
+        val trigger = runCatching {
+            SyncTrigger.valueOf(inputData.getString(KEY_TRIGGER) ?: SyncTrigger.WORKER.name)
+        }.getOrDefault(SyncTrigger.WORKER)
+        return when (val outcome = orchestrator.run(trigger)) {
             is BeaconSyncOrchestrator.Outcome.Success -> {
                 Log.i(
                     TAG,
@@ -51,6 +59,8 @@ class BeaconSyncWorker(
     companion object {
         private const val TAG = "BeaconSyncWorker"
         const val UNIQUE_WORK_NAME = "background_location_sync"
+        const val ONESHOT_WORK_NAME = "background_location_sync_oneshot"
+        const val KEY_TRIGGER = "trigger"
         const val DEFAULT_INTERVAL_MINUTES = 30
         const val MIN_INTERVAL_MINUTES = 15
 
@@ -72,6 +82,7 @@ class BeaconSyncWorker(
             val wm = WorkManager.getInstance(context.applicationContext)
             if (!settings.isBackgroundSyncEnabled()) {
                 wm.cancelUniqueWork(UNIQUE_WORK_NAME)
+                SyncAlarmScheduler.disable(context)
                 return
             }
             val intervalMinutes = resolveIntervalMinutes(settings)
@@ -82,6 +93,7 @@ class BeaconSyncWorker(
                 intervalMinutes.toLong(), TimeUnit.MINUTES,
             )
                 .setConstraints(constraints)
+                .setInputData(workDataOf(KEY_TRIGGER to SyncTrigger.WORKER.name))
                 // LINEAR, not the default EXPONENTIAL: a run that fails because
                 // the network/DNS was down at fire time should retry in a fixed
                 // ~15 min, not double toward WorkManager's 5 h cap and leave the
@@ -93,9 +105,34 @@ class BeaconSyncWorker(
                 ExistingPeriodicWorkPolicy.UPDATE,
                 request,
             )
+            // Doze backstop: the periodic job above is deferred for hours in
+            // deep Doze, so pair it with an allow-while-idle alarm that fires
+            // overnight. The orchestrator throttles the overlap so the two
+            // triggers don't double-fetch.
+            SyncAlarmScheduler.schedule(context, intervalMinutes)
+        }
+
+        /**
+         * Enqueue a single expedited sync now, tagged with [trigger]. Used by
+         * [SyncAlarmReceiver] when the Doze-proof alarm fires. KEEP so a burst
+         * of alarms can't stack duplicate work.
+         */
+        fun enqueueOneShot(context: Context, trigger: SyncTrigger) {
+            val constraints = Constraints.Builder()
+                .setRequiredNetworkType(NetworkType.CONNECTED)
+                .build()
+            val request = OneTimeWorkRequestBuilder<BeaconSyncWorker>()
+                .setConstraints(constraints)
+                .setInputData(workDataOf(KEY_TRIGGER to trigger.name))
+                .setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
+                .setBackoffCriteria(BackoffPolicy.LINEAR, 15, TimeUnit.MINUTES)
+                .build()
+            WorkManager.getInstance(context.applicationContext)
+                .enqueueUniqueWork(ONESHOT_WORK_NAME, ExistingWorkPolicy.KEEP, request)
         }
 
         fun cancel(context: Context) {
+            SyncAlarmScheduler.disable(context)
             WorkManager.getInstance(context.applicationContext)
                 .cancelUniqueWork(UNIQUE_WORK_NAME)
         }

@@ -9,6 +9,8 @@
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <!-- Re-arm the Doze-proof sync alarm after a reboot. -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
     <!-- BLE nearby tag detection. SCAN/CONNECT are the Android 12+ replacement for the legacy
          BLUETOOTH/BLUETOOTH_ADMIN pair; the neverForLocation flag asserts we don't infer
@@ -65,6 +67,23 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- Doze-proof background-sync backstop: an allow-while-idle alarm fires
+             this receiver, which enqueues an expedited sync and re-arms itself.
+             Not exported: only our own PendingIntent triggers it. -->
+        <receiver
+            android:name="io.github.tieo.taghistory.sync.SyncAlarmReceiver"
+            android:exported="false" />
+
+        <receiver
+            android:name="io.github.tieo.taghistory.sync.SyncBootReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.LOCKED_BOOT_COMPLETED" />
+                <action android:name="android.intent.action.QUICKBOOT_POWERON" />
+            </intent-filter>
+        </receiver>
 
         <provider
             android:name="androidx.core.content.FileProvider"
