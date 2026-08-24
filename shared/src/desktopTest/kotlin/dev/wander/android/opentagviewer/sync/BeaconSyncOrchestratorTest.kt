@@ -8,6 +8,8 @@ import io.github.tieo.taghistory.data.model.BeaconLocationReport
 import io.github.tieo.taghistory.data.model.ImportData
 import io.github.tieo.taghistory.data.model.UserSettings
 import io.github.tieo.taghistory.data.repo.BeaconRepository
+import io.github.tieo.taghistory.data.repo.SyncRunRepository
+import io.github.tieo.taghistory.data.repo.SyncTrigger
 import io.github.tieo.taghistory.data.repo.UserAuthRepository
 import io.github.tieo.taghistory.data.repo.UserSettingsRepository
 import io.github.tieo.taghistory.data.storage.SecureBlobStore
@@ -341,5 +343,89 @@ class BeaconSyncOrchestratorTest {
         assertIs<BeaconSyncOrchestrator.Outcome.Success>(outcome)
         assertEquals(originalAcc.uid, receivedUid)
         assertEquals("sekret", receivedPassword)
+    }
+
+    private fun oneReport() = BeaconLocationReport(
+        publishedAt = now, description = "", timestamp = now,
+        confidence = 1, latitude = 1.0, longitude = 2.0,
+        horizontalAccuracy = 10, status = 0,
+    )
+
+    @Test
+    fun `records a SUCCESS run with counts`(): Unit = runBlocking {
+        settingsRepo.storeUserSettings(UserSettings(backgroundSyncEnabled = true))
+        storeValidAuthBlob()
+        seedBeacon("beacon-1")
+        val runRepo = SyncRunRepository(db) { now }
+        val orchestrator = BeaconSyncOrchestrator(
+            settingsRepo, authRepo, beaconRepo,
+            fetchReports = { _, accessories, _ -> accessories.keys.associateWith { listOf(oneReport()) } },
+            accessoryLoader = { stubAccessory() },
+            syncRunRepo = runRepo,
+            nowMs = { now },
+        )
+
+        assertIs<BeaconSyncOrchestrator.Outcome.Success>(orchestrator.run(SyncTrigger.WORKER))
+
+        val rows = db.syncRunRecordQueries.recent(10).executeAsList()
+        assertEquals(1, rows.size)
+        assertEquals("SUCCESS", rows.single().outcome)
+        assertEquals("WORKER", rows.single().trigger_kind)
+        assertEquals(1L, rows.single().persisted_reports)
+        assertEquals(1L, rows.single().beacon_count)
+    }
+
+    @Test
+    fun `throttles an overlapping WORKER run within the min gap`(): Unit = runBlocking {
+        settingsRepo.storeUserSettings(UserSettings(backgroundSyncEnabled = true))
+        storeValidAuthBlob()
+        seedBeacon("beacon-1")
+        val runRepo = SyncRunRepository(db) { now }
+        var fetchCount = 0
+        val orchestrator = BeaconSyncOrchestrator(
+            settingsRepo, authRepo, beaconRepo,
+            fetchReports = { _, accessories, _ ->
+                fetchCount++
+                accessories.keys.associateWith { listOf(oneReport()) }
+            },
+            accessoryLoader = { stubAccessory() },
+            syncRunRepo = runRepo,
+            nowMs = { now },
+        )
+
+        orchestrator.run(SyncTrigger.WORKER) // effective
+        now += 2 * 60_000L // 2 min later, well inside the 30 min gap (interval 60 default)
+        val second = orchestrator.run(SyncTrigger.ALARM)
+
+        assertIs<BeaconSyncOrchestrator.Outcome.Success>(second) // SKIPPED maps to Success (no retry)
+        assertEquals(1, fetchCount, "second overlapping run must not fetch")
+        val rows = db.syncRunRecordQueries.recent(10).executeAsList()
+        assertEquals(2, rows.size)
+        assertEquals("SKIPPED", rows.first().outcome) // newest first
+        assertEquals("ALARM", rows.first().trigger_kind)
+    }
+
+    @Test
+    fun `a MANUAL run bypasses the throttle`(): Unit = runBlocking {
+        settingsRepo.storeUserSettings(UserSettings(backgroundSyncEnabled = true))
+        storeValidAuthBlob()
+        seedBeacon("beacon-1")
+        val runRepo = SyncRunRepository(db) { now }
+        var fetchCount = 0
+        val orchestrator = BeaconSyncOrchestrator(
+            settingsRepo, authRepo, beaconRepo,
+            fetchReports = { _, accessories, _ ->
+                fetchCount++
+                accessories.keys.associateWith { listOf(oneReport()) }
+            },
+            accessoryLoader = { stubAccessory() },
+            syncRunRepo = runRepo,
+            nowMs = { now },
+        )
+
+        orchestrator.run(SyncTrigger.WORKER)
+        now += 1 * 60_000L
+        assertIs<BeaconSyncOrchestrator.Outcome.Success>(orchestrator.run(SyncTrigger.MANUAL))
+        assertEquals(2, fetchCount, "manual run must fetch even inside the throttle window")
     }
 }

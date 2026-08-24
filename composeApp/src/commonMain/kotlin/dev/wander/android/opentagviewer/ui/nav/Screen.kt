@@ -8,4 +8,5 @@ sealed class Screen {
     data class History(val beaconId: String, val title: String) : Screen()
     data object Nearby : Screen()
     data object ManageTags : Screen()
+    data object SyncActivity : Screen()
 }

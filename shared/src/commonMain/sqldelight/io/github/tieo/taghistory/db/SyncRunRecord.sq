@@ -1,0 +1,38 @@
+-- One row per background sync attempt (the periodic WorkManager job or the
+-- Doze-proof alarm one-shot). Lets the app show, over time, whether the
+-- background actually ran and stored data -- the raw SyncLog only ever went to
+-- logcat and vanished. `trigger_kind` is quoted-avoiding: `trigger` is a SQLite
+-- keyword, so the column is named `trigger_kind`.
+
+CREATE TABLE IF NOT EXISTS SyncRunRecord (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    started_at INTEGER NOT NULL,
+    trigger_kind TEXT NOT NULL,        -- WORKER | ALARM | MANUAL
+    outcome TEXT NOT NULL,             -- SUCCESS | RETRY | SKIPPED
+    detail TEXT,                       -- skip reason or error summary, else NULL
+    persisted_reports INTEGER NOT NULL DEFAULT 0,
+    beacon_count INTEGER NOT NULL DEFAULT 0,
+    window_hours INTEGER,
+    duration_ms INTEGER
+);
+
+CREATE INDEX IF NOT EXISTS SyncRunRecord_started_at ON SyncRunRecord(started_at);
+
+insert:
+INSERT INTO SyncRunRecord(
+    started_at, trigger_kind, outcome, detail, persisted_reports, beacon_count, window_hours, duration_ms
+) VALUES (
+    :startedAt, :triggerKind, :outcome, :detail, :persistedReports, :beaconCount, :windowHours, :durationMs
+);
+
+recent:
+SELECT * FROM SyncRunRecord ORDER BY started_at DESC LIMIT :limit;
+
+-- Newest run whose outcome was not SKIPPED -- used to throttle overlapping
+-- triggers (the periodic job and the alarm firing close together). Single
+-- non-aggregate column so it returns a plain Long, no generated wrapper.
+lastEffectiveAt:
+SELECT started_at FROM SyncRunRecord WHERE outcome != 'SKIPPED' ORDER BY started_at DESC LIMIT 1;
+
+pruneOlderThan:
+DELETE FROM SyncRunRecord WHERE started_at < :cutoff;

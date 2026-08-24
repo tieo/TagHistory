@@ -125,6 +125,7 @@ class AndroidAppHost private constructor(
     }
 
     private val beaconRepo by lazy { BeaconRepository(db) }
+    private val syncRunRepo by lazy { io.github.tieo.taghistory.data.repo.SyncRunRepository(db) }
     private val userSettingsRepo by lazy {
         io.github.tieo.taghistory.data.repo.UserSettingsRepository(
             settingsFactory.create(SETTINGS_STORE_USER_SETTINGS),
@@ -330,7 +331,11 @@ class AndroidAppHost private constructor(
         // install. The old fixed 7-day-every-hour sweep flooded network/CPU
         // (a 2h manual reload measured 9.3s while a 168h sweep ran alongside).
         maxHoursBack = 24 * 7,
+        syncRunRepo = syncRunRepo,
     )
+
+    /** Durable background-sync run log for the Sync-activity screen. */
+    fun syncRunRepository(): io.github.tieo.taghistory.data.repo.SyncRunRepository = syncRunRepo
 
     /**
      * Build the "Refresh now" callback used by Settings. Forces a fetch
@@ -493,6 +498,7 @@ class AndroidAppHost private constructor(
             context.startActivity(chooser)
         },
         settingsFlow = userSettingsRepo.flow,
+        syncRuns = { syncRunRepo.observeRecent(limit = 200, context = Dispatchers.IO) },
         onImport = onImport,
         onImportPreview = onImportPreview,
         onImportCommit = createImportCommitCallback(),

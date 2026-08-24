@@ -4,6 +4,10 @@ import io.github.tieo.taghistory.apple.account.AppleAccount
 import io.github.tieo.taghistory.apple.findmy.FindMyAccessory
 import io.github.tieo.taghistory.data.model.BeaconLocationReport
 import io.github.tieo.taghistory.data.repo.BeaconRepository
+import io.github.tieo.taghistory.data.repo.SyncOutcome
+import io.github.tieo.taghistory.data.repo.SyncRun
+import io.github.tieo.taghistory.data.repo.SyncRunRepository
+import io.github.tieo.taghistory.data.repo.SyncTrigger
 import io.github.tieo.taghistory.data.repo.UserAuthRepository
 import io.github.tieo.taghistory.data.repo.UserSettingsRepository
 import io.github.tieo.taghistory.db.OwnedBeacons
@@ -39,6 +43,12 @@ class BeaconSyncOrchestrator(
     private val maxHoursBack: Int = DEFAULT_MAX_HOURS_BACK,
     /** Lower bound on the adaptive window — the routine ~hourly cadence floor. */
     private val minHoursBack: Int = DEFAULT_MIN_HOURS_BACK,
+    /**
+     * Durable per-run log. Null in tests that don't assert on it. Every exit of
+     * [run] writes one row here so the Sync-activity screen can show whether the
+     * background actually ran and stored data over time.
+     */
+    private val syncRunRepo: SyncRunRepository? = null,
     /** Injectable clock for tests. */
     private val nowMs: () -> Long = { defaultNowMs() },
 ) {
@@ -59,17 +69,68 @@ class BeaconSyncOrchestrator(
         data class Retry(val cause: Throwable) : Outcome()
     }
 
-    suspend fun run(): Outcome {
+    suspend fun run(trigger: SyncTrigger = SyncTrigger.WORKER): Outcome {
+        val startedAt = nowMs()
+
+        // Record one row per exit and map the internal outcome to the
+        // WorkManager Result the worker needs. SKIPPED (disabled / no auth /
+        // nothing to do / throttled) is NOT a retry — it maps to Success so
+        // WorkManager doesn't back off.
+        fun finish(
+            outcome: SyncOutcome,
+            detail: String? = null,
+            persisted: Int = 0,
+            beacons: Int = 0,
+            window: Int? = null,
+            cause: Throwable? = null,
+        ): Outcome {
+            runCatching {
+                syncRunRepo?.record(
+                    SyncRun(
+                        startedAtMs = startedAt,
+                        trigger = trigger,
+                        outcome = outcome,
+                        detail = detail,
+                        persistedReports = persisted,
+                        beaconCount = beacons,
+                        windowHours = window,
+                        durationMs = nowMs() - startedAt,
+                    ),
+                )
+            }
+            return if (outcome == SyncOutcome.RETRY) {
+                Outcome.Retry(cause ?: RuntimeException(detail ?: "retry"))
+            } else {
+                Outcome.Success(persistedReports = persisted, beaconCount = beacons)
+            }
+        }
+
         val settings = settingsRepo.getUserSettings()
         if (!settings.isBackgroundSyncEnabled()) {
             SyncLog.record(SyncEvent.Kind.INFO, "Background sync: disabled in settings, skipping")
-            return Outcome.Success(persistedReports = 0, beaconCount = 0)
+            return finish(SyncOutcome.SKIPPED, "disabled in settings")
+        }
+
+        // Throttle overlapping triggers: the periodic WorkManager job and the
+        // Doze-proof alarm both fire ~every interval and can land close
+        // together. If an effective run happened within half the interval,
+        // skip — the data is already fresh and a second Apple sweep just risks
+        // throttling. A MANUAL press always runs.
+        if (trigger != SyncTrigger.MANUAL) {
+            val intervalMin = settings.backgroundSyncIntervalMinutes ?: DEFAULT_INTERVAL_MINUTES_FALLBACK
+            val minGapMs = maxOf(MIN_THROTTLE_GAP_MINUTES, intervalMin / 2).toLong() * 60_000L
+            val lastEffective = syncRunRepo?.lastEffectiveAtMs()
+            if (lastEffective != null && startedAt - lastEffective < minGapMs) {
+                val agoMin = (startedAt - lastEffective) / 60_000L
+                SyncLog.record(SyncEvent.Kind.INFO, "Background sync: throttled, ${agoMin}m since last run")
+                return finish(SyncOutcome.SKIPPED, "throttled: ${agoMin}m since last run")
+            }
         }
 
         val userAuth = authRepo.getUserAuth()
         if (userAuth == null) {
             SyncLog.record(SyncEvent.Kind.INFO, "Background sync: no auth, skipping")
-            return Outcome.Success(persistedReports = 0, beaconCount = 0)
+            return finish(SyncOutcome.SKIPPED, "no auth")
         }
 
         val beacons = beaconRepo.getAllBeacons()
@@ -85,7 +146,7 @@ class BeaconSyncOrchestrator(
         }
         if (accessoriesById.isEmpty()) {
             SyncLog.record(SyncEvent.Kind.INFO, "Background sync: no loadable accessories, skipping")
-            return Outcome.Success(persistedReports = 0, beaconCount = 0)
+            return finish(SyncOutcome.SKIPPED, "no loadable accessories")
         }
 
         // Adaptive window: fetch only as far back as the data is stale, instead
@@ -127,7 +188,12 @@ class BeaconSyncOrchestrator(
                 "Background sync persisted $total reports across ${reports.size} beacons",
                 mapOf("persisted" to total.toString(), "beacons" to reports.size.toString()),
             )
-            Outcome.Success(persistedReports = total, beaconCount = reports.size)
+            finish(
+                SyncOutcome.SUCCESS,
+                persisted = total,
+                beacons = reports.size,
+                window = effectiveHours,
+            )
         } catch (e: Throwable) {
             // Throwable, not Exception: an anisette decrypt can OutOfMemoryError
             // (an Error). If that escaped, the worker died uninstrumented and
@@ -141,7 +207,12 @@ class BeaconSyncOrchestrator(
                     "error_msg" to (e.message ?: "?"),
                 ),
             )
-            Outcome.Retry(e)
+            finish(
+                SyncOutcome.RETRY,
+                detail = "${e::class.simpleName}: ${e.message}",
+                window = effectiveHours,
+                cause = e,
+            )
         }
     }
 
@@ -157,6 +228,12 @@ class BeaconSyncOrchestrator(
         const val DEFAULT_MIN_HOURS_BACK: Int = 2
         /** Slack added to the measured staleness gap so we never just-miss a fix. */
         const val WINDOW_MARGIN_HOURS: Int = 1
+
+        /** Used for the throttle only when no interval is set in settings. */
+        const val DEFAULT_INTERVAL_MINUTES_FALLBACK: Int = 60
+
+        /** Floor on the overlap-throttle gap regardless of interval. */
+        const val MIN_THROTTLE_GAP_MINUTES: Int = 10
 
         @OptIn(kotlin.time.ExperimentalTime::class)
         private fun defaultNowMs(): Long = kotlin.time.Clock.System.now().toEpochMilliseconds()

@@ -57,6 +57,7 @@ fun SettingsScreen(
     viewModel: SettingsViewModel,
     onOpenInformation: () -> Unit,
     onOpenNearby: (() -> Unit)? = null,
+    onOpenSyncActivity: (() -> Unit)? = null,
     onImport: (suspend () -> String?)? = null,
     onRefreshNow: (suspend () -> String?)? = null,
     isIgnoringBatteryOptimizations: (() -> Boolean)? = null,
@@ -279,6 +280,16 @@ fun SettingsScreen(
                     onClick = onOpenNearby,
                     modifier = Modifier.fillMaxWidth().testTag("btn_open_nearby"),
                 ) { Text("Scan for nearby tags") }
+            }
+        }
+
+        // ---------- Sync activity ----------
+        if (onOpenSyncActivity != null) {
+            SettingsSection("Background sync") {
+                OutlinedButton(
+                    onClick = onOpenSyncActivity,
+                    modifier = Modifier.fillMaxWidth().testTag("btn_sync_activity"),
+                ) { Text("Sync activity") }
             }
         }
 

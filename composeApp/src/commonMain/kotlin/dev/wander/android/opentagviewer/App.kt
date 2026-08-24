@@ -1,6 +1,9 @@
+@file:OptIn(kotlin.time.ExperimentalTime::class)
+
 package io.github.tieo.taghistory
 
 import androidx.compose.foundation.isSystemInDarkTheme
+import kotlin.time.Clock
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -94,6 +97,9 @@ data class AppHostFactories(
      */
     val routeTo: (lat: Double, lon: Double, label: String) -> Unit = { _, _, _ -> },
     val settingsFlow: StateFlow<UserSettings> = MutableStateFlow(UserSettings()),
+    /** Durable background-sync run log for the Sync-activity screen. */
+    val syncRuns: () -> kotlinx.coroutines.flow.Flow<List<io.github.tieo.taghistory.data.repo.SyncRun>> =
+        { MutableStateFlow(emptyList()) },
     val onImport: (suspend () -> String?)? = null,
     /**
      * Two-stage import: open file picker, parse the archive but don't
@@ -350,6 +356,7 @@ private fun AuthedNav(
                         viewModel = settingsVm,
                         onOpenInformation = { nav = nav.push(Screen.Information) },
                         onOpenNearby = { nav = nav.push(Screen.Nearby) },
+                        onOpenSyncActivity = { nav = nav.push(Screen.SyncActivity) },
                         onImport = onImport,
                         onRefreshNow = refreshNow,
                         isIgnoringBatteryOptimizations = factories.isIgnoringBatteryOptimizations,
@@ -361,6 +368,15 @@ private fun AuthedNav(
                         versionName = factories.appVersion,
                         onBack = { nav = nav.pop() },
                         onOpenUrl = factories.openUrl,
+                    )
+                }
+                is Screen.SyncActivity -> {
+                    val runs = remember { factories.syncRuns() }
+                        .collectAsStateWithLifecycle(emptyList()).value
+                    io.github.tieo.taghistory.ui.sync.SyncActivityScreen(
+                        runs = runs,
+                        onBack = { nav = nav.pop() },
+                        nowMs = Clock.System.now().toEpochMilliseconds(),
                     )
                 }
                 is Screen.DeviceInfo -> {

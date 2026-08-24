@@ -1,0 +1,17 @@
+-- v3: add SyncRunRecord. New table only; no data movement. Fresh installs get
+-- the table from SyncRunRecord.sq via Schema.create; existing DBs hit this
+-- migration on first open after the upgrade.
+
+CREATE TABLE IF NOT EXISTS SyncRunRecord (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    started_at INTEGER NOT NULL,
+    trigger_kind TEXT NOT NULL,
+    outcome TEXT NOT NULL,
+    detail TEXT,
+    persisted_reports INTEGER NOT NULL DEFAULT 0,
+    beacon_count INTEGER NOT NULL DEFAULT 0,
+    window_hours INTEGER,
+    duration_ms INTEGER
+);
+
+CREATE INDEX IF NOT EXISTS SyncRunRecord_started_at ON SyncRunRecord(started_at);
