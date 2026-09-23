@@ -113,15 +113,17 @@ class BeaconSyncOrchestrator(
 
         // Throttle overlapping triggers: the periodic WorkManager job and the
         // Doze-proof alarm both fire ~every interval and can land close
-        // together. If an effective run happened within half the interval,
+        // together. If a successful run happened within half the interval,
         // skip — the data is already fresh and a second Apple sweep just risks
-        // throttling. A MANUAL press always runs.
+        // throttling. Only a success counts: WorkManager retries a failed run
+        // after its backoff, and that retry must go through. A MANUAL press
+        // always runs.
         if (trigger != SyncTrigger.MANUAL) {
             val intervalMin = settings.effectiveBackgroundSyncIntervalMinutes()
             val minGapMs = maxOf(MIN_THROTTLE_GAP_MINUTES, intervalMin / 2).toLong() * 60_000L
-            val lastEffective = syncRunRepo?.lastEffectiveAtMs()
-            if (lastEffective != null && startedAt - lastEffective < minGapMs) {
-                val agoMin = (startedAt - lastEffective) / 60_000L
+            val lastSuccess = syncRunRepo?.lastSuccessAtMs()
+            if (lastSuccess != null && startedAt - lastSuccess < minGapMs) {
+                val agoMin = (startedAt - lastSuccess) / 60_000L
                 SyncLog.record(SyncEvent.Kind.INFO, "Background sync: throttled, ${agoMin}m since last run")
                 return finish(SyncOutcome.SKIPPED, "throttled: ${agoMin}m since last run")
             }

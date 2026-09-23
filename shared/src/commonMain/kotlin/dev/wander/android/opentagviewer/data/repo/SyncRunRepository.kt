@@ -63,8 +63,8 @@ class SyncRunRepository(
         }
     }
 
-    /** Epoch ms of the newest non-skipped run, or null if there is none. */
-    fun lastEffectiveAtMs(): Long? = queries.lastEffectiveAt().executeAsOneOrNull()
+    /** Epoch ms of the newest successful run, or null if there is none. */
+    fun lastSuccessAtMs(): Long? = queries.lastSuccessAt().executeAsOneOrNull()
 
     fun observeRecent(limit: Long = 100, context: CoroutineContext = Dispatchers.Default): Flow<List<SyncRun>> =
         queries.recent(limit).asFlow().mapToList(context).map { rows -> rows.map { it.toDomain() } }

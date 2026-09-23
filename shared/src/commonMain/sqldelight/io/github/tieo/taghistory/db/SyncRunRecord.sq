@@ -28,11 +28,12 @@ INSERT INTO SyncRunRecord(
 recent:
 SELECT * FROM SyncRunRecord ORDER BY started_at DESC LIMIT :limit;
 
--- Newest run whose outcome was not SKIPPED -- used to throttle overlapping
--- triggers (the periodic job and the alarm firing close together). Single
--- non-aggregate column so it returns a plain Long, no generated wrapper.
-lastEffectiveAt:
-SELECT started_at FROM SyncRunRecord WHERE outcome != 'SKIPPED' ORDER BY started_at DESC LIMIT 1;
+-- Newest successful run -- used to throttle overlapping triggers (the
+-- periodic job and the alarm firing close together). Only a success counts:
+-- a failed run stored nothing, so it must not suppress the retry after it.
+-- Single non-aggregate column so it returns a plain Long, no wrapper.
+lastSuccessAt:
+SELECT started_at FROM SyncRunRecord WHERE outcome = 'SUCCESS' ORDER BY started_at DESC LIMIT 1;
 
 pruneOlderThan:
 DELETE FROM SyncRunRecord WHERE started_at < :cutoff;

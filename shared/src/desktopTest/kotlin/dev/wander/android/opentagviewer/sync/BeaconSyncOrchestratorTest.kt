@@ -428,4 +428,35 @@ class BeaconSyncOrchestratorTest {
         assertIs<BeaconSyncOrchestrator.Outcome.Success>(orchestrator.run(SyncTrigger.MANUAL))
         assertEquals(2, fetchCount, "manual run must fetch even inside the throttle window")
     }
+
+    @Test
+    fun `a failed run does not throttle the retry that follows it`(): Unit = runBlocking {
+        // WorkManager retries a failed run after its linear backoff. That retry
+        // lands well inside the throttle gap; it must still fetch, because the
+        // failed run stored nothing.
+        settingsRepo.storeUserSettings(UserSettings(backgroundSyncEnabled = true))
+        storeValidAuthBlob()
+        seedBeacon("beacon-1")
+        val runRepo = SyncRunRepository(db) { now }
+        var calls = 0
+        val orchestrator = BeaconSyncOrchestrator(
+            settingsRepo, authRepo, beaconRepo,
+            fetchReports = { _, accessories, _ ->
+                calls++
+                if (calls == 1) throw RuntimeException("Unable to resolve host")
+                accessories.keys.associateWith { listOf(oneReport()) }
+            },
+            accessoryLoader = { stubAccessory() },
+            syncRunRepo = runRepo,
+            nowMs = { now },
+        )
+
+        assertIs<BeaconSyncOrchestrator.Outcome.Retry>(orchestrator.run(SyncTrigger.WORKER))
+        now += 15 * 60_000L // WorkManager's linear backoff
+        val retry = orchestrator.run(SyncTrigger.WORKER)
+
+        assertEquals(2, calls, "the retry must fetch, not be throttled by the failed run")
+        val success = assertIs<BeaconSyncOrchestrator.Outcome.Success>(retry)
+        assertEquals(1, success.persistedReports)
+    }
 }
