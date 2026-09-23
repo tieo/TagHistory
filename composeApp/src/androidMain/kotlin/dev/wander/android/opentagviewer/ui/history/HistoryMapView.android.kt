@@ -107,6 +107,10 @@ actual fun HistoryMapView(
     }
     val lastAppliedBasemap = remember { arrayOf(effectiveBasemap) }
     val lastRenderedPointsKey = remember { arrayOf<List<Long>>(emptyList()) }
+    // Selection last shown. The update block runs on every recomposition,
+    // including when geocoding patches addresses into the same points, so the
+    // camera may only pan when the selection itself changed.
+    val lastRenderedSelection = remember { arrayOf<Int?>(-1) }
 
     io.github.tieo.taghistory.ui.map.BindMapViewLifecycle(mapView)
 
@@ -137,6 +141,7 @@ actual fun HistoryMapView(
             val initialOrdered = currentPoints.value.sortedBy { it.timestampMs }
             val initialKey = initialOrdered.map { it.timestampMs }
             lastRenderedPointsKey[0] = initialKey
+            lastRenderedSelection[0] = currentSelectedIdx.value
             mapView.getMapAsync { map ->
                 PerfTrace.mark("getMapAsync first callback")
                 map.uiSettings.isRotateGesturesEnabled = false
@@ -210,6 +215,8 @@ actual fun HistoryMapView(
             // bounds and looked like a spurious zoom-in.
             val pointsChanged = newKey != lastRenderedPointsKey[0]
             if (pointsChanged) lastRenderedPointsKey[0] = newKey
+            val selectionChanged = sel != lastRenderedSelection[0]
+            lastRenderedSelection[0] = sel
             onRendered(newKey)
             mapView.getMapAsync { map ->
                 val style = map.style ?: return@getMapAsync
@@ -218,7 +225,9 @@ actual fun HistoryMapView(
                     renderPath(map, style, ordered, fitCamera = true, topInsetPx = topInset, bottomInsetPx = bottomInset)
                     renderAllDots(style, ordered)
                 }
-                renderSelectedPoint(map, style, ordered, sel, panCamera = !pointsChanged)
+                // New points get a fit above; otherwise follow a new selection
+                // and leave the camera alone for anything else.
+                renderSelectedPoint(map, style, ordered, sel, panCamera = !pointsChanged && selectionChanged)
                 // labels removed
                 style.getLayer(PATH_LAYER)?.setProperties(
                     PropertyFactory.visibility(
