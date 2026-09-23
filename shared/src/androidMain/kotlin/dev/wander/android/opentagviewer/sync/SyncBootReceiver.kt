@@ -12,8 +12,10 @@ import android.content.Intent
 class SyncBootReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         val action = intent.action ?: return
+        // BOOT_COMPLETED arrives after the user unlocks, when the credential
+        // storage the prefs live in is readable. QUICKBOOT_POWERON is the same
+        // event on devices with a fast-boot mode.
         if (action == Intent.ACTION_BOOT_COMPLETED ||
-            action == Intent.ACTION_LOCKED_BOOT_COMPLETED ||
             action == "android.intent.action.QUICKBOOT_POWERON"
         ) {
             SyncAlarmScheduler.rescheduleFromPrefs(context)
