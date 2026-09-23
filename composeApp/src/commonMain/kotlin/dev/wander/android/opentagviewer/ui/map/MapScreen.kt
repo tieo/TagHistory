@@ -56,6 +56,8 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
@@ -263,7 +265,6 @@ private fun EmptyDevicesCard(
 internal fun TagGlassList(
     cards: List<TagCardUi>,
     selectedBeaconId: String?,
-    @Suppress("UNUSED_PARAMETER")
     fetchingBeaconIds: Set<String>,
     isRefreshing: Boolean,
     hasError: Boolean,
@@ -346,6 +347,7 @@ internal fun TagGlassList(
                     TagGlassRow(
                         card = card,
                         isSelected = card.beaconId == selectedBeaconId,
+                        isFetching = card.beaconId in fetchingBeaconIds,
                         onSelect = { onSelect(card.beaconId) },
                         onOpenInfo = { onOpenInfo(card.beaconId) },
                         onOpenHistory = { onOpenHistory(card.beaconId, card.displayName) },
@@ -405,7 +407,9 @@ private fun RefreshSpinButton(
         }
         var startNs = 0L
         while (true) {
-            androidx.compose.runtime.withFrameNanos { ns ->
+            // Infinite-animation variant so a test harness's policy can park
+            // this loop; with no policy installed it is plain withFrameNanos.
+            androidx.compose.animation.core.withInfiniteAnimationFrameNanos { ns ->
                 if (startNs == 0L) startNs = ns
                 val elapsedMs = (ns - startNs) / 1_000_000L
                 angle = ((elapsedMs / 900f) * 360f) % 360f
@@ -453,6 +457,7 @@ private fun RefreshSpinButton(
 private fun TagGlassRow(
     card: TagCardUi,
     isSelected: Boolean,
+    isFetching: Boolean,
     onSelect: () -> Unit,
     onOpenInfo: () -> Unit,
     onOpenHistory: () -> Unit,
@@ -512,7 +517,7 @@ private fun TagGlassRow(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
-                AddressLine(card.addressLine, hasLocation, card.latitude, card.longitude)
+                AddressLine(card.addressLine, hasLocation, isFetching, card.latitude, card.longitude)
                 Text(
                     lastUpdatedLabel(card.lastUpdatedMs),
                     fontSize = 11.sp,
@@ -606,6 +611,7 @@ private fun coarseCoords(lat: Double, lon: Double): String {
 private fun AddressLine(
     addressLine: String?,
     hasLocation: Boolean,
+    isFetching: Boolean,
     latitude: Double?,
     longitude: Double?,
 ) {
@@ -620,6 +626,9 @@ private fun AddressLine(
         val streetOnly = addressLine?.substringBefore(",")?.trim()?.takeIf { it.isNotEmpty() }
         Text(
             when {
+                // No fix yet while this tag's fetch is still running: that is
+                // a search in progress, not a verdict that nothing was found.
+                !hasLocation && isFetching -> "Locating…"
                 !hasLocation -> "No recent location"
                 streetOnly != null -> streetOnly
                 // Located but the reverse-geocode has not come back (or the
@@ -672,7 +681,11 @@ private fun LoadingShimmerCard(modifier: Modifier = Modifier) {
         color = MaterialTheme.colorScheme.surface.copy(alpha = 0.92f),
         tonalElevation = 3.dp,
         shadowElevation = 8.dp,
-        modifier = modifier,
+        // The skeleton bars carry no text, so the card states what it is for
+        // screen readers (and gives tests something to find).
+        modifier = modifier
+            .testTag("map_loading_placeholder")
+            .semantics { contentDescription = "Loading tags" },
     ) {
         Column(
             modifier = Modifier.fillMaxWidth().padding(20.dp),

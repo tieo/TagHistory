@@ -5,6 +5,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.runComposeUiTest
 import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver
@@ -18,11 +19,14 @@ import io.github.tieo.taghistory.data.storage.SecureBlobStore
 import io.github.tieo.taghistory.db.TagHistoryDatabase
 import io.github.tieo.taghistory.ui.theme.TagHistoryTheme
 import java.util.Properties
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.TestCoroutineScheduler
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
 import kotlin.test.AfterTest
@@ -55,6 +59,8 @@ class MapScreenTest {
 
     @AfterTest
     fun tearDown() {
+        vmScopes.forEach { it.cancel() }
+        vmScopes.clear()
         Dispatchers.resetMain()
     }
 
@@ -79,37 +85,61 @@ class MapScreenTest {
         )
     }
 
+    // Every VM's scope is cancelled in tearDown; otherwise a test whose fetch
+    // never completes leaves its VM running into the following tests.
+    private val vmScopes = mutableListOf<CoroutineScope>()
+
     private fun buildVm(
         fetchReports: suspend (Map<String, BeaconData>, Int) -> Map<String, List<BeaconLocationReport>> =
             { _, _ -> emptyMap() },
+        ioDispatcher: CoroutineDispatcher = Dispatchers.Default,
     ) = MapViewModel(
         beaconRepo = beaconRepo,
         userDataRepo = userDataRepo,
         authRepo = authRepo,
         fetchReports = fetchReports,
         minRefreshIntervalMs = 0L,
-        scope = CoroutineScope(Dispatchers.Default + SupervisorJob()),
+        scope = CoroutineScope(Dispatchers.Default + SupervisorJob()).also { vmScopes += it },
         hoursBack = 24,
+        ioDispatcher = ioDispatcher,
     )
 
     @Test
-    fun map_shows_shimmer_while_initial_fetch_in_progress() = runComposeUiTest {
-        // Beacon exists but fetch suspends indefinitely → isInitialFetchComplete stays false
-        // and no cards → shimmer shown.
+    fun map_shows_loading_placeholder_before_boot_finishes() = runComposeUiTest {
+        // Cards list every owned tag, located or not, so the skeleton only shows
+        // before boot has read the DB. An IO dispatcher on its own scheduler,
+        // never advanced, holds boot there deterministically. (A bare
+        // StandardTestDispatcher() would share the test Main scheduler, which
+        // the Compose harness advances while waiting for idle.)
         seedBeacon("b1", "Keys")
-        val vm = buildVm(fetchReports = { _, _ -> kotlinx.coroutines.suspendCancellableCoroutine { } })
-        // Wait until the VM is actually fetching (isRefreshing=true) so the shimmer is shown.
-        waitUntil(timeoutMillis = 5_000L) { vm.state.value.isRefreshing }
+        val vm = buildVm(ioDispatcher = StandardTestDispatcher(TestCoroutineScheduler()))
         setContent {
             TagHistoryTheme {
                 Surface(color = MaterialTheme.colorScheme.background) {
-                    MapScreen(
-                        viewModel = vm,
-                    )
+                    MapScreen(viewModel = vm)
                 }
             }
         }
+        onNodeWithTag("map_loading_placeholder").assertIsDisplayed()
+        onNodeWithContentDescription("Loading tags").assertIsDisplayed()
         onNodeWithText("No AirTags yet").assertDoesNotExist()
+    }
+
+    @Test
+    fun map_says_locating_for_a_tag_whose_first_fetch_is_in_flight() = runComposeUiTest {
+        seedBeacon("b1", "Keys")
+        val vm = buildVm(fetchReports = { _, _ -> kotlinx.coroutines.suspendCancellableCoroutine { } })
+        waitUntil(timeoutMillis = 5_000L) { "b1" in vm.state.value.fetchingBeaconIds }
+        setContent {
+            TagHistoryTheme {
+                Surface(color = MaterialTheme.colorScheme.background) {
+                    MapScreen(viewModel = vm)
+                }
+            }
+        }
+        onNodeWithText("Keys").assertIsDisplayed()
+        onNodeWithText("Locating…").assertIsDisplayed()
+        onNodeWithText("No recent location").assertDoesNotExist()
     }
 
     @Test
@@ -157,8 +187,8 @@ class MapScreenTest {
                 }
             }
         }
-        onNodeWithText("Details").assertIsDisplayed()
-        onNodeWithText("History").assertIsDisplayed()
+        onNodeWithContentDescription("Details").assertIsDisplayed()
+        onNodeWithContentDescription("History").assertIsDisplayed()
     }
 
     @Test

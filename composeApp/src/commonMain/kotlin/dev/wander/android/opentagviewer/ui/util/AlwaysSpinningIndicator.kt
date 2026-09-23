@@ -1,5 +1,6 @@
 package io.github.tieo.taghistory.ui.util
 
+import androidx.compose.animation.core.withInfiniteAnimationFrameNanos
 import androidx.compose.foundation.Canvas
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
@@ -8,7 +9,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -23,6 +23,12 @@ import androidx.compose.ui.unit.dp
  * device has animator_duration_scale = 0 (developer-options "animations
  * off") because it advances rotation directly from withFrameNanos rather
  * than via the InfiniteTransition / MotionDurationScale machinery.
+ *
+ * Frames come from withInfiniteAnimationFrameNanos, which is withFrameNanos
+ * plus Compose's InfiniteAnimationPolicy: where a policy is installed (UI test
+ * harnesses, Espresso idling) it can park the loop, so a screen showing this
+ * spinner still reaches idle. At runtime there is no policy and every frame
+ * is delivered as before.
  */
 @Composable
 fun AlwaysSpinningIndicator(
@@ -36,7 +42,7 @@ fun AlwaysSpinningIndicator(
     LaunchedEffect(revolutionsPerSecond) {
         var prev = 0L
         while (true) {
-            withFrameNanos { now ->
+            withInfiniteAnimationFrameNanos { now ->
                 if (prev != 0L) {
                     val dt = (now - prev) / 1_000_000_000f
                     angle = (angle + dt * 360f * revolutionsPerSecond) % 360f
