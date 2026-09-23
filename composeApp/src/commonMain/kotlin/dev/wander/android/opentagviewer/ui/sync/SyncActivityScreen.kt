@@ -38,8 +38,9 @@ fun SyncActivityScreen(
     nowMs: Long,
     modifier: Modifier = Modifier,
 ) {
-    PushedScreenScaffold(title = "Sync activity", onBack = onBack, modifier = modifier) { inner ->
-        Column(Modifier.fillMaxSize().padding(inner)) {
+    // PushedScreenScaffold already pads its content by the scaffold insets.
+    PushedScreenScaffold(title = "Sync activity", onBack = onBack, modifier = modifier) { _ ->
+        Column(Modifier.fillMaxSize()) {
             SyncActivityHeader(runs, nowMs)
             HorizontalDivider()
             if (runs.isEmpty()) {
