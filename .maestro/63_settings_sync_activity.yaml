@@ -1,0 +1,50 @@
+appId: io.github.tieo.taghistory
+name: Settings — Sync activity opens from the Background sync section and returns
+---
+- runFlow:
+    file: 00_seed_test_data.yaml
+
+- tapOn:
+    id: "btn_settings"
+- extendedWaitUntil:
+    visible:
+      text: "Settings"
+    timeout: 25000
+
+# The run log sits at the end of the Background sync section, which can be
+# pushed down by the battery-optimization warning, so scroll rather than
+# assume it is on screen.
+- scrollUntilVisible:
+    element:
+      id: "btn_sync_activity"
+    direction: DOWN
+    timeout: 25000
+    centerElement: true
+- tapOn:
+    id: "btn_sync_activity"
+
+- extendedWaitUntil:
+    visible:
+      text: "Sync activity"
+    timeout: 25000
+- extendedWaitUntil:
+    visible:
+      text: "Background sync"
+    timeout: 25000
+# Whether or not a background run happened since the seed, the header counts
+# the recorded runs.
+- extendedWaitUntil:
+    visible:
+      text: ".*recorded run\\(s\\)\\. Times are local\\."
+    timeout: 25000
+
+- back
+- extendedWaitUntil:
+    visible:
+      id: "btn_sync_activity"
+    timeout: 25000
+- back
+- extendedWaitUntil:
+    visible:
+      id: "btn_settings"
+    timeout: 25000

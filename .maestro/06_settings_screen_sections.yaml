@@ -24,8 +24,7 @@ name: Settings screen — all section headers visible and reachable by scroll
 - assertNotVisible:
     text: "About"
 
-# Scroll down: Account/About become visible. (The Advanced section was
-# removed along with the in-app sync-log panel — logs are logcat-only now.)
+# Scroll down: Account/About become visible.
 # Use scrollUntilVisible, not a fixed swipe: the Background-sync section's
 # height varies (a battery-optimization warning may render), so a single
 # swipe isn't guaranteed to reveal the bottom sections.
