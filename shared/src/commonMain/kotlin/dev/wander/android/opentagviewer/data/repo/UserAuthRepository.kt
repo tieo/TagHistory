@@ -4,6 +4,8 @@ import com.russhwolf.settings.Settings
 import io.github.tieo.taghistory.data.model.AppleUserData
 import io.github.tieo.taghistory.data.model.UserAuthData
 import io.github.tieo.taghistory.data.storage.SecureBlobStore
+import io.github.tieo.taghistory.sync.SyncEvent
+import io.github.tieo.taghistory.sync.SyncLog
 import kotlin.io.encoding.Base64
 import kotlin.io.encoding.ExperimentalEncodingApi
 import kotlinx.serialization.json.Json
@@ -25,13 +27,29 @@ class UserAuthRepository(
     private val json: Json = DefaultJson,
 ) {
 
+    /**
+     * The stored credential, or null when there is none or it cannot be read
+     * (corrupt Base64, a keystore key that is gone or failing, unparsable
+     * JSON). Every startup path asks this to decide whether the user is signed
+     * in, so throwing here crashed the app on every launch until its data was
+     * cleared. An unreadable blob reads as signed out and is left in place: a
+     * keystore failure can be transient, and signing in again overwrites it.
+     */
     @OptIn(ExperimentalEncodingApi::class)
     fun getUserAuth(): AppleUserData? {
         val encoded = settings.getStringOrNull(KEY_APPLE_ACCOUNT) ?: return null
-        val envelope = Base64.decode(encoded)
-        val plaintext = crypto.decrypt(envelope, keystoreAlias)
-        val header = json.decodeFromString(UserAuthData.serializer(), plaintext.decodeToString())
-        return AppleUserData(user = header, data = envelope)
+        return try {
+            val envelope = Base64.decode(encoded)
+            val plaintext = crypto.decrypt(envelope, keystoreAlias)
+            val header = json.decodeFromString(UserAuthData.serializer(), plaintext.decodeToString())
+            AppleUserData(user = header, data = envelope)
+        } catch (e: Exception) {
+            SyncLog.record(
+                SyncEvent.Kind.INFO,
+                "Stored Apple credentials could not be read, treating as signed out: ${e::class.simpleName}",
+            )
+            null
+        }
     }
 
     fun clearUser() {

@@ -81,4 +81,20 @@ class UserAuthRepositoryTest {
         // decode must succeed
         Base64.decode(raw)
     }
+
+    @Test
+    fun `an unreadable stored credential reads as signed out instead of throwing`() {
+        // Every startup path asks getUserAuth whether the user is signed in.
+        // If it threw on a corrupt or undecryptable blob, the app would crash
+        // on every launch until its data was cleared.
+        props.setProperty("apple_account", "%%% not base64 %%%")
+        assertNull(repo.getUserAuth())
+
+        props.setProperty("apple_account", Base64.encode("not json".encodeToByteArray()))
+        assertNull(repo.getUserAuth())
+
+        // The blob is kept: a transient keystore failure must not sign the
+        // user out for good, and signing in again overwrites it anyway.
+        assertNotNull(props.getProperty("apple_account"))
+    }
 }
