@@ -54,7 +54,7 @@ jobs:
           docker compose run --rm \
             -v ${HOME}/.gradle:/root/.gradle \
             build \
-            ./gradlew ktlintCheck verifyNoAsyncMapStateWrite test :shared:desktopTest :androidApp:assembleDebug
+            ./gradlew ktlintCheck verifyNoAsyncMapStateWrite test :shared:desktopTest :composeApp:desktopTest :androidApp:assembleDebug
 
       - uses: actions/upload-artifact@v4
         with:
@@ -172,10 +172,20 @@ jobs:
           disable-animations: true
           script: ./run-shard.sh
 
+      # Maestro names each output directory after its flow, and flow names
+      # carry characters upload-artifact rejects in paths (":", ">", quotes).
+      # One archive per shard keeps the upload independent of flow names.
+      - name: Pack Maestro output
+        if: always()
+        run: |
+          if [ -d "$HOME/.maestro/tests" ]; then
+            tar -czf "maestro-shard-${{ matrix.shard }}.tar.gz" -C "$HOME/.maestro/tests" .
+          fi
+
       - if: always()
         uses: actions/upload-artifact@v4
         with:
           name: maestro-shard-${{ matrix.shard }}
-          path: ~/.maestro/tests/
+          path: maestro-shard-${{ matrix.shard }}.tar.gz
           retention-days: 7
           if-no-files-found: ignore
