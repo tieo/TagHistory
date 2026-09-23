@@ -11,8 +11,9 @@ import org.maplibre.android.maps.MapView
  * Drives a MapLibre [MapView] from the surrounding lifecycle and destroys it
  * when it leaves composition. When the activity finishes, ON_DESTROY reaches
  * the observer and then the composition is disposed, so both paths ask for a
- * destroy; MapLibre fails on the second one (NPE or "Map has been destroyed"),
- * hence the once-only guard. Both the main map and the history map use this.
+ * destroy. MapView.onDestroy is not idempotent: a second call runs
+ * MapLibreMap.onDestroy and the renderer teardown again on an already
+ * destroyed map. The guard makes it run once. Both maps use this.
  */
 @Composable
 internal fun BindMapViewLifecycle(mapView: MapView) {
