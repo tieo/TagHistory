@@ -2,8 +2,11 @@ package io.github.tieo.taghistory.ui.history
 
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.ui.test.ComposeUiTest
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.runComposeUiTest
 import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver
@@ -12,22 +15,33 @@ import io.github.tieo.taghistory.data.repo.BeaconRepository
 import io.github.tieo.taghistory.db.TagHistoryDatabase
 import io.github.tieo.taghistory.ui.theme.TagHistoryTheme
 import java.util.Properties
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.TestCoroutineScheduler
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 
+/**
+ * The screen triggers its own load when it appears, and the view model does
+ * that work on a background dispatcher the Compose harness cannot see. So no
+ * test pre-loads the VM or asserts straight after setContent: each waits on
+ * [HistoryUiState.hasLoaded] for the screen's own read to land, then checks
+ * what is drawn.
+ */
 @OptIn(ExperimentalTestApi::class, ExperimentalCoroutinesApi::class)
 class HistoryScreenTest {
 
     private lateinit var db: TagHistoryDatabase
     private lateinit var beaconRepo: BeaconRepository
+    private val vmScopes = mutableListOf<CoroutineScope>()
 
     @BeforeTest
     fun setUp() {
@@ -40,6 +54,8 @@ class HistoryScreenTest {
 
     @AfterTest
     fun tearDown() {
+        vmScopes.forEach { it.cancel() }
+        vmScopes.clear()
         Dispatchers.resetMain()
     }
 
@@ -53,111 +69,92 @@ class HistoryScreenTest {
     }
 
     private fun buildVm(
-        beaconId: String = "b1",
         fetchRange: suspend (String, Long, Long) -> List<BeaconLocationReport> = { _, _, _ -> emptyList() },
+        ioDispatcher: CoroutineDispatcher = Dispatchers.Default,
     ) = HistoryViewModel(
         beaconRepo = beaconRepo,
-        beaconId = beaconId,
+        beaconId = "b1",
         fetchRange = fetchRange,
-        scope = CoroutineScope(Dispatchers.Default + SupervisorJob()),
+        scope = CoroutineScope(Dispatchers.Default + SupervisorJob()).also { vmScopes += it },
+        ioDispatcher = ioDispatcher,
     )
 
-    @Test
-    fun history_shows_no_history_message_when_empty() = runComposeUiTest {
-        val vm = buildVm()
+    private fun ComposeUiTest.show(vm: HistoryViewModel, title: String = "Tag") {
         setContent {
             TagHistoryTheme {
                 Surface(color = MaterialTheme.colorScheme.background) {
-                    HistoryScreen(viewModel = vm, title = "My Keys", onBack = {})
+                    HistoryScreen(viewModel = vm, title = title, onBack = {})
                 }
             }
         }
-        waitUntil(timeoutMillis = 3_000L) { !vm.state.value.isLoading }
-        onNodeWithText("No history yet").assertIsDisplayed()
-    }
-
-    @Test
-    fun history_shows_error_message_on_fetch_failure() = runComposeUiTest {
-        val vm = buildVm(
-            fetchRange = { _, _, _ -> throw RuntimeException("connection timed out") },
-        )
-        setContent {
-            TagHistoryTheme {
-                Surface {
-                    HistoryScreen(viewModel = vm, title = "My Keys", onBack = {})
-                }
-            }
-        }
-        waitUntil(timeoutMillis = 3_000L) { vm.state.value.error != null }
-        onNodeWithText("connection timed out").assertIsDisplayed()
-    }
-
-    @Test
-    fun history_shows_today_chip_when_points_present() = runComposeUiTest {
-        val nowMs = System.currentTimeMillis()
-        seedLocation("b1", nowMs - 1_000L) // 1s ago = today
-        val vm = buildVm()
-        // Prime the VM state with the seeded point.
-        vm.load(nowMs - 7L * 24 * 3600 * 1000L, nowMs)
-        waitUntil(timeoutMillis = 3_000L) { vm.state.value.points.isNotEmpty() }
-        setContent {
-            TagHistoryTheme {
-                Surface {
-                    HistoryScreen(viewModel = vm, title = "Tag", onBack = {})
-                }
-            }
-        }
-        onNodeWithText("Today").assertIsDisplayed()
-    }
-
-    @Test
-    fun history_footer_shows_point_count() = runComposeUiTest {
-        val nowMs = System.currentTimeMillis()
-        seedLocation("b1", nowMs - 1_000L)
-        seedLocation("b1", nowMs - 2_000L)
-        val vm = buildVm()
-        vm.load(nowMs - 7L * 24 * 3600 * 1000L, nowMs)
-        waitUntil(timeoutMillis = 3_000L) { vm.state.value.points.size == 2 }
-        setContent {
-            TagHistoryTheme {
-                Surface {
-                    HistoryScreen(viewModel = vm, title = "Tag", onBack = {})
-                }
-            }
-        }
-        // Footer text: "2 points"
-        onNodeWithText("2 points").assertIsDisplayed()
     }
 
     @Test
     fun history_title_shown_in_top_bar() = runComposeUiTest {
         val vm = buildVm()
-        setContent {
-            TagHistoryTheme {
-                Surface {
-                    HistoryScreen(viewModel = vm, title = "AirTag Laptop", onBack = {})
-                }
-            }
-        }
+        show(vm, title = "AirTag Laptop")
         onNodeWithText("AirTag Laptop").assertIsDisplayed()
     }
 
     @Test
-    fun history_singular_point_count_shown_correctly() = runComposeUiTest {
-        val nowMs = System.currentTimeMillis()
-        seedLocation("b1", nowMs - 500L) // single point today
+    fun history_says_loading_until_the_first_read_lands() = runComposeUiTest {
+        // An IO dispatcher on its own, never-advanced scheduler keeps the read
+        // pending, which is the state the header must not call "No data".
+        val vm = buildVm(ioDispatcher = StandardTestDispatcher(TestCoroutineScheduler()))
+        show(vm)
+        onNodeWithText("Loading…").assertIsDisplayed()
+        onNodeWithText("No data").assertDoesNotExist()
+    }
+
+    @Test
+    fun history_says_no_data_once_an_empty_read_has_landed() = runComposeUiTest {
         val vm = buildVm()
-        vm.load(nowMs - 7L * 24 * 3600 * 1000L, nowMs)
-        waitUntil(timeoutMillis = 3_000L) { vm.state.value.points.size == 1 }
-        setContent {
-            TagHistoryTheme {
-                Surface {
-                    HistoryScreen(viewModel = vm, title = "Tag", onBack = {})
-                }
-            }
-        }
-        // Singular: "1 point" not "1 points"
-        onNodeWithText("1 point").assertIsDisplayed()
-        onNodeWithText("1 points").assertDoesNotExist()
+        show(vm)
+        waitUntil(timeoutMillis = 5_000L) { vm.state.value.hasLoaded }
+        onNodeWithText("No data").assertIsDisplayed()
+        onNodeWithText("Loading…").assertDoesNotExist()
+    }
+
+    @Test
+    fun history_labels_todays_points_as_today() = runComposeUiTest {
+        seedLocation("b1", System.currentTimeMillis())
+        val vm = buildVm()
+        show(vm)
+        waitUntil(timeoutMillis = 5_000L) { vm.state.value.hasLoaded && vm.state.value.points.isNotEmpty() }
+        onNodeWithText("Today").assertIsDisplayed()
+    }
+
+    @Test
+    fun history_announces_the_point_count_with_its_unit() = runComposeUiTest {
+        val now = System.currentTimeMillis()
+        seedLocation("b1", now - 1_000L)
+        seedLocation("b1", now - 2_000L)
+        val vm = buildVm()
+        show(vm)
+        waitUntil(timeoutMillis = 5_000L) { vm.state.value.points.size == 2 }
+        onNodeWithContentDescription("2 points").assertIsDisplayed()
+    }
+
+    @Test
+    fun history_announces_a_single_point_in_the_singular() = runComposeUiTest {
+        seedLocation("b1", System.currentTimeMillis() - 500L)
+        val vm = buildVm()
+        show(vm)
+        waitUntil(timeoutMillis = 5_000L) { vm.state.value.points.size == 1 }
+        onNodeWithContentDescription("1 point").assertIsDisplayed()
+        onNodeWithContentDescription("1 points").assertDoesNotExist()
+    }
+
+    @Test
+    fun history_shows_the_error_and_retry_after_a_failed_refresh() = runComposeUiTest {
+        // The screen itself only reads the DB; the network path runs when
+        // refresh() is called, which is what Retry does.
+        val vm = buildVm(fetchRange = { _, _, _ -> throw RuntimeException("connection timed out") })
+        show(vm)
+        waitUntil(timeoutMillis = 5_000L) { vm.state.value.hasLoaded }
+        vm.refresh()
+        waitUntil(timeoutMillis = 5_000L) { vm.state.value.error != null }
+        onNodeWithText("connection timed out").assertIsDisplayed()
+        onNodeWithTag("btn_history_retry").assertIsDisplayed()
     }
 }

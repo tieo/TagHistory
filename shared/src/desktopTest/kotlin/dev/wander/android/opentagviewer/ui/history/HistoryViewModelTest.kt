@@ -128,4 +128,28 @@ class HistoryViewModelTest {
         assertTrue(vm.state.value.error == null)
         assertEquals(1, vm.state.value.points.size)
     }
+
+    @Test
+    fun `hasLoaded separates not read yet from read and empty`() = runTest {
+        // The IO dispatcher is on the test scheduler, so the DB read only
+        // lands when the test advances it.
+        val io = kotlinx.coroutines.test.StandardTestDispatcher(testScheduler)
+        val vm = HistoryViewModel(beaconRepo, "b1", scope = this, ioDispatcher = io)
+        assertFalse(vm.state.value.hasLoaded, "nothing has been read before load()")
+
+        vm.load(0L, 500L)
+        assertFalse(vm.state.value.hasLoaded, "read still pending right after load()")
+        advanceUntilIdle()
+        assertTrue(vm.state.value.hasLoaded, "empty result counts as loaded")
+        assertTrue(vm.state.value.points.isEmpty())
+
+        // A new range is a new question: back to not-yet-read until it lands.
+        seedLocation("b1", 700L)
+        vm.load(600L, 800L)
+        assertFalse(vm.state.value.hasLoaded)
+        advanceUntilIdle()
+        assertTrue(vm.state.value.hasLoaded)
+        assertEquals(listOf(700L), vm.state.value.points.map { it.timestampMs })
+        vm.stopObserving()
+    }
 }

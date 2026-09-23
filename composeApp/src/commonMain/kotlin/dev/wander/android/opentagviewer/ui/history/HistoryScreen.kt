@@ -401,6 +401,7 @@ fun HistoryScreen(
                     selectedPointIdx = selectedPointIdx,
                     summary = summary,
                     isLoading = state.isLoading,
+                    hasLoaded = state.hasLoaded,
                     error = state.error,
                     hideCity = hideCity,
                     todayStr = todayStr,
@@ -542,6 +543,7 @@ private fun SheetContent(
     selectedPointIdx: Int,
     summary: DaySummary,
     isLoading: Boolean,
+    hasLoaded: Boolean,
     error: String?,
     hideCity: Boolean,
     todayStr: String,
@@ -609,9 +611,12 @@ private fun SheetContent(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
+                    // "No data" is a finding, so it waits for the first read
+                    // to land; before that the list is empty only because
+                    // nothing has been read yet.
                     text = days.getOrNull(dayIdx)?.key?.let {
                         dayLabel(it, now, todayStr, yesterdayStr)
-                    } ?: "No data",
+                    } ?: if (hasLoaded) "No data" else "Loading…",
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                     textAlign = androidx.compose.ui.text.style.TextAlign.Center,
@@ -706,7 +711,13 @@ private fun DaySummaryStrip(summary: DaySummary, totalPoints: Int) {
             sub = if (summary.stopCount == 1) "stop" else "stops",
         )
         Spacer(Modifier.weight(1f))
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        // The bare number needs its unit for screen readers.
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.semantics(mergeDescendants = true) {
+                contentDescription = if (totalPoints == 1) "1 point" else "$totalPoints points"
+            },
+        ) {
             Icon(
                 Icons.Filled.Timeline,
                 contentDescription = null,

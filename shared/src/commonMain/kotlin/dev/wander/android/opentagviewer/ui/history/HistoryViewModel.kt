@@ -85,7 +85,7 @@ class HistoryViewModel(
 
     fun load(startUnixMs: Long, endUnixMs: Long) {
         PerfTrace.mark("vm.load() called")
-        _state.update { it.copy(rangeStartMs = startUnixMs, rangeEndMs = endUnixMs) }
+        _state.update { it.copy(rangeStartMs = startUnixMs, rangeEndMs = endUnixMs, hasLoaded = false) }
         // First do a one-shot DB read so the screen has data on the
         // first frame, then subscribe to the DB query Flow so any new
         // point landing in LocationReport (from the map screen's
@@ -192,7 +192,7 @@ class HistoryViewModel(
             val mapped = sorted.map { it.toUi(cached, cache) }
             processByDay(mapped)
         }
-        _state.update { it.copy(points = points, entries = entries) }
+        _state.update { it.copy(points = points, entries = entries, hasLoaded = true) }
     }
 
     private suspend fun emitPoints() {
@@ -214,7 +214,7 @@ class HistoryViewModel(
             PerfTrace.mark("emitPoints mapped + classified n=${classified.size} entries=${entries.size}")
             classified to entries
         }
-        _state.update { it.copy(points = points, entries = entries) }
+        _state.update { it.copy(points = points, entries = entries, hasLoaded = true) }
     }
 
     private fun BeaconLocationReport.toUi(
@@ -623,6 +623,12 @@ data class HistoryUiState(
      */
     val entries: List<HistoryEntry> = emptyList(),
     val filters: HistoryFilters = HistoryFilters(),
+    /**
+     * False until the first read for the current range has landed. Lets the
+     * UI tell "not read yet" apart from "read, and there is nothing", which
+     * otherwise look the same: an empty point list.
+     */
+    val hasLoaded: Boolean = false,
     val isLoading: Boolean = false,
     val error: String? = null,
 )
