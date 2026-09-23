@@ -164,7 +164,7 @@ fun ManageTagsScreen(
                     if (onImportPreview != null && onImportCommit != null) {
                         importing = true
                         scope.launch {
-                            val preview = try { onImportPreview.invoke() } catch (e: Exception) {
+                            val preview = try { onImportPreview.invoke() } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Throwable) {
                                 io.github.tieo.taghistory.ImportPreview.Err(
                                     "Import failed: ${e.message ?: e::class.simpleName}",
                                 )
@@ -192,7 +192,7 @@ fun ManageTagsScreen(
                     if (onImport == null) return@ActionBar
                     importing = true
                     scope.launch {
-                        val result = try { onImport.invoke() } catch (e: Exception) {
+                        val result = try { onImport.invoke() } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Throwable) {
                             "Import failed: ${e.message ?: e::class.simpleName}"
                         }
                         importing = false
@@ -206,7 +206,7 @@ fun ManageTagsScreen(
                     scope.launch {
                         statusMessage = try {
                             onExportSelected.invoke(ids)
-                        } catch (e: Exception) {
+                        } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Throwable) {
                             "Export failed: ${e.message ?: e::class.simpleName}"
                         }
                     }
@@ -294,7 +294,7 @@ fun ManageTagsScreen(
                     val result = try {
                         onImportCommit?.invoke(staged, ids)
                             ?: "Host did not wire onImportCommit"
-                    } catch (e: Exception) {
+                    } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Throwable) {
                         "Import failed: ${e.message ?: e::class.simpleName}"
                     }
                     importing = false

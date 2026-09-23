@@ -60,7 +60,7 @@ class AppleLoginViewModel(
             } catch (e: AppleLoginException) {
                 _state.update { it.copy(isLoggingIn = false, loginError = e.message ?: "Login failed") }
                 return@launch
-            } catch (e: Exception) {
+            } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Throwable) {
                 _state.update { it.copy(isLoggingIn = false, loginError = e.message ?: "Login failed") }
                 return@launch
             }
@@ -79,7 +79,7 @@ class AppleLoginViewModel(
                         twoFactorError = null,
                     )
                 }
-            } catch (e: Exception) {
+            } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Throwable) {
                 _state.update { it.copy(twoFactorError = e.message ?: "Could not send code") }
             }
         }
@@ -97,7 +97,7 @@ class AppleLoginViewModel(
         runScope.launch {
             val outcome = try {
                 method.submit(snapshot.twoFactorCode)
-            } catch (e: Exception) {
+            } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Throwable) {
                 _state.update {
                     it.copy(
                         isSubmittingTwoFactor = false,

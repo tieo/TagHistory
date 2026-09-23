@@ -140,7 +140,7 @@ class HistoryViewModel(
                 PerfTrace.mark("post-fetch emitPoints done")
                 _state.update { it.copy(isLoading = false) }
                 kickoffGeocoding()
-            } catch (e: Exception) {
+            } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Throwable) {
                 _state.update {
                     it.copy(isLoading = false, error = e.message ?: "Fetch failed")
                 }

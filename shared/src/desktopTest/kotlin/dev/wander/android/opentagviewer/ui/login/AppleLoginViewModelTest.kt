@@ -11,6 +11,9 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
@@ -210,6 +213,38 @@ class AppleLoginViewModelTest {
         // drive the setter than rebuild the whole 2fa pipeline for this check.
         vm.setTwoFactorCode("abc")
         assertEquals("abc", vm.state.value.twoFactorCode)
+        assertNull(vm.state.value.twoFactorError)
+    }
+
+    @Test
+    fun `cancelling a 2FA submit is not counted as a failed attempt`() = runTest {
+        // The submit never answers; the VM's scope is then cancelled, as when
+        // the login screen goes away mid-request. Cancellation is not a wrong
+        // code and must not look like one.
+        val neverAnswers = CompletableDeferred<LoginResult>()
+        val coord = object : TwoFactorCoordinator {
+            override suspend fun requestSms(phoneNumberId: Int) {}
+            override suspend fun submitSms(phoneNumberId: Int, code: String) = neverAnswers.await()
+            override suspend fun requestTrustedDevice() {}
+            override suspend fun submitTrustedDevice(code: String) = neverAnswers.await()
+        }
+        val sms = TwoFactorChallenge.Sms(phoneNumberId = 1, phoneNumber = "+1", coordinator = coord)
+        val vmScope = CoroutineScope(StandardTestDispatcher(testScheduler) + Job())
+        val vm = AppleLoginViewModel(
+            startLogin = { _, _ -> LoginResult.RequireTwoFactor(listOf(sms)) },
+            scope = vmScope,
+        )
+        vm.setEmail("a@b"); vm.setPassword("password1"); vm.submitLogin(); advanceUntilIdle()
+        vm.chooseTwoFactorMethod(sms)
+        vm.setTwoFactorCode("123456")
+        vm.submitTwoFactorCode()
+        advanceUntilIdle()
+        assertTrue(vm.state.value.isSubmittingTwoFactor)
+
+        vmScope.cancel()
+        advanceUntilIdle()
+
+        assertEquals(0, vm.state.value.failedTwoFactorAttempts)
         assertNull(vm.state.value.twoFactorError)
     }
 }

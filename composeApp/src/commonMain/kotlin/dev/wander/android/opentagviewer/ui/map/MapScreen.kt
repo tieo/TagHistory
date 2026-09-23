@@ -222,7 +222,7 @@ private fun EmptyDevicesCard(
                         if (importing) return@FilledTonalButton
                         importing = true
                         scope.launch {
-                            val msg = try { onImport() } catch (e: Exception) { e.message }
+                            val msg = try { onImport() } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Throwable) { e.message }
                             importing = false
                             if (msg != null) {
                                 snackbarHostState?.showSnackbar(msg.take(80))
