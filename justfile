@@ -43,7 +43,7 @@ docker-test:
 [group('local')]
 [doc('Build debug APK on the host (no Docker).')]
 local-apk:
-    JAVA_HOME=$HOME/.gradle/jdks/temurin-21 ./gradlew :androidApp:assembleDebug
+    ./gradlew :androidApp:assembleDebug
 
 [group('local')]
 [doc('Install the latest debug APK on emulator-5554.')]
@@ -63,7 +63,7 @@ local-e2e-one file: local-install
 [group('local')]
 [doc('Run all unit tests on the host.')]
 local-test:
-    JAVA_HOME=$HOME/.gradle/jdks/temurin-21 ./gradlew test
+    ./gradlew test
 
 # ─── CI mirror ────────────────────────────────────────────────────────
 

@@ -24,14 +24,14 @@ pre-push:
     unit-tests:
       run: |
         echo "→ unit tests"
-        JAVA_HOME=$HOME/.gradle/jdks/temurin-21 ./gradlew test --daemon
+        ./gradlew test --daemon
     maestro-smoke:
       run: |
         # Quick smoke flow against running emulator-5554 (skipped if not booted).
         if adb -s emulator-5554 get-state 2>/dev/null | grep -q device; then
           echo "→ maestro smoke flow"
           if [ -f .maestro/04_map_screen_beacons.yaml ]; then
-            JAVA_HOME=$HOME/.gradle/jdks/temurin-21 ./gradlew :androidApp:assembleDebug --daemon
+            ./gradlew :androidApp:assembleDebug --daemon
             adb -s emulator-5554 install -r androidApp/build/outputs/apk/debug/androidApp-debug.apk
             maestro --device emulator-5554 test .maestro/04_map_screen_beacons.yaml
           fi
