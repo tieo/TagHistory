@@ -1,12 +1,17 @@
 package io.github.tieo.taghistory.sync
 
+import android.app.Notification
+import android.app.NotificationChannel
+import android.app.NotificationManager
 import android.content.Context
+import android.os.Build
 import android.util.Log
 import androidx.work.BackoffPolicy
 import androidx.work.Constraints
 import androidx.work.CoroutineWorker
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.ExistingWorkPolicy
+import androidx.work.ForegroundInfo
 import androidx.work.NetworkType
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.OutOfQuotaPolicy
@@ -56,12 +61,46 @@ class BeaconSyncWorker(
         }
     }
 
+    /**
+     * Only called for expedited work below Android 12, where WorkManager runs
+     * it as a foreground service and needs a notification to show. From
+     * Android 12 on, expedited work is an expedited job and this is never
+     * used. CoroutineWorker's default throws, which made the alarm's
+     * expedited sync fail on every Android 11 and older device.
+     */
+    override suspend fun getForegroundInfo(): ForegroundInfo {
+        val context = applicationContext
+        val builder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val manager = context.getSystemService(NotificationManager::class.java)
+            manager.createNotificationChannel(
+                NotificationChannel(
+                    FOREGROUND_CHANNEL_ID,
+                    "Background sync",
+                    NotificationManager.IMPORTANCE_MIN,
+                ),
+            )
+            Notification.Builder(context, FOREGROUND_CHANNEL_ID)
+        } else {
+            @Suppress("DEPRECATION")
+            Notification.Builder(context).setPriority(Notification.PRIORITY_MIN)
+        }
+        val notification = builder
+            // :shared cannot reach the app's drawables; the platform sync
+            // icon is what a transient sync notification should show anyway.
+            .setSmallIcon(android.R.drawable.stat_notify_sync)
+            .setContentTitle("Updating tag locations")
+            .setOngoing(true)
+            .build()
+        return ForegroundInfo(FOREGROUND_NOTIFICATION_ID, notification)
+    }
+
     companion object {
         private const val TAG = "BeaconSyncWorker"
+        private const val FOREGROUND_CHANNEL_ID = "background_sync"
+        private const val FOREGROUND_NOTIFICATION_ID = 0x5A11
         const val UNIQUE_WORK_NAME = "background_location_sync"
         const val ONESHOT_WORK_NAME = "background_location_sync_oneshot"
         const val KEY_TRIGGER = "trigger"
-        const val DEFAULT_INTERVAL_MINUTES = 30
         const val MIN_INTERVAL_MINUTES = 15
 
         /**
@@ -74,8 +113,7 @@ class BeaconSyncWorker(
         var orchestratorProvider: ((Context) -> BeaconSyncOrchestrator)? = null
 
         fun resolveIntervalMinutes(settings: UserSettings): Int {
-            val configured = settings.backgroundSyncIntervalMinutes ?: DEFAULT_INTERVAL_MINUTES
-            return maxOf(MIN_INTERVAL_MINUTES, configured)
+            return maxOf(MIN_INTERVAL_MINUTES, settings.effectiveBackgroundSyncIntervalMinutes())
         }
 
         fun apply(context: Context, settings: UserSettings) {
