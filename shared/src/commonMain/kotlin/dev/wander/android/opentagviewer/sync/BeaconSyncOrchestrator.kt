@@ -117,7 +117,7 @@ class BeaconSyncOrchestrator(
         // skip — the data is already fresh and a second Apple sweep just risks
         // throttling. A MANUAL press always runs.
         if (trigger != SyncTrigger.MANUAL) {
-            val intervalMin = settings.backgroundSyncIntervalMinutes ?: DEFAULT_INTERVAL_MINUTES_FALLBACK
+            val intervalMin = settings.effectiveBackgroundSyncIntervalMinutes()
             val minGapMs = maxOf(MIN_THROTTLE_GAP_MINUTES, intervalMin / 2).toLong() * 60_000L
             val lastEffective = syncRunRepo?.lastEffectiveAtMs()
             if (lastEffective != null && startedAt - lastEffective < minGapMs) {
@@ -228,9 +228,6 @@ class BeaconSyncOrchestrator(
         const val DEFAULT_MIN_HOURS_BACK: Int = 2
         /** Slack added to the measured staleness gap so we never just-miss a fix. */
         const val WINDOW_MARGIN_HOURS: Int = 1
-
-        /** Used for the throttle only when no interval is set in settings. */
-        const val DEFAULT_INTERVAL_MINUTES_FALLBACK: Int = 60
 
         /** Floor on the overlap-throttle gap regardless of interval. */
         const val MIN_THROTTLE_GAP_MINUTES: Int = 10

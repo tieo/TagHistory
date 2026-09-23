@@ -21,4 +21,18 @@ data class UserSettings(
      * defaults to enabled rather than silently collecting nothing.
      */
     fun isBackgroundSyncEnabled(): Boolean = backgroundSyncEnabled != false
+
+    /** The chosen sync interval, or the default when none was ever picked. */
+    fun effectiveBackgroundSyncIntervalMinutes(): Int =
+        backgroundSyncIntervalMinutes ?: DEFAULT_BACKGROUND_SYNC_INTERVAL_MINUTES
+
+    companion object {
+        /**
+         * The one default for the background sync interval. The settings
+         * screen, the stored settings, the WorkManager job and the sync
+         * throttle all read it from here so what the slider shows is what
+         * gets scheduled.
+         */
+        const val DEFAULT_BACKGROUND_SYNC_INTERVAL_MINUTES: Int = 60
+    }
 }

@@ -55,7 +55,7 @@ class UserSettingsRepository(private val settings: Settings) {
         // Background sync is the core feature — default ON. The user can still opt out.
         backgroundSyncEnabled = settings.getBooleanOrNull(KEY_BACKGROUND_SYNC_ENABLED) ?: true,
         backgroundSyncIntervalMinutes = settings.getIntOrNull(KEY_BACKGROUND_SYNC_INTERVAL_MINUTES)
-            ?: DEFAULT_BACKGROUND_SYNC_INTERVAL_MINUTES,
+            ?: UserSettings.DEFAULT_BACKGROUND_SYNC_INTERVAL_MINUTES,
     )
 
     private companion object {
@@ -64,6 +64,5 @@ class UserSettingsRepository(private val settings: Settings) {
         const val KEY_ENABLE_DEBUG_DATA = "enable_debug_data"
         const val KEY_BACKGROUND_SYNC_ENABLED = "background_sync_enabled"
         const val KEY_BACKGROUND_SYNC_INTERVAL_MINUTES = "background_sync_interval_minutes"
-        const val DEFAULT_BACKGROUND_SYNC_INTERVAL_MINUTES = 60
     }
 }

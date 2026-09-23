@@ -125,7 +125,7 @@ fun SettingsScreen(
             if (state.current.isBackgroundSyncEnabled()) {
                 HorizontalDivider()
                 SyncIntervalSlider(
-                    current = state.current.backgroundSyncIntervalMinutes ?: DEFAULT_INTERVAL_MIN,
+                    current = state.current.effectiveBackgroundSyncIntervalMinutes(),
                     onChange = viewModel::setBackgroundSyncIntervalMinutes,
                 )
                 // Battery-optimization warning. Without the exemption Android
@@ -165,7 +165,7 @@ fun SettingsScreen(
                         scope.launch {
                             val msg = try {
                                 onRefreshNow.invoke() ?: "Refresh complete"
-                            } catch (e: Exception) {
+                            } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Throwable) {
                                 "Refresh failed: ${e.message ?: "unknown error"}"
                             }
                             refreshMessage = msg
@@ -220,7 +220,7 @@ fun SettingsScreen(
                         scope.launch {
                             val msg = try {
                                 onImport.invoke()
-                            } catch (e: Exception) {
+                            } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Throwable) {
                                 "Import failed: ${e.message ?: e::class.simpleName}"
                             }
                             importing = false
@@ -334,10 +334,10 @@ fun SettingsScreen(
  * WorkManager). Presets make the tradeoff legible.
  */
 private val INTERVAL_STEPS: IntArray = intArrayOf(15, 30, 60, 120, 240, 480, 720, 1440)
-private const val DEFAULT_INTERVAL_MIN: Int = 60
 
 private fun snapToStep(value: Int): Int =
-    INTERVAL_STEPS.minByOrNull { kotlin.math.abs(it - value) } ?: DEFAULT_INTERVAL_MIN
+    INTERVAL_STEPS.minByOrNull { kotlin.math.abs(it - value) }
+        ?: io.github.tieo.taghistory.data.model.UserSettings.DEFAULT_BACKGROUND_SYNC_INTERVAL_MINUTES
 
 private fun formatInterval(minutes: Int): String = when {
     minutes < 60 -> "$minutes min"
