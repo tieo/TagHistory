@@ -62,6 +62,26 @@ jobs:
           path: androidApp/build/outputs/apk/debug/androidApp-debug.apk
           retention-days: 1
 
+  # The wasm target is otherwise never built, and it broke silently for three
+  # months once. Runs on the plain runner, which ships Chrome for Karma.
+  wasm:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '21'
+
+      - name: Compile and test the wasm target
+        env:
+          CHROME_BIN: /usr/bin/google-chrome
+        run: |
+          echo "sdk.dir=$ANDROID_HOME" > local.properties
+          echo "MAPS_API_KEY=${{ secrets.MAPS_API_KEY || 'maps_key_default_value' }}" > secrets.properties
+          ./gradlew :shared:wasmJsBrowserTest :composeApp:compileKotlinWasmJs
+
   test:
     needs: build-apk
     runs-on: ubuntu-latest

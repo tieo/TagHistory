@@ -1,5 +1,7 @@
 package io.github.tieo.taghistory.sync
 
+import kotlin.concurrent.Volatile
+
 /**
  * Sync activity logger. One log, read it with `adb logcat | grep TagHistory`.
  *
