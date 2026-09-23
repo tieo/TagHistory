@@ -16,6 +16,7 @@ import app.cash.sqldelight.coroutines.mapToList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import kotlin.concurrent.Volatile
 import kotlin.coroutines.CoroutineContext
 import kotlin.time.Clock
 import kotlin.time.ExperimentalTime
@@ -42,10 +43,28 @@ class BeaconRepository(
      * underlying tables change. Reads from the cache are O(1) — the XML
      * plist parse only runs once per import / option change, not once
      * per UI recomposition.
+     *
+     * Readers run on several threads at once (map, history, the sync
+     * worker), so an entry is stamped with the [infoGeneration] token
+     * observed before its rows were read, and is only served while that
+     * token is still current. A reader that queried the tables just before
+     * a write committed can still publish its entry after the write
+     * invalidated the cache; the stamp makes that stale entry unusable
+     * instead of letting it hide the new name until the next write. Each
+     * invalidation installs a fresh token object, so concurrent
+     * invalidations need no counter and cannot lose an update.
      */
-    private var infoCache: Map<String, BeaconInformation>? = null
+    private class InfoCacheEntry(val generation: Any, val infos: Map<String, BeaconInformation>)
 
+    @Volatile
+    private var infoGeneration: Any = Any()
+
+    @Volatile
+    private var infoCache: InfoCacheEntry? = null
+
+    /** Must be called after the write's transaction has committed. */
     private fun invalidateInfoCache() {
+        infoGeneration = Any()
         infoCache = null
     }
 
@@ -277,11 +296,12 @@ class BeaconRepository(
 
     /** Lazily-computed map of beacon id → parsed info. */
     fun getAllBeaconInformation(): Map<String, BeaconInformation> {
-        infoCache?.let { return it }
+        val generation = infoGeneration
+        infoCache?.let { if (it.generation === generation) return it.infos }
         val rows = getAllBeacons()
         val built = rows.mapNotNull { BeaconInformationParser.parse(it) }
             .associateBy { it.beaconId }
-        infoCache = built
+        infoCache = InfoCacheEntry(generation, built)
         return built
     }
 
