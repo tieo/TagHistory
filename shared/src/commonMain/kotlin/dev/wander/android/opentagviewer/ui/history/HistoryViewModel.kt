@@ -124,10 +124,19 @@ class HistoryViewModel(
                 error = null,
             )
         }
+        // The DB range can be everything cached (0 until Long.MAX_VALUE), but
+        // the network can only return what Apple still keeps, and a fetch over
+        // the unclamped span would derive a key for every 15 minute slot since
+        // 1970. Clamp the fetch to Apple's retention window and to now.
+        val now = nowMs()
+        val fetchStart = maxOf(startUnixMs, now - APPLE_RETENTION_MS)
+        val fetchEnd = minOf(endUnixMs, now)
         runScope.launch {
             try {
-                val fetched = withContext(ioDispatcher) {
-                    fetchRange(beaconId, startUnixMs, endUnixMs)
+                val fetched = if (fetchStart < fetchEnd) {
+                    withContext(ioDispatcher) { fetchRange(beaconId, fetchStart, fetchEnd) }
+                } else {
+                    emptyList()
                 }
                 PerfTrace.mark("network fetch done (${fetched.size})")
                 if (fetched.isNotEmpty()) {
@@ -603,6 +612,9 @@ class HistoryViewModel(
 
     private companion object {
         const val DAY_MS: Long = 24L * 60L * 60L * 1000L
+
+        /** How far back Apple keeps location reports; nothing older can be fetched. */
+        const val APPLE_RETENTION_MS: Long = 7L * DAY_MS
         const val STOP_RADIUS_M: Double = 25.0
         /**
          * A run of MOVE points is reclassified as stationary jitter
