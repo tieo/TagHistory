@@ -52,7 +52,10 @@ fun SyncActivityScreen(
                 )
             } else {
                 LazyColumn(Modifier.fillMaxSize().testTag("sync_activity_list")) {
-                    items(runs, key = { it.startedAtMs }) { run ->
+                    // No item keys: rows hold no state, and a start time is
+                    // not unique (two triggers can start in the same ms), which
+                    // LazyColumn rejects with a crash.
+                    items(runs) { run ->
                         SyncRunRow(run)
                         HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
                     }
