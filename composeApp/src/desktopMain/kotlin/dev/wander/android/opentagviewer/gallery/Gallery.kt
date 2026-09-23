@@ -6,6 +6,10 @@ import com.russhwolf.settings.PropertiesSettings
 import io.github.tieo.taghistory.data.model.BeaconData
 import io.github.tieo.taghistory.data.model.BeaconLocationReport
 import io.github.tieo.taghistory.data.repo.BeaconRepository
+import io.github.tieo.taghistory.data.repo.SyncTrigger
+import io.github.tieo.taghistory.data.repo.SyncOutcome
+import io.github.tieo.taghistory.data.repo.SyncRun
+import io.github.tieo.taghistory.ui.sync.SyncActivityScreen
 import io.github.tieo.taghistory.data.repo.UserAuthRepository
 import io.github.tieo.taghistory.data.repo.UserDataRepository
 import io.github.tieo.taghistory.data.repo.UserSettingsRepository
@@ -86,6 +90,11 @@ private fun authRepo(): UserAuthRepository =
 
 private fun galleryScope() = CoroutineScope(Dispatchers.Unconfined + SupervisorJob())
 
+/** Drops every task: work sent here never runs, which holds a screen in its loading phase. */
+private object NeverDispatcher : kotlinx.coroutines.CoroutineDispatcher() {
+    override fun dispatch(context: kotlin.coroutines.CoroutineContext, block: Runnable) = Unit
+}
+
 /** Build a MapViewModel over a freshly-seeded DB and let its boot+refresh settle. */
 private fun mapVm(
     seed: TagHistoryDatabase.() -> Unit,
@@ -129,20 +138,19 @@ private fun sampleDay(): List<BeaconLocationReport> {
 
 private fun historyVm(
     seed: TagHistoryDatabase.() -> Unit = {},
-    fetchRange: suspend (String, Long, Long) -> List<BeaconLocationReport> = { _, _, _ -> emptyList() },
-    fetch: Boolean = false,
+    ioDispatcher: kotlinx.coroutines.CoroutineDispatcher = Dispatchers.Default,
 ): HistoryViewModel {
     val db = newDb().apply { seedBeacon("a", "Car Keys", "🔑"); seed() }
     val vm = HistoryViewModel(
         beaconRepo = BeaconRepository(db) { 1_000L },
         beaconId = "a",
-        fetchRange = fetchRange,
         scope = galleryScope(),
+        ioDispatcher = ioDispatcher,
         nowMs = { nowMs },
     )
-    // load() reads what is already cached; fetchAndLoad() runs the network path
-    // (used only to show the loading state via a fetch that never returns).
-    if (fetch) vm.fetchAndLoad(hoursAgo(24), nowMs) else vm.load(hoursAgo(24), nowMs)
+    // The screen triggers its own load when it appears; this only warms the
+    // state so the first rendered frame already has the data.
+    vm.load(0L, Long.MAX_VALUE)
     runBlocking { delay(120) }
     return vm
 }
@@ -199,11 +207,20 @@ private val SCENES: List<Scene> = buildList {
         )
     })
     add(Scene("map", "empty") { MapScreen(viewModel = mapVm(seed = {})) })
-    // Map Loading and Failed are not drawn: their only difference from "as it
-    // is" lives in the native map layer (a desktop stub here) and in a snackbar
-    // (hosted outside the screen), so on this renderer all three are the same
-    // picture. The app could surface them in-screen (a loading skeleton, an
-    // inline error) to make them visible; until then they are not modelled.
+    // Tags known but not located yet, with their first fetch still running:
+    // each card reads "Locating…" until the fetch answers.
+    add(Scene("map", "loading") {
+        MapScreen(
+            viewModel = mapVm(
+                seed = {
+                    seedBeacon("a", "Car Keys", "🔑"); seedBeacon("b", "Backpack", "🎒"); seedBeacon("c", "Bike", "🚲")
+                },
+                fetchReports = { _, _ -> kotlinx.coroutines.awaitCancellation() },
+            ),
+        )
+    })
+    // Map Failed is not drawn: the error is a snackbar hosted outside the
+    // screen, so the picture is the same as the one before the failure.
 
     // ── Manage tags ───────────────────────────────────────────────────────────
     add(Scene("manage-tags", "as-it-is") {
@@ -228,10 +245,29 @@ private val SCENES: List<Scene> = buildList {
                 scope = galleryScope(),
             ).also { runBlocking { delay(60) } },
             onOpenInformation = {},
+            onOpenSyncActivity = {},
             onRefreshNow = { "Refreshed 3 tags" },
             isIgnoringBatteryOptimizations = { false },
             requestIgnoreBatteryOptimizations = {},
         )
+    })
+
+    // ── Sync activity ──────────────────────────────────────────────────────────
+    add(Scene("sync-activity", "as-it-is") {
+        val m = 60_000L
+        SyncActivityScreen(
+            runs = listOf(
+                SyncRun(nowMs - 20 * m, SyncTrigger.ALARM, SyncOutcome.SUCCESS, null, 21, 13, 2, 25_300),
+                SyncRun(nowMs - 45 * m, SyncTrigger.WORKER, SyncOutcome.SKIPPED, "throttled: 12m since last run", 0, 0, null, 40),
+                SyncRun(nowMs - 80 * m, SyncTrigger.WORKER, SyncOutcome.RETRY, "UnknownHostException: Unable to resolve host", 0, 0, 2, 1_900),
+                SyncRun(nowMs - 140 * m, SyncTrigger.ALARM, SyncOutcome.SUCCESS, null, 9, 4, 3, 18_700),
+            ),
+            onBack = {},
+            nowMs = nowMs,
+        )
+    })
+    add(Scene("sync-activity", "empty") {
+        SyncActivityScreen(runs = emptyList(), onBack = {}, nowMs = nowMs)
     })
 
     // ── Information ────────────────────────────────────────────────────────────
@@ -248,10 +284,10 @@ private val SCENES: List<Scene> = buildList {
             title = "Car Keys 🔑", onBack = {},
         )
     })
-    // History Loading is not drawn: while it loads it shows the same "No data"
-    // sheet as Empty with only a small spinner added, so the two are one
-    // picture here. (That "No data" mid-load is itself worth fixing in the app,
-    // it reads as "nothing" before the fetch has answered.)
+    // Before the first read lands the header says "Loading…", not "No data".
+    add(Scene("history", "loading") {
+        HistoryScreen(viewModel = historyVm(ioDispatcher = NeverDispatcher), title = "Car Keys 🔑", onBack = {})
+    })
     add(Scene("history", "empty") {
         HistoryScreen(viewModel = historyVm(), title = "Car Keys 🔑", onBack = {})
     })

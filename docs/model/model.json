@@ -222,6 +222,36 @@
           "label": "wide dark"
         }
       ]
+    },
+    {
+      "tag": "VIEW",
+      "uid": "VIEW-SYNC-ACTIVITY",
+      "title": "Sync activity",
+      "statement": "Every background sync attempt of the last seven days: when, which trigger, the outcome, and what it stored or why it did not run.",
+      "status": "Built",
+      "relations": [],
+      "notes": "",
+      "states": [
+        "Empty"
+      ],
+      "renders": [
+        {
+          "file": "sync-activity-phone-light.png",
+          "label": "phone light"
+        },
+        {
+          "file": "sync-activity-phone-dark.png",
+          "label": "phone dark"
+        },
+        {
+          "file": "sync-activity-wide-light.png",
+          "label": "wide light"
+        },
+        {
+          "file": "sync-activity-wide-dark.png",
+          "label": "wide dark"
+        }
+      ]
     }
   ],
   "states": [
@@ -253,15 +283,23 @@
       "uid": "STATE-MAP-LOADING",
       "title": "Loading",
       "kind": "Loading",
-      "statement": "A fetch is in flight; the difference from the resting map is the native map layer and a refresh spinner, neither of which reaches this off-screen renderer.",
+      "statement": "Tags are known but their first fetch is still running; each card reads \"Locating\u2026\" until the fetch answers.",
       "relations": [
         {
           "to": "VIEW-MAP",
           "role": "State of"
         }
       ],
-      "drawable": false,
-      "renders": []
+      "renders": [
+        {
+          "file": "map-loading-phone-light.png",
+          "label": "phone light"
+        },
+        {
+          "file": "map-loading-phone-dark.png",
+          "label": "phone dark"
+        }
+      ]
     },
     {
       "tag": "STATE",
@@ -306,15 +344,23 @@
       "uid": "STATE-HISTORY-LOADING",
       "title": "Loading",
       "kind": "Loading",
-      "statement": "While loading it shows the Empty \"No data\" sheet plus a small spinner; on a PNG that is the same picture as Empty. (The app should not say \"No data\" before the fetch has answered.)",
+      "statement": "The first read of the cache has not landed yet; the day header says \"Loading\u2026\" rather than claiming there is no data.",
       "relations": [
         {
           "to": "VIEW-HISTORY",
           "role": "State of"
         }
       ],
-      "drawable": false,
-      "renders": []
+      "renders": [
+        {
+          "file": "history-loading-phone-light.png",
+          "label": "phone light"
+        },
+        {
+          "file": "history-loading-phone-dark.png",
+          "label": "phone dark"
+        }
+      ]
     },
     {
       "tag": "STATE",
@@ -405,6 +451,37 @@
         },
         {
           "file": "manage-tags-empty-wide-dark.png",
+          "label": "wide dark"
+        }
+      ]
+    },
+    {
+      "tag": "STATE",
+      "uid": "STATE-SYNC-ACTIVITY-EMPTY",
+      "title": "Empty",
+      "kind": "Empty",
+      "statement": "No background sync has been recorded yet.",
+      "relations": [
+        {
+          "to": "VIEW-SYNC-ACTIVITY",
+          "role": "State of"
+        }
+      ],
+      "renders": [
+        {
+          "file": "sync-activity-empty-phone-light.png",
+          "label": "phone light"
+        },
+        {
+          "file": "sync-activity-empty-phone-dark.png",
+          "label": "phone dark"
+        },
+        {
+          "file": "sync-activity-empty-wide-light.png",
+          "label": "wide light"
+        },
+        {
+          "file": "sync-activity-empty-wide-dark.png",
           "label": "wide dark"
         }
       ]
