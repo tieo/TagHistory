@@ -1,6 +1,7 @@
 package io.github.tieo.taghistory.sync
 
 import io.github.tieo.taghistory.apple.account.AppleAccount
+import io.github.tieo.taghistory.apple.account.AppleLoginException
 import io.github.tieo.taghistory.apple.findmy.FindMyAccessory
 import io.github.tieo.taghistory.data.model.BeaconLocationReport
 import io.github.tieo.taghistory.data.repo.BeaconRepository
@@ -201,6 +202,20 @@ class BeaconSyncOrchestrator(
             // (an Error). If that escaped, the worker died uninstrumented and
             // WorkManager just bumped run_attempt_count with no log of why.
             if (e is kotlinx.coroutines.CancellationException) throw e
+            // Apple rejected the credentials. Nothing refreshes the
+            // search-party token, so this holds until the user signs in again;
+            // a retry would only repeat the key derivation and the request.
+            if (e is AppleLoginException && e.kind == AppleLoginException.Kind.UNAUTHORIZED) {
+                SyncLog.record(
+                    SyncEvent.Kind.RUNG_FAIL,
+                    "Background sync: Apple rejected the credentials, not retrying until sign-in",
+                )
+                return finish(
+                    SyncOutcome.SKIPPED,
+                    detail = "Apple rejected the credentials: sign in again",
+                    window = effectiveHours,
+                )
+            }
             SyncLog.record(
                 SyncEvent.Kind.RUNG_FAIL,
                 "Background sync failed: ${e::class.simpleName}: ${e.message}",

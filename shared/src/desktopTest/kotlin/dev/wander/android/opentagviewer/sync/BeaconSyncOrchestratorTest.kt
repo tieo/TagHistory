@@ -459,4 +459,32 @@ class BeaconSyncOrchestratorTest {
         val success = assertIs<BeaconSyncOrchestrator.Outcome.Success>(retry)
         assertEquals(1, success.persistedReports)
     }
+
+    @Test
+    fun `an auth rejection from Apple is not retried`(): Unit = runBlocking {
+        // Nothing refreshes the search-party token, so a 401 stays a 401 until
+        // the user signs in again. Asking WorkManager to retry it only repeats
+        // the key derivation and the request every 15 minutes.
+        settingsRepo.storeUserSettings(UserSettings(backgroundSyncEnabled = true))
+        storeValidAuthBlob()
+        seedBeacon("beacon-1")
+        val runRepo = SyncRunRepository(db) { now }
+        val orchestrator = BeaconSyncOrchestrator(
+            settingsRepo, authRepo, beaconRepo,
+            fetchReports = { _, _, _ ->
+                throw io.github.tieo.taghistory.apple.account.AppleLoginException(
+                    io.github.tieo.taghistory.apple.account.AppleLoginException.Kind.UNAUTHORIZED,
+                    "Not authorized to fetch reports (HTTP 401). Re-authenticate.",
+                )
+            },
+            accessoryLoader = { stubAccessory() },
+            syncRunRepo = runRepo,
+            nowMs = { now },
+        )
+
+        assertIs<BeaconSyncOrchestrator.Outcome.Success>(orchestrator.run(SyncTrigger.WORKER))
+        val row = db.syncRunRecordQueries.recent(1).executeAsList().single()
+        assertEquals("SKIPPED", row.outcome)
+        kotlin.test.assertTrue(row.detail.orEmpty().contains("sign in", ignoreCase = true), row.detail)
+    }
 }
