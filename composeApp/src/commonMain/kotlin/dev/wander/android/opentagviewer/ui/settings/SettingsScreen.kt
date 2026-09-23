@@ -144,6 +144,15 @@ fun SettingsScreen(
                     )
                 }
             }
+            // The run log stays reachable with sync switched off: it is how
+            // to check what the background did before it was disabled.
+            if (onOpenSyncActivity != null) {
+                HorizontalDivider()
+                OutlinedButton(
+                    onClick = onOpenSyncActivity,
+                    modifier = Modifier.fillMaxWidth().testTag("btn_sync_activity"),
+                ) { Text("Sync activity") }
+            }
         }
 
         // ---------- Data ----------
@@ -280,16 +289,6 @@ fun SettingsScreen(
                     onClick = onOpenNearby,
                     modifier = Modifier.fillMaxWidth().testTag("btn_open_nearby"),
                 ) { Text("Scan for nearby tags") }
-            }
-        }
-
-        // ---------- Sync activity ----------
-        if (onOpenSyncActivity != null) {
-            SettingsSection("Background sync") {
-                OutlinedButton(
-                    onClick = onOpenSyncActivity,
-                    modifier = Modifier.fillMaxWidth().testTag("btn_sync_activity"),
-                ) { Text("Sync activity") }
             }
         }
 

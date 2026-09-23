@@ -5,6 +5,9 @@ import androidx.compose.material3.Surface
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.runComposeUiTest
@@ -68,7 +71,7 @@ class SettingsScreenTest {
         onNodeWithText("Appearance").assertIsDisplayed()
         onNodeWithText("Background sync").assertIsDisplayed()
         // Lower sections may be off-screen on small test windows.
-        onNodeWithText("Advanced").assertExists()
+        onNodeWithText("Data").assertExists()
         onNodeWithText("Account").assertExists()
         onNodeWithText("About").assertExists()
     }
@@ -205,5 +208,25 @@ class SettingsScreenTest {
             }
         }
         onNodeWithTag("btn_refresh_now").assertDoesNotExist()
+    }
+
+    @Test
+    fun settings_sync_activity_sits_in_the_single_background_sync_section() = runComposeUiTest {
+        var opened = false
+        setContent {
+            TagHistoryTheme {
+                Surface {
+                    SettingsScreen(
+                        viewModel = stubVm(),
+                        onOpenInformation = {},
+                        onOpenSyncActivity = { opened = true },
+                    )
+                }
+            }
+        }
+        // One heading: the run-log button belongs to the existing section.
+        onAllNodesWithText("Background sync").assertCountEquals(1)
+        onNodeWithTag("btn_sync_activity").performScrollTo().performClick()
+        assertTrue(opened)
     }
 }
