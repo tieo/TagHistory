@@ -88,14 +88,17 @@ class AndroidAppHost private constructor(
     /**
      * Cache-aware reverse geocode for the map screen. Cache keyed by
      * ~1 m rounded coordinates, so repeat visits to the same place
-     * skip the Geocoder entirely.
+     * skip the Geocoder entirely. The cache lookup reads and touches the
+     * DB, so the whole function runs on IO: the map calls it from the main
+     * thread.
      */
-    private suspend fun reverseGeocodeWithCache(lat: Double, lon: Double): String? {
-        geocodeCacheRepo.get(lat, lon)?.let { return it }
-        val resolved = rawReverseGeocode(lat, lon) ?: return null
-        runCatching { geocodeCacheRepo.put(lat, lon, resolved) }
-        return resolved
-    }
+    private suspend fun reverseGeocodeWithCache(lat: Double, lon: Double): String? =
+        withContext(Dispatchers.IO) {
+            geocodeCacheRepo.get(lat, lon)?.let { return@withContext it }
+            val resolved = rawReverseGeocode(lat, lon) ?: return@withContext null
+            runCatching { geocodeCacheRepo.put(lat, lon, resolved) }
+            resolved
+        }
 
     /** Back-compat alias for older callers. */
     private suspend fun reverseGeocode(lat: Double, lon: Double): String? =
@@ -377,6 +380,12 @@ class AndroidAppHost private constructor(
      */
     fun startBackgroundSync(scope: kotlinx.coroutines.CoroutineScope) {
         BeaconSyncWorker.orchestratorProvider = { createSyncOrchestrator() }
+        // Every geocoded coordinate gets a row and a hit refreshes its
+        // last_used, so dropping rows nobody has read in a long time keeps the
+        // table bounded without losing addresses still on screen.
+        scope.launch(Dispatchers.IO) {
+            runCatching { geocodeCacheRepo.evictOlderThan(GEOCODE_CACHE_MAX_IDLE_MS) }
+        }
         scope.launch {
             userSettingsRepo.flow
                 .map { it.backgroundSyncEnabled to it.backgroundSyncIntervalMinutes }
@@ -595,6 +604,7 @@ class AndroidAppHost private constructor(
 
     companion object {
         private const val TAG = "OTV/Host"
+        private const val GEOCODE_CACHE_MAX_IDLE_MS: Long = 180L * 24 * 60 * 60 * 1000
         private const val SETTINGS_STORE_USER_SETTINGS = "user_settings"
         private const val SETTINGS_STORE_USER_DATA = "user_data"
         private const val SETTINGS_STORE_USER_AUTH = "user_auth"
