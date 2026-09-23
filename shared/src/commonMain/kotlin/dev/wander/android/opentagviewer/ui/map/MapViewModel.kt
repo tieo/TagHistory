@@ -3,6 +3,7 @@ package io.github.tieo.taghistory.ui.map
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.github.tieo.taghistory.data.model.BeaconData
+import io.github.tieo.taghistory.data.model.BeaconInformation
 import io.github.tieo.taghistory.data.model.BeaconLocationReport
 import io.github.tieo.taghistory.data.model.UserMapCameraPosition
 import io.github.tieo.taghistory.data.repo.BeaconRepository
@@ -14,11 +15,13 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.MainCoroutineDispatcher
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.plus
 import kotlinx.coroutines.withContext
 
 /**
@@ -79,7 +82,65 @@ class MapViewModel(
     private val _state = MutableStateFlow(MapUiState())
     val state: StateFlow<MapUiState> = _state.asStateFlow()
 
-    private val runScope: CoroutineScope get() = scope ?: viewModelScope
+    /**
+     * Every mutable field of this class (the three maps, the selection
+     * flags, the rate-limit stamp, the render generations) is read and
+     * written only from coroutines on this scope. Its dispatcher runs one
+     * task at a time: Main in production, and any multi-threaded dispatcher
+     * a caller passes in is narrowed with limitedParallelism(1). Work that
+     * has to leave it (DB, network, decrypt, geocoding) is handed snapshots
+     * and returns values; it never touches the fields. That confinement is
+     * what keeps the plain HashMaps safe without locks, and it makes a
+     * check-then-set such as the isRefreshing latch atomic with respect to
+     * every other confined task.
+     */
+    private val confinedScope: CoroutineScope by lazy {
+        val base = scope ?: viewModelScope
+        val dispatcher = base.coroutineContext[CoroutineDispatcher]
+        if (dispatcher == null ||
+            dispatcher is MainCoroutineDispatcher ||
+            dispatcher === Dispatchers.Unconfined
+        ) {
+            base
+        } else {
+            base + dispatcher.limitedParallelism(1)
+        }
+    }
+
+    private class UiModels(val markers: List<BeaconMarkerUi>, val cards: List<TagCardUi>)
+
+    // Builds run off the confined scope and can finish out of order. Each
+    // build is numbered when its snapshot is taken; one that finishes after a
+    // later snapshot was already published is dropped, so an older snapshot
+    // can never overwrite fresher markers.
+    private var renderSnapshotGeneration = 0L
+    private var renderPublishedGeneration = 0L
+
+    /**
+     * Snapshot the confined state, build markers and cards on [ioDispatcher]
+     * (the name lookup reads the DB), and return them unless a build whose
+     * snapshot was taken later has already been published. Must run on
+     * [confinedScope].
+     */
+    private suspend fun buildUi(): UiModels? {
+        val generation = ++renderSnapshotGeneration
+        val beacons = beaconsById.values.toList()
+        val locations = latestLocationByBeacon.toMap()
+        val addresses = geocodeCache.toMap()
+        val models = withContext(ioDispatcher) {
+            val infos = beaconRepo.getAllBeaconInformation()
+            UiModels(
+                markers = buildMarkers(beacons, locations, addresses, infos),
+                cards = buildCards(beacons, locations, addresses, infos),
+            )
+        }
+        if (generation < renderPublishedGeneration) return null
+        renderPublishedGeneration = generation
+        return models
+    }
+
+    /** Number of known beacons that currently have a fix. Confined. */
+    private fun countLocated(): Int = beaconsById.keys.count { latestLocationByBeacon[it] != null }
 
     /** Holds the latest location per beacon keyed by beaconId. */
     private val latestLocationByBeacon = mutableMapOf<String, BeaconLocationReport>()
@@ -87,6 +148,7 @@ class MapViewModel(
     // Once the user picks a card themselves (swipe / marker tap),
     // refresh stops auto-promoting selection to the most-recently-located beacon.
     // Reset by `reboot()` (post-import) so a fresh import gets the auto-pick again.
+    @kotlin.concurrent.Volatile
     private var userHasExplicitlySelected: Boolean = false
 
 
@@ -125,7 +187,7 @@ class MapViewModel(
         // hosting AppHost creates the VM eagerly in App.kt, so this kicks
         // off BEFORE MapScreen mounts. Saves the few hundred ms of Compose
         // composition time before the network request starts.
-        runScope.launch {
+        confinedScope.launch {
             boot().join()
             // Subscribe to the DB AFTER boot so the first emission merges
             // into already-populated beacon metadata. From here on, ANY
@@ -167,21 +229,19 @@ class MapViewModel(
      * markers/cards.
      */
     private fun observeLocations() {
-        runScope.launch {
+        confinedScope.launch {
             beaconRepo.observeLastLocationsForAll(ioDispatcher).collect { latest ->
                 var changed = false
                 for ((id, report) in latest) {
                     if (adoptIfNewer(id, report)) changed = true
                 }
                 if (!changed) return@collect
-                val (markers, cards) = withContext(ioDispatcher) {
-                    buildMarkers() to buildCards()
-                }
+                val ui = buildUi() ?: return@collect
                 _state.update { current ->
                     current.copy(
-                        markers = markers,
-                        cards = cards,
-                        selectedBeaconId = pickSelection(current.selectedBeaconId, markers),
+                        markers = ui.markers,
+                        cards = ui.cards,
+                        selectedBeaconId = pickSelection(current.selectedBeaconId, ui.markers),
                     )
                 }
                 kickoffGeocoding()
@@ -198,7 +258,7 @@ class MapViewModel(
      * subsequent [refresh] can `join()` before calling it — otherwise
      * refresh races boot and clobbers cached markers with empty state.
      */
-    fun boot(): Job = runScope.launch {
+    fun boot(): Job = confinedScope.launch {
         val bootData = withContext(ioDispatcher) {
             authRepo.getUserAuth() ?: return@withContext null
             BootData(
@@ -217,9 +277,9 @@ class MapViewModel(
         latestLocationByBeacon.clear()
         latestLocationByBeacon.putAll(bootData.lastLocations)
 
-        val (markers, cards) = withContext(ioDispatcher) {
-            buildMarkers() to buildCards()
-        }
+        val ui = buildUi()
+        val markers = ui?.markers ?: _state.value.markers
+        val cards = ui?.cards ?: _state.value.cards
         _state.update {
             it.copy(
                 initialCamera = bootData.camera,
@@ -263,7 +323,7 @@ class MapViewModel(
         )
     }
 
-    private fun refreshCascade(windows: List<Int>, skipCascadeIfInitialDone: Boolean) {
+    private fun refreshCascade(windows: List<Int>, skipCascadeIfInitialDone: Boolean) = confinedScope.launch {
         // Always log the user/caller intent so the Settings sync-log UI shows
         // every Refresh-now press, even when an earlier refresh is still in
         // flight and the cascade itself short-circuits.
@@ -285,7 +345,7 @@ class MapViewModel(
                 "Skipped: previous refresh still in flight",
                 mapOf("reason" to "isRefreshing=true"),
             )
-            return
+            return@launch
         }
         // Rate limit: at most one fetch per [minRefreshIntervalMs], no matter
         // how often Refresh-now is tapped. The first fetch (lastRefreshStartMs
@@ -300,7 +360,7 @@ class MapViewModel(
                 "Skipped: rate-limited (one fetch per ${minRefreshIntervalMs}ms)",
                 mapOf("since_last_ms" to (nowMs - lastRefreshStartMs).toString()),
             )
-            return
+            return@launch
         }
         lastRefreshStartMs = nowMs
         _state.update { it.copy(isRefreshing = true, refreshError = null) }
@@ -313,7 +373,7 @@ class MapViewModel(
         // small hoursBack floor (fast); long gap -> wide window.
         val isPeriodic = skipCascadeIfInitialDone && _state.value.isInitialFetchComplete
         val effective = if (isPeriodic) listOf(adaptiveWindowHours(nowMs)) else windows
-        runScope.launch {
+        run {
             var lastError: String? = null
             try {
             for (window in effective) {
@@ -321,8 +381,10 @@ class MapViewModel(
                 // a recent fix yet. Once a beacon is located in an early rung it
                 // doesn't need the heavier wider-window crypto sweep.
                 // During periodic refresh, always fetch all so positions stay fresh.
+                // A copy: fetchReports runs on ioDispatcher and must not iterate
+                // the confined map while a rename or removal mutates it.
                 val toFetch = if (isPeriodic) {
-                    beaconsById
+                    beaconsById.toMap()
                 } else {
                     beaconsById.filterKeys { id -> latestLocationByBeacon[id] == null }
                 }
@@ -381,15 +443,14 @@ class MapViewModel(
                     }
                     continue
                 }
-                val (markers, cards) = withContext(ioDispatcher) {
-                    if (reports.isNotEmpty()) {
-                        beaconRepo.storeToLocationCache(reports)
-                        for ((id, list) in reports) {
-                            list.maxByOrNull { it.timestamp }?.let { adoptIfNewer(id, it) }
-                        }
+                if (reports.isNotEmpty()) {
+                    withContext(ioDispatcher) { beaconRepo.storeToLocationCache(reports) }
+                    // Back on the confined scope: the map is only touched here.
+                    for ((id, list) in reports) {
+                        list.maxByOrNull { it.timestamp }?.let { adoptIfNewer(id, it) }
                     }
-                    buildMarkers() to buildCards()
                 }
+                val ui = buildUi()
                 val got = reports.values.sumOf { it.size }
                 val rungMs = kotlin.time.Clock.System.now().toEpochMilliseconds() - rungStartMs
                 SyncLog.record(
@@ -402,7 +463,7 @@ class MapViewModel(
                         "beacons_replied" to reports.size.toString(),
                         "reports_total" to got.toString(),
                         "duration_ms" to rungMs.toString(),
-                        "located_after" to markers.size.toString(),
+                        "located_after" to countLocated().toString(),
                         "responding_beacons" to reports.keys.joinToString(","),
                         "non_responding_beacons" to toFetch.keys.minus(reports.keys).joinToString(","),
                     ),
@@ -414,12 +475,13 @@ class MapViewModel(
                 // regardless of report count, then break'd, so a 1h
                 // rung returning 0 reports halted the cascade with
                 // "0 located" instead of escalating.
-                val anyLocated = markers.isNotEmpty()
+                val anyLocated = countLocated() > 0
                 _state.update { current ->
+                    val markers = ui?.markers ?: current.markers
                     current.copy(
                         isInitialFetchComplete = current.isInitialFetchComplete || anyLocated,
                         markers = markers,
-                        cards = cards,
+                        cards = ui?.cards ?: current.cards,
                         selectedBeaconId = pickSelection(current.selectedBeaconId, markers),
                     )
                 }
@@ -542,7 +604,7 @@ class MapViewModel(
         // Update in-state so MapView recreates at the correct position after
         // back-navigation (otherwise MapView rebuilds at world-map default).
         _state.update { it.copy(initialCamera = position) }
-        runScope.launch {
+        confinedScope.launch {
             withContext(ioDispatcher) { userDataRepo.storeLastCameraPosition(position) }
         }
     }
@@ -561,7 +623,7 @@ class MapViewModel(
     fun renameBeacon(beaconId: String, name: String, emoji: String? = null) {
         val trimmed = name.trim()
         if (trimmed.isEmpty()) return
-        runScope.launch {
+        confinedScope.launch {
             withContext(ioDispatcher) {
                 val now = kotlin.time.Clock.System.now().toEpochMilliseconds()
                 beaconRepo.storeUserBeaconOptions(
@@ -583,7 +645,7 @@ class MapViewModel(
      * markers/cards so it disappears from the map immediately.
      */
     fun removeBeacon(beaconId: String) {
-        runScope.launch {
+        confinedScope.launch {
             withContext(ioDispatcher) {
                 beaconRepo.markBeaconAsRemoved(beaconId)
             }
@@ -602,12 +664,10 @@ class MapViewModel(
      * are immediately reflected in cards and markers.
      */
     fun refreshNames() {
-        if (beaconsById.isEmpty()) return
-        runScope.launch {
-            val (markers, cards) = withContext(ioDispatcher) {
-                buildMarkers() to buildCards()
-            }
-            _state.update { it.copy(markers = markers, cards = cards) }
+        confinedScope.launch {
+            if (beaconsById.isEmpty()) return@launch
+            val ui = buildUi() ?: return@launch
+            _state.update { it.copy(markers = ui.markers, cards = ui.cards) }
         }
     }
 
@@ -616,22 +676,26 @@ class MapViewModel(
      * are picked up. Clears all cached data and reruns boot → refresh.
      */
     fun reboot() {
-        beaconsById.clear()
-        latestLocationByBeacon.clear()
-        geocodeCache.clear()
-        userHasExplicitlySelected = false
-        autoPromoteDone = false
-        _state.update { MapUiState() }
-        runScope.launch {
+        confinedScope.launch {
+            beaconsById.clear()
+            latestLocationByBeacon.clear()
+            geocodeCache.clear()
+            userHasExplicitlySelected = false
+            autoPromoteDone = false
+            _state.update { MapUiState() }
             boot().join()
             refresh()
         }
     }
 
-    private fun buildMarkers(): List<BeaconMarkerUi> {
-        val infos = beaconRepo.getAllBeaconInformation()
-        return beaconsById.values.mapNotNull { beacon ->
-            val loc = latestLocationByBeacon[beacon.beaconId] ?: return@mapNotNull null
+    private fun buildMarkers(
+        beacons: List<BeaconData>,
+        locations: Map<String, BeaconLocationReport>,
+        addresses: Map<Long, String>,
+        infos: Map<String, BeaconInformation>,
+    ): List<BeaconMarkerUi> {
+        return beacons.mapNotNull { beacon ->
+            val loc = locations[beacon.beaconId] ?: return@mapNotNull null
             val info = infos[beacon.beaconId]
             BeaconMarkerUi(
                 beaconId = beacon.beaconId,
@@ -641,7 +705,7 @@ class MapViewModel(
                 longitude = loc.longitude,
                 lastUpdatedMs = loc.timestamp,
                 horizontalAccuracy = loc.horizontalAccuracy,
-                addressLine = geocodeCache[geocodeKey(loc.latitude, loc.longitude)],
+                addressLine = addresses[geocodeKey(loc.latitude, loc.longitude)],
             )
         }
     }
@@ -650,10 +714,14 @@ class MapViewModel(
      * Every owned beacon shows up as a card — sorted by last-seen descending
      * so the most recently updated tag is always first. Unlocated tags tail.
      */
-    private fun buildCards(): List<TagCardUi> {
-        val infos = beaconRepo.getAllBeaconInformation()
-        val cards = beaconsById.values.map { beacon ->
-            val loc = latestLocationByBeacon[beacon.beaconId]
+    private fun buildCards(
+        beacons: List<BeaconData>,
+        locations: Map<String, BeaconLocationReport>,
+        addresses: Map<Long, String>,
+        infos: Map<String, BeaconInformation>,
+    ): List<TagCardUi> {
+        val cards = beacons.map { beacon ->
+            val loc = locations[beacon.beaconId]
             val info = infos[beacon.beaconId]
             TagCardUi(
                 beaconId = beacon.beaconId,
@@ -663,7 +731,7 @@ class MapViewModel(
                 latitude = loc?.latitude,
                 longitude = loc?.longitude,
                 lastUpdatedMs = loc?.timestamp,
-                addressLine = loc?.let { geocodeCache[geocodeKey(it.latitude, it.longitude)] },
+                addressLine = loc?.let { addresses[geocodeKey(it.latitude, it.longitude)] },
             )
         }
         val (located, unlocated) = cards.partition { it.latitude != null && it.longitude != null }
@@ -672,7 +740,7 @@ class MapViewModel(
     }
 
     private fun kickoffGeocoding() {
-        runScope.launch {
+        confinedScope.launch {
             // Selected marker first — the user sees its address immediately
             // while others fill in behind it. Geocoder can take 100-500 ms
             // per call on a cold hit so ordering matters.
@@ -683,6 +751,8 @@ class MapViewModel(
                 if (geocodeCache.containsKey(key)) continue
                 val line = try {
                     reverseGeocode(marker.latitude, marker.longitude)
+                } catch (e: kotlinx.coroutines.CancellationException) {
+                    throw e
                 } catch (_: Exception) {
                     null
                 } ?: continue
