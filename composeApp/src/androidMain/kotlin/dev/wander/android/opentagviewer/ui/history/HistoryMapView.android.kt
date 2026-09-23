@@ -5,7 +5,6 @@ import android.graphics.RectF
 import android.os.Bundle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
@@ -14,9 +13,6 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.viewinterop.AndroidView
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleEventObserver
-import androidx.lifecycle.compose.LocalLifecycleOwner
 import io.github.tieo.taghistory.ui.map.MapBasemap
 import io.github.tieo.taghistory.ui.map.defaultBasemap
 import io.github.tieo.taghistory.ui.map.fromBasemap
@@ -84,7 +80,6 @@ actual fun HistoryMapView(
     modifier: Modifier,
 ) {
     val context = LocalContext.current
-    val lifecycleOwner = LocalLifecycleOwner.current
     val density = LocalDensity.current
     val effectiveBasemap = basemap ?: defaultBasemap()
     val currentPoints = rememberUpdatedState(points)
@@ -113,30 +108,7 @@ actual fun HistoryMapView(
     val lastAppliedBasemap = remember { arrayOf(effectiveBasemap) }
     val lastRenderedPointsKey = remember { arrayOf<List<Long>>(emptyList()) }
 
-    DisposableEffect(lifecycleOwner, mapView) {
-        var destroyed = false
-        val safeDestroy = {
-            if (!destroyed) {
-                destroyed = true
-                runCatching { mapView.onDestroy() }
-            }
-        }
-        val observer = LifecycleEventObserver { _, event ->
-            when (event) {
-                Lifecycle.Event.ON_START -> mapView.onStart()
-                Lifecycle.Event.ON_RESUME -> mapView.onResume()
-                Lifecycle.Event.ON_PAUSE -> mapView.onPause()
-                Lifecycle.Event.ON_STOP -> mapView.onStop()
-                Lifecycle.Event.ON_DESTROY -> safeDestroy()
-                else -> Unit
-            }
-        }
-        lifecycleOwner.lifecycle.addObserver(observer)
-        onDispose {
-            lifecycleOwner.lifecycle.removeObserver(observer)
-            safeDestroy()
-        }
-    }
+    io.github.tieo.taghistory.ui.map.BindMapViewLifecycle(mapView)
 
     LaunchedEffect(effectiveBasemap) {
         if (lastAppliedBasemap[0] == effectiveBasemap) return@LaunchedEffect
