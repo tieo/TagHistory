@@ -171,6 +171,10 @@ fun HistoryScreen(
     val chronological = remember(selectedDay) {
         selectedDay?.points?.sortedBy { it.timestampMs } ?: emptyList()
     }
+    // Only the selected day shows addresses, so only its points get geocoded.
+    LaunchedEffect(selectedDay?.points) {
+        viewModel.setVisiblePoints(selectedDay?.points?.mapTo(HashSet()) { it.id } ?: emptySet())
+    }
     // Day-scoped entries: rebuild from VM-supplied entries that are
     // already classified + filtered, intersected with the current day.
     val dayEntries = remember(state.entries, selectedDay) {

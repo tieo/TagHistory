@@ -409,12 +409,35 @@ class HistoryViewModel(
         return chrono.asReversed()
     }
 
+    // Points currently on screen (the selected day), as reported by the UI.
+    // Null until the screen reports; nothing is geocoded before that.
+    @kotlin.concurrent.Volatile
+    private var visiblePointIds: Set<String>? = null
+
+    @kotlin.concurrent.Volatile
+    private var geocodeJob: kotlinx.coroutines.Job? = null
+
+    /**
+     * Tell the VM which points are on screen. Only those are reverse-geocoded:
+     * the range covers the whole cache, often thousands of distinct
+     * coordinates, while addresses only ever show for the selected day.
+     */
+    fun setVisiblePoints(ids: Set<String>) {
+        if (ids == visiblePointIds) return
+        visiblePointIds = ids
+        kickoffGeocoding()
+    }
+
     private fun kickoffGeocoding() {
         val real = realReverseGeocode ?: return
+        val visible = visiblePointIds ?: return
         val cache = geocodeCache
-        runScope.launch {
+        // One pass at a time: each call re-reads the current points, so a
+        // newer pass makes an older one redundant.
+        geocodeJob?.cancel()
+        geocodeJob = runScope.launch {
             PerfTrace.mark("kickoffGeocoding start")
-            val current = _state.value.points
+            val current = _state.value.points.filter { it.id in visible }
             val keyToPoints = HashMap<String, MutableList<HistoryPoint>>()
             for (p in current) {
                 if (p.address != null) continue

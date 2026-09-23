@@ -152,4 +152,35 @@ class HistoryViewModelTest {
         assertEquals(listOf(700L), vm.state.value.points.map { it.timestampMs })
         vm.stopObserving()
     }
+
+    @Test
+    fun `only the points on screen are reverse geocoded`() = runTest {
+        // Two groups of fixes at distinct coordinates; the screen shows one.
+        seedLocation("b1", 100L, lat = 10.0, lon = 10.0)
+        seedLocation("b1", 110L, lat = 11.0, lon = 11.0)
+        seedLocation("b1", 120L, lat = 12.0, lon = 12.0)
+        seedLocation("b1", 900L, lat = 50.0, lon = 50.0)
+        seedLocation("b1", 910L, lat = 51.0, lon = 51.0)
+        val looked = mutableListOf<Pair<Double, Double>>()
+        val vm = HistoryViewModel(
+            beaconRepo = beaconRepo,
+            beaconId = "b1",
+            realReverseGeocode = { lat, lon -> looked += lat to lon; "addr" },
+            scope = this,
+            ioDispatcher = Dispatchers.Unconfined,
+        )
+        vm.load(0L, 1_000L)
+        advanceUntilIdle()
+        assertTrue(looked.isEmpty(), "nothing is on screen yet, so nothing is looked up: $looked")
+
+        val shown = vm.state.value.points.filter { it.timestampMs < 500L }
+        vm.setVisiblePoints(shown.mapTo(HashSet()) { it.id })
+        advanceUntilIdle()
+
+        assertEquals(setOf(10.0 to 10.0, 11.0 to 11.0, 12.0 to 12.0), looked.toSet())
+        val byTs = vm.state.value.points.associateBy { it.timestampMs }
+        assertEquals("addr", byTs.getValue(100L).address)
+        assertEquals(null, byTs.getValue(900L).address)
+        vm.stopObserving()
+    }
 }
