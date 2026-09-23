@@ -4,6 +4,7 @@ import android.app.AlarmManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.os.SystemClock
 
 /**
  * Doze-proof backstop for the periodic [BeaconSyncWorker]. A plain
@@ -38,8 +39,10 @@ object SyncAlarmScheduler {
             .putBoolean(KEY_ENABLED, true)
             .apply()
         val am = ctx.getSystemService(Context.ALARM_SERVICE) as AlarmManager
-        val triggerAt = System.currentTimeMillis() + intervalMinutes.toLong() * 60_000L
-        am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAt, pendingIntent(ctx))
+        // An interval, so measured on the elapsed-since-boot clock: a wall
+        // clock change (manual or network time) must not move the next sync.
+        val triggerAt = SystemClock.elapsedRealtime() + intervalMinutes.toLong() * 60_000L
+        am.setAndAllowWhileIdle(AlarmManager.ELAPSED_REALTIME_WAKEUP, triggerAt, pendingIntent(ctx))
     }
 
     /**
