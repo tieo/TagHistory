@@ -31,7 +31,6 @@ import androidx.compose.material.icons.filled.Directions
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Timeline
-import io.github.tieo.taghistory.ui.util.AlwaysSpinningIndicator
 import io.github.tieo.taghistory.ui.util.fmtFixed
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDefaults
@@ -404,9 +403,7 @@ fun HistoryScreen(
                     dayEntries = dayEntries,
                     selectedPointIdx = selectedPointIdx,
                     summary = summary,
-                    isLoading = state.isLoading,
                     hasLoaded = state.hasLoaded,
-                    error = state.error,
                     hideCity = hideCity,
                     todayStr = todayStr,
                     yesterdayStr = yesterdayStr,
@@ -440,8 +437,6 @@ fun HistoryScreen(
                         }
                     },
                     onSelectPoint = { id -> selectedPointId = id },
-                    onRefresh = { viewModel.refresh() },
-                    onRetry = { viewModel.refresh() },
                 )
             }
         }
@@ -546,9 +541,7 @@ private fun SheetContent(
     dayEntries: List<HistoryEntry>,
     selectedPointIdx: Int,
     summary: DaySummary,
-    isLoading: Boolean,
     hasLoaded: Boolean,
-    error: String?,
     hideCity: Boolean,
     todayStr: String,
     yesterdayStr: String,
@@ -559,8 +552,6 @@ private fun SheetContent(
     onDayTitleTap: () -> Unit,
     onDayTitleLongPress: () -> Unit,
     onSelectPoint: (String) -> Unit,
-    onRefresh: () -> Unit,
-    onRetry: () -> Unit,
 ) {
     // See HistoryScreen for the rationale: swallow the residual scroll
     // here so the BottomSheetScaffold never sees it and can't hijack
@@ -646,25 +637,11 @@ private fun SheetContent(
             // refresh, the background worker, the manual refresh-now
             // button in Settings) shows up in this list automatically
             // — no manual reload needed.
-            if (isLoading) {
-                Box(modifier = Modifier.size(40.dp), contentAlignment = Alignment.Center) {
-                    AlwaysSpinningIndicator(
-                        modifier = Modifier.size(18.dp),
-                        strokeWidth = 2.dp,
-                        color = MaterialTheme.colorScheme.primary,
-                    )
-                }
-            }
         }
 
         if (chronological.isNotEmpty()) {
             DaySummaryStrip(summary = summary, totalPoints = chronological.size)
             HorizontalDivider()
-        }
-
-        if (error != null && chronological.isEmpty()) {
-            ErrorBlock(message = error, onRetry = onRetry)
-            return@Column
         }
 
         // Plain LazyColumn — no PullToRefreshBox. The previous wrapper
@@ -1285,29 +1262,6 @@ private fun HistoryDatePickerDialog(
             },
             colors = DatePickerDefaults.colors(),
         )
-    }
-}
-
-@Composable
-private fun ErrorBlock(message: String, onRetry: () -> Unit) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        Text(
-            message,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.error,
-        )
-        Spacer(Modifier.height(12.dp))
-        androidx.compose.material3.Button(
-            onClick = onRetry,
-            modifier = Modifier.testTag("btn_history_retry"),
-        ) {
-            Text("Retry")
-        }
     }
 }
 

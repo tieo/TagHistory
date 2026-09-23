@@ -1,7 +1,6 @@
 package io.github.tieo.taghistory.ui.history
 
 import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver
-import io.github.tieo.taghistory.data.model.BeaconLocationReport
 import io.github.tieo.taghistory.data.repo.BeaconRepository
 import io.github.tieo.taghistory.db.TagHistoryDatabase
 import java.util.Properties
@@ -75,63 +74,8 @@ class HistoryViewModelTest {
         vm.stopObserving()
     }
 
-    @Test
-    fun `fetchAndLoad persists returned reports and emits them`() = runTest {
-        val fetched = listOf(
-            BeaconLocationReport(
-                publishedAt = 500L, description = "", timestamp = 500L,
-                confidence = 1, latitude = 10.0, longitude = 20.0,
-                horizontalAccuracy = 5, status = 0,
-            )
-        )
-        val vm = HistoryViewModel(
-            beaconRepo = beaconRepo,
-            beaconId = "b1",
-            fetchRange = { _, _, _ -> fetched },
-            // The fetch window is clamped to now, so the clock sits at the end
-            // of the synthetic range.
-            nowMs = { 1_000L },
-            scope = this,
-            ioDispatcher = Dispatchers.Unconfined,
-        )
-        vm.fetchAndLoad(0L, 1_000L)
-        advanceUntilIdle()
-        assertFalse(vm.state.value.isLoading)
-        assertEquals(1, vm.state.value.points.size)
-        assertEquals(10.0, vm.state.value.points.single().latitude)
-    }
 
-    @Test
-    fun `fetchAndLoad records error on failure`() = runTest {
-        val vm = HistoryViewModel(
-            beaconRepo = beaconRepo,
-            beaconId = "b1",
-            fetchRange = { _, _, _ -> throw RuntimeException("boom") },
-            nowMs = { 1L },
-            scope = this,
-            ioDispatcher = Dispatchers.Unconfined,
-        )
-        vm.fetchAndLoad(0L, 1L)
-        advanceUntilIdle()
-        assertEquals("boom", vm.state.value.error)
-        assertFalse(vm.state.value.isLoading)
-    }
 
-    @Test
-    fun `fetchAndLoad with empty response leaves error null and emits cached`() = runTest {
-        seedLocation("b1", 200L)
-        val vm = HistoryViewModel(
-            beaconRepo = beaconRepo,
-            beaconId = "b1",
-            fetchRange = { _, _, _ -> emptyList() },
-            scope = this,
-            ioDispatcher = Dispatchers.Unconfined,
-        )
-        vm.fetchAndLoad(0L, 1_000L)
-        advanceUntilIdle()
-        assertTrue(vm.state.value.error == null)
-        assertEquals(1, vm.state.value.points.size)
-    }
 
     @Test
     fun `hasLoaded separates not read yet from read and empty`() = runTest {
@@ -188,30 +132,4 @@ class HistoryViewModelTest {
         vm.stopObserving()
     }
 
-    @Test
-    fun `the network fetch is clamped to what Apple still keeps`() = runTest {
-        // History reads the whole cache (0 until Long.MAX_VALUE), but a network
-        // fetch over that span would try to derive a key for every 15 minute
-        // slot since 1970. The fetch window must be clamped to Apple's
-        // retention and to now.
-        val now = 1_800_000_000_000L
-        var asked: Pair<Long, Long>? = null
-        val vm = HistoryViewModel(
-            beaconRepo = beaconRepo,
-            beaconId = "b1",
-            fetchRange = { _, start, end -> asked = start to end; emptyList() },
-            nowMs = { now },
-            scope = this,
-            ioDispatcher = Dispatchers.Unconfined,
-        )
-        vm.load(0L, Long.MAX_VALUE)
-        advanceUntilIdle()
-        vm.refresh()
-        advanceUntilIdle()
-
-        val (start, end) = asked ?: error("refresh did not fetch")
-        assertEquals(now - 7L * 24 * 60 * 60 * 1000, start)
-        assertEquals(now, end)
-        vm.stopObserving()
-    }
 }

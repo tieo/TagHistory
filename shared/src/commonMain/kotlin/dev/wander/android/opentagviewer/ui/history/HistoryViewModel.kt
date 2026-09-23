@@ -45,8 +45,6 @@ import kotlin.time.ExperimentalTime
 class HistoryViewModel(
     private val beaconRepo: BeaconRepository,
     private val beaconId: String,
-    private val fetchRange: suspend (String, Long, Long) -> List<BeaconLocationReport> =
-        { _, _, _ -> emptyList() },
     private val realReverseGeocode: (suspend (Double, Double) -> String?)? = null,
     private val geocodeCache: GeocodeCacheRepository? = null,
     private val nowMs: () -> Long = { Clock.System.now().toEpochMilliseconds() },
@@ -112,56 +110,6 @@ class HistoryViewModel(
         val end = nowMs()
         val start = end - DAY_MS
         load(start, end)
-    }
-
-    fun fetchAndLoad(startUnixMs: Long, endUnixMs: Long) {
-        PerfTrace.mark("vm.fetchAndLoad() called")
-        _state.update {
-            it.copy(
-                rangeStartMs = startUnixMs,
-                rangeEndMs = endUnixMs,
-                isLoading = true,
-                error = null,
-            )
-        }
-        // The DB range can be everything cached (0 until Long.MAX_VALUE), but
-        // the network can only return what Apple still keeps, and a fetch over
-        // the unclamped span would derive a key for every 15 minute slot since
-        // 1970. Clamp the fetch to Apple's retention window and to now.
-        val now = nowMs()
-        val fetchStart = maxOf(startUnixMs, now - APPLE_RETENTION_MS)
-        val fetchEnd = minOf(endUnixMs, now)
-        runScope.launch {
-            try {
-                val fetched = if (fetchStart < fetchEnd) {
-                    withContext(ioDispatcher) { fetchRange(beaconId, fetchStart, fetchEnd) }
-                } else {
-                    emptyList()
-                }
-                PerfTrace.mark("network fetch done (${fetched.size})")
-                if (fetched.isNotEmpty()) {
-                    withContext(ioDispatcher) {
-                        beaconRepo.storeToLocationCache(mapOf(beaconId to fetched))
-                    }
-                    PerfTrace.mark("storeToLocationCache done")
-                }
-                emitPoints()
-                PerfTrace.mark("post-fetch emitPoints done")
-                _state.update { it.copy(isLoading = false) }
-                kickoffGeocoding()
-            } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Throwable) {
-                _state.update {
-                    it.copy(isLoading = false, error = e.message ?: "Fetch failed")
-                }
-            }
-        }
-    }
-
-    /** UI hook: pull-to-refresh / the explicit Retry button. */
-    fun refresh() {
-        val start = _state.value.rangeStartMs ?: return
-        val end = _state.value.rangeEndMs ?: return
-        fetchAndLoad(start, end)
     }
 
     fun setStopsOnly(value: Boolean) {
@@ -613,8 +561,6 @@ class HistoryViewModel(
     private companion object {
         const val DAY_MS: Long = 24L * 60L * 60L * 1000L
 
-        /** How far back Apple keeps location reports; nothing older can be fetched. */
-        const val APPLE_RETENTION_MS: Long = 7L * DAY_MS
         const val STOP_RADIUS_M: Double = 25.0
         /**
          * A run of MOVE points is reclassified as stationary jitter
@@ -664,8 +610,6 @@ data class HistoryUiState(
      * otherwise look the same: an empty point list.
      */
     val hasLoaded: Boolean = false,
-    val isLoading: Boolean = false,
-    val error: String? = null,
 )
 
 enum class HistoryPointKind { STOP, MOVE }

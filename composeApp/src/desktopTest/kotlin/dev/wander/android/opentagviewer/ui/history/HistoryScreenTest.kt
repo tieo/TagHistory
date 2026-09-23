@@ -6,11 +6,9 @@ import androidx.compose.ui.test.ComposeUiTest
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.onNodeWithContentDescription
-import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.runComposeUiTest
 import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver
-import io.github.tieo.taghistory.data.model.BeaconLocationReport
 import io.github.tieo.taghistory.data.repo.BeaconRepository
 import io.github.tieo.taghistory.db.TagHistoryDatabase
 import io.github.tieo.taghistory.ui.theme.TagHistoryTheme
@@ -69,12 +67,10 @@ class HistoryScreenTest {
     }
 
     private fun buildVm(
-        fetchRange: suspend (String, Long, Long) -> List<BeaconLocationReport> = { _, _, _ -> emptyList() },
         ioDispatcher: CoroutineDispatcher = Dispatchers.Default,
     ) = HistoryViewModel(
         beaconRepo = beaconRepo,
         beaconId = "b1",
-        fetchRange = fetchRange,
         scope = CoroutineScope(Dispatchers.Default + SupervisorJob()).also { vmScopes += it },
         ioDispatcher = ioDispatcher,
     )
@@ -145,16 +141,4 @@ class HistoryScreenTest {
         onNodeWithContentDescription("1 points").assertDoesNotExist()
     }
 
-    @Test
-    fun history_shows_the_error_and_retry_after_a_failed_refresh() = runComposeUiTest {
-        // The screen itself only reads the DB; the network path runs when
-        // refresh() is called, which is what Retry does.
-        val vm = buildVm(fetchRange = { _, _, _ -> throw RuntimeException("connection timed out") })
-        show(vm)
-        waitUntil(timeoutMillis = 5_000L) { vm.state.value.hasLoaded }
-        vm.refresh()
-        waitUntil(timeoutMillis = 5_000L) { vm.state.value.error != null }
-        onNodeWithText("connection timed out").assertIsDisplayed()
-        onNodeWithTag("btn_history_retry").assertIsDisplayed()
-    }
 }

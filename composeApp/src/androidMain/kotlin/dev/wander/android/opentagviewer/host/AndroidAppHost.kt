@@ -35,7 +35,6 @@ import io.github.tieo.taghistory.ui.map.MapViewModel
 import io.github.tieo.taghistory.ui.settings.SettingsViewModel
 import java.util.Locale
 import kotlin.time.ExperimentalTime
-import kotlin.time.Instant
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -446,24 +445,9 @@ class AndroidAppHost private constructor(
     }
 
     fun createHistoryViewModel(beaconId: String): HistoryViewModel {
-        val reportsClient = LocationReportsClient(http, anisette)
         return HistoryViewModel(
             beaconRepo = beaconRepo,
             beaconId = beaconId,
-            fetchRange = { id, startMs, endMs ->
-                val auth = userAuthRepo.getUserAuth() ?: return@HistoryViewModel emptyList()
-                val plain = userAuthRepo.decrypt(auth.data).decodeToString()
-                val account = AppleAccount.restoreFromJson(plain)
-                val beacon = beaconRepo.getById(id) ?: return@HistoryViewModel emptyList()
-                beacon.ownedBeaconInfo?.content ?: return@HistoryViewModel emptyList()
-                val accessory = runCatching {
-                    BeaconSyncOrchestrator.DefaultAccessoryLoader(beacon.ownedBeaconInfo!!)
-                }.getOrNull() ?: return@HistoryViewModel emptyList()
-                val from = Instant.fromEpochMilliseconds(startMs)
-                val to = Instant.fromEpochMilliseconds(endMs)
-                AppleReportsService(reportsClient, account)
-                    .fetchReportsByBeacon(mapOf(id to accessory), from, to)[id] ?: emptyList()
-            },
             // Inject the geocode pipeline pieces so HistoryViewModel can
             // do its own dedupe-by-rounded-key + parallel fan-out.
             realReverseGeocode = { lat, lon -> rawReverseGeocode(lat, lon) },
