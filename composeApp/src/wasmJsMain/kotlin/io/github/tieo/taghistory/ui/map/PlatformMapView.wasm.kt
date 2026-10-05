@@ -1,32 +1,29 @@
 package io.github.tieo.taghistory.ui.map
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableDoubleStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Rect
-import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.layout.positionInWindow
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import io.github.tieo.taghistory.data.model.UserMapCameraPosition
 
 /**
- * Web PlatformMapView. Mounts a MapLibre canvas in a DOM div that
- * tracks the Compose surface's bounds via onGloballyPositioned. Map
- * is positioned fixed in the page so it visually sits in the same
- * box the Compose composable claims; tap routing goes through
- * maplibre's `click` event and back through `onMarkerClick`.
+ * Web map: MapLibre GL behind the Compose canvas (see [MapSurface]), with the
+ * same Compose chip markers, north button and camera behavior as Android.
+ * MapLibre draws tiles and accuracy circles; markers are composables drawn at
+ * the projected position of each tag, re-projected on every camera move.
  */
 @Composable
 actual fun PlatformMapView(
@@ -39,129 +36,92 @@ actual fun PlatformMapView(
     bottomInsetPx: Int,
     modifier: Modifier,
 ) {
-    val mapHandle = remember { MapHandle() }
-    var bounds by remember { mutableStateOf(Rect.Zero) }
+    var map by remember { mutableStateOf<WebMap?>(null) }
+    var ready by remember { mutableStateOf(false) }
+    var cameraTick by remember { mutableIntStateOf(0) }
+    var bearing by remember { mutableDoubleStateOf(0.0) }
+    val lastStyle = remember { arrayOf(basemap) }
+    // Compose lays out in device pixels, MapLibre works in CSS pixels.
+    val density = LocalDensity.current.density
 
-    DisposableEffect(Unit) {
-        mapHandle.create(initialCamera, basemap) { id -> onMarkerClick(id) }
-        onDispose { mapHandle.destroy() }
-    }
+    Box(modifier = modifier.fillMaxSize()) {
+        MapSurface(map = map, modifier = Modifier.fillMaxSize())
 
-    LaunchedEffect(bounds) {
-        mapHandle.setBounds(
-            bounds.left.toDouble(),
-            bounds.top.toDouble(),
-            bounds.width.toDouble(),
-            bounds.height.toDouble(),
-        )
-    }
-    LaunchedEffect(markers, selectedBeaconId) {
-        mapHandle.setMarkers(markers, selectedBeaconId)
-    }
-    LaunchedEffect(basemap) {
-        mapHandle.setBasemap(basemap)
-    }
-
-    Box(
-        modifier = modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.surfaceVariant)
-            .onGloballyPositioned { coords ->
-                val pos = coords.positionInWindow()
-                bounds = Rect(pos.x, pos.y, pos.x + coords.size.width, pos.y + coords.size.height)
-            },
-    ) {
-        if (markers.isEmpty()) {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text(
-                    "No located tags yet",
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(16.dp),
+        val m = map
+        if (m != null && ready) {
+            @Suppress("UNUSED_VARIABLE")
+            val tick = cameraTick
+            val selected = markers.firstOrNull { it.beaconId == selectedBeaconId }
+            for (marker in markers.filter { it.beaconId != selectedBeaconId } + listOfNotNull(selected)) {
+                val (x, y) = m.project(marker.latitude, marker.longitude)
+                ChipMarker(
+                    marker = marker,
+                    isSelected = marker.beaconId == selectedBeaconId,
+                    onClick = { onMarkerClick(marker.beaconId) },
+                    screenX = (x * density).toFloat(),
+                    screenY = (y * density).toFloat(),
                 )
             }
         }
-    }
-}
 
-/**
- * Thin wrapper around the JS MapLibre instance. All actual DOM /
- * map work happens in WebMap.js — Kotlin keeps a single js-object
- * handle and forwards calls.
- */
-private class MapHandle {
-    private var handle: JsAny? = null
-
-    fun create(
-        initialCamera: UserMapCameraPosition?,
-        basemap: MapBasemap,
-        onMarkerClick: (String) -> Unit,
-    ) {
-        handle = jsCreate(
-            initialCamera?.lat ?: 0.0,
-            initialCamera?.lon ?: 0.0,
-            initialCamera?.zoom?.toDouble() ?: 2.0,
-            basemap.styleUrl(),
-            onMarkerClick,
+        NorthLockButton(
+            bearing = bearing.toFloat(),
+            onReset = { map?.resetNorth() },
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .statusBarsPadding()
+                .padding(top = 72.dp, end = 12.dp),
         )
     }
 
-    fun destroy() {
-        handle?.let { jsDestroy(it) }
-        handle = null
-    }
-
-    fun setBounds(x: Double, y: Double, w: Double, h: Double) {
-        handle?.let { jsSetBounds(it, x, y, w, h) }
-    }
-
-    fun setMarkers(markers: List<BeaconMarkerUi>, selectedId: String?) {
-        handle?.let { jsSetMarkers(it, encodeMarkers(markers, selectedId)) }
-    }
-
-    fun setBasemap(basemap: MapBasemap) {
-        handle?.let { jsSetStyle(it, basemap.styleUrl()) }
-    }
-
-    private fun MapBasemap.styleUrl(): String = when (this) {
-        // Free no-API-key vector tile demo. Coverage is global but
-        // styling is plain. Self-hosting a tile server is the
-        // production path; this just keeps the preview live.
-        MapBasemap.LIGHT -> "https://demotiles.maplibre.org/style.json"
-        // Same source — MapLibre demotiles only ship one style. Dark
-        // mode tile sets exist behind API keys (Stadia, MapTiler) but
-        // pinning a key in this scaffold would leak it.
-        MapBasemap.DARK -> "https://demotiles.maplibre.org/style.json"
-        MapBasemap.SATELLITE -> "https://demotiles.maplibre.org/style.json"
-    }
-
-    private fun encodeMarkers(markers: List<BeaconMarkerUi>, selectedId: String?): String =
-        markers.joinToString("|") { m ->
-            "${m.beaconId},${m.latitude},${m.longitude},${m.emoji ?: "📍"},${if (m.beaconId == selectedId) 1 else 0}"
+    DisposableEffect(Unit) {
+        val camera = initialCamera?.takeIf { it.zoom >= MEANINGFUL_ZOOM_FLOOR }
+        val created = WebMap(
+            lat = camera?.lat ?: 0.0,
+            lon = camera?.lon ?: 0.0,
+            zoom = camera?.zoom?.toDouble() ?: 2.0,
+            style = basemap.webStyle(),
+            overlays = markerAccuracyOverlays,
+            onReady = { ready = true; cameraTick++ },
+            onMove = { b -> bearing = b; cameraTick++ },
+            onIdle = { lat, lon, zoom ->
+                cameraTick++
+                onCameraIdle(UserMapCameraPosition(zoom = zoom.toFloat(), lat = lat, lon = lon))
+            },
+        )
+        map = created
+        onDispose {
+            created.destroy()
+            map = null
         }
-}
+    }
 
-private fun jsCreate(
-    lat: Double,
-    lon: Double,
-    zoom: Double,
-    styleUrl: String,
-    onMarkerClick: (String) -> Unit,
-): JsAny = js(
-    "window.__taghistoryMap__.create(lat, lon, zoom, styleUrl, onMarkerClick)"
-)
+    // Everything below re-sends its state once the map has loaded, since the
+    // bridge drops calls made before that.
+    LaunchedEffect(ready, bottomInsetPx) {
+        map?.setBottomPadding(bottomInsetPx / density.toDouble())
+    }
+    LaunchedEffect(ready, markers) {
+        map?.setData("accuracy", accuracyGeoJson(markers))
+    }
+    LaunchedEffect(basemap) {
+        if (lastStyle[0] == basemap) return@LaunchedEffect
+        lastStyle[0] = basemap
+        map?.setStyle(basemap.webStyle())
+    }
 
-private fun jsDestroy(handle: JsAny) {
-    js("window.__taghistoryMap__.destroy(handle)")
-}
-
-private fun jsSetBounds(handle: JsAny, x: Double, y: Double, w: Double, h: Double) {
-    js("window.__taghistoryMap__.setBounds(handle, x, y, w, h)")
-}
-
-private fun jsSetMarkers(handle: JsAny, encoded: String) {
-    js("window.__taghistoryMap__.setMarkers(handle, encoded)")
-}
-
-private fun jsSetStyle(handle: JsAny, styleUrl: String) {
-    js("window.__taghistoryMap__.setStyle(handle, styleUrl)")
+    // Follow the selection, as on Android: only when the selected tag or its
+    // position changes, zooming to at least street level.
+    val selectedMarker = markers.firstOrNull { it.beaconId == selectedBeaconId }
+    val cameraKey = selectedMarker?.let { "${it.beaconId}|${it.latitude}|${it.longitude}" }
+    LaunchedEffect(ready, cameraKey) {
+        val target = selectedMarker ?: return@LaunchedEffect
+        val m = map?.takeIf { ready } ?: return@LaunchedEffect
+        m.easeTo(
+            lat = target.latitude,
+            lon = target.longitude,
+            zoom = maxOf(m.zoom, DEFAULT_FOCUS_ZOOM),
+            durationMs = cameraDurationFor(haversineMeters(m.centerLat, m.centerLon, target.latitude, target.longitude)),
+        )
+    }
 }

@@ -24,6 +24,8 @@ object ServerApi {
     const val SYNC_RUNS = "/api/sync-runs"
     const val SYNC = "/api/sync"
     const val GEOCODE = "/api/geocode"
+    /** `?text=` returns an emoji font covering exactly those characters. */
+    const val EMOJI_FONT = "/api/emoji-font"
 
     /** `PUT` here with [BeaconOptionsDto] renames a beacon; `DELETE` removes it. */
     fun beacon(beaconId: String) = "$BEACONS/$beaconId"

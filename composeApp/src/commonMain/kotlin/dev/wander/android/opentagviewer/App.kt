@@ -30,6 +30,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
@@ -152,6 +153,10 @@ data class AppHostFactories(
      * hourly sync worker gets parked by Doze for many hours.
      */
     val requestIgnoreBatteryOptimizations: (() -> Unit)? = null,
+    /** False on a server client: the server runs the sync, not this device. */
+    val syncsOnDevice: Boolean = true,
+    /** False where the host has no Bluetooth scanner for the Nearby screen. */
+    val supportsNearby: Boolean = true,
 )
 
 @Composable
@@ -161,7 +166,11 @@ fun App(factories: AppHostFactories) {
     val darkTheme = settings.useDarkTheme ?: systemDark
 
     TagHistoryTheme(darkTheme = darkTheme) {
-        Surface(modifier = Modifier.fillMaxSize().withTestTagsAsResourceId()) {
+        Surface(
+            modifier = Modifier.fillMaxSize().withTestTagsAsResourceId(),
+            color = rootSurfaceColor(MaterialTheme.colorScheme.surface),
+            contentColor = MaterialTheme.colorScheme.onSurface,
+        ) {
             var showLogin by remember { mutableStateOf(!factories.isLoggedIn()) }
             if (showLogin) {
                 val vm = remember { factories.createLogin() }
@@ -271,8 +280,11 @@ private fun AuthedNav(
 
     val current = nav.current
 
+    // Transparent: the root surface below already paints the theme color, and
+    // on the web the map shows through both (see rootSurfaceColor).
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
+        containerColor = Color.Transparent,
     ) { innerPadding ->
         Box(
             modifier = Modifier
@@ -355,12 +367,13 @@ private fun AuthedNav(
                     SettingsScreen(
                         viewModel = settingsVm,
                         onOpenInformation = { nav = nav.push(Screen.Information) },
-                        onOpenNearby = { nav = nav.push(Screen.Nearby) },
+                        onOpenNearby = if (factories.supportsNearby) ({ nav = nav.push(Screen.Nearby) }) else null,
                         onOpenSyncActivity = { nav = nav.push(Screen.SyncActivity) },
                         onImport = onImport,
                         onRefreshNow = refreshNow,
                         isIgnoringBatteryOptimizations = factories.isIgnoringBatteryOptimizations,
                         requestIgnoreBatteryOptimizations = factories.requestIgnoreBatteryOptimizations,
+                        syncsOnDevice = factories.syncsOnDevice,
                     )
                 }
                 is Screen.Information -> {

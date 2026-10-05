@@ -35,11 +35,6 @@ import org.maplibre.geojson.FeatureCollection
 import org.maplibre.geojson.LineString
 import org.maplibre.geojson.Point
 import org.maplibre.geojson.Polygon
-import kotlin.math.PI
-import kotlin.math.asin
-import kotlin.math.atan2
-import kotlin.math.cos
-import kotlin.math.sin
 
 private const val POLYLINE_WIDTH_DP = 4f
 private const val BOUNDS_PADDING_PX = 140
@@ -91,8 +86,8 @@ actual fun HistoryMapView(
     // streets to dark matter to satellite, and a single material
     // primary doesn't read against all three. Pick a tone that
     // contrasts with the underlying tile palette explicitly.
-    val lineColor = colorForBasemap(effectiveBasemap)
-    val selectedColor = selectedColorForBasemap(effectiveBasemap)
+    val lineColor = historyLineColor(effectiveBasemap).toInt()
+    val selectedColor = historySelectedColor(effectiveBasemap).toInt()
     val onSurfaceColor = MaterialTheme.colorScheme.onSurface.toArgb()
     val surfaceColor = MaterialTheme.colorScheme.surface.toArgb()
     // Tap-test radius in pixels — generous because dots are 12 dp.
@@ -420,7 +415,8 @@ private fun renderSelectedPoint(
     if (accuracySource != null) {
         val radiusM = pt.horizontalAccuracy.coerceAtLeast(0L).toDouble()
         if (radiusM > 0.0) {
-            val ring = circlePolygonLatLng(pt.latitude, pt.longitude, radiusM, segments = 48)
+            val ring = io.github.tieo.taghistory.ui.map.circleRing(pt.latitude, pt.longitude, radiusM, segments = 48)
+                .map { (lon, lat) -> Point.fromLngLat(lon, lat) }
             accuracySource.setGeoJson(
                 Feature.fromGeometry(Polygon.fromLngLats(listOf(ring))),
             )
@@ -432,61 +428,6 @@ private fun renderSelectedPoint(
         val zoom = map.cameraPosition.zoom.coerceAtLeast(13.0)
         map.animateCamera(CameraUpdateFactory.newLatLngZoom(LatLng(pt.latitude, pt.longitude), zoom))
     }
-}
-
-/**
- * Polyline + accent color, hand-tuned for each basemap. Deeper /
- * richer than the previous palette which the user called ugly.
- *
- *  - LIGHT: deep teal that sits well against the carto.streets
- *    pastel beige + green palette without clashing.
- *  - DARK: warm coral for high contrast on the dark-matter near-
- *    black background — reads as the focal element instantly.
- *  - SATELLITE: hot magenta so the line cuts through busy
- *    aerial textures without being washed out.
- */
-private fun colorForBasemap(basemap: MapBasemap): Int = when (basemap) {
-    MapBasemap.LIGHT -> 0xFF0F766E.toInt()
-    MapBasemap.DARK -> 0xFFFB923C.toInt()
-    MapBasemap.SATELLITE -> 0xFFEC4899.toInt()
-}
-
-/**
- * Accent for the selected point's halo + accuracy fill, paired
- * with the line color so they read as one styled scheme rather
- * than two unrelated tones.
- */
-private fun selectedColorForBasemap(basemap: MapBasemap): Int = when (basemap) {
-    MapBasemap.LIGHT -> 0xFFB45309.toInt()
-    MapBasemap.DARK -> 0xFFFCD34D.toInt()
-    MapBasemap.SATELLITE -> 0xFF38BDF8.toInt()
-}
-
-/** Emit a closed lat/lon ring approximating a circle in true meters. */
-private fun circlePolygonLatLng(
-    centerLat: Double,
-    centerLon: Double,
-    radiusM: Double,
-    segments: Int,
-): List<Point> {
-    val earthR = 6_371_000.0
-    val lat0 = centerLat * PI / 180.0
-    val lon0 = centerLon * PI / 180.0
-    val angularDist = radiusM / earthR
-    val out = ArrayList<Point>(segments + 1)
-    for (i in 0..segments) {
-        val bearing = 2.0 * PI * i / segments
-        val newLat = asin(
-            sin(lat0) * cos(angularDist) +
-                cos(lat0) * sin(angularDist) * cos(bearing),
-        )
-        val newLon = lon0 + atan2(
-            sin(bearing) * sin(angularDist) * cos(lat0),
-            cos(angularDist) - sin(lat0) * sin(newLat),
-        )
-        out += Point.fromLngLat(newLon * 180.0 / PI, newLat * 180.0 / PI)
-    }
-    return out
 }
 
 // renderLabels removed — no floating address text on the map.

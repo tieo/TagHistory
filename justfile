@@ -125,6 +125,6 @@ lefthook-run:
 # ─── Sync server ──────────────────────────────────────────────────────
 
 [group('server')]
-[doc('Build and deploy the sync server + web app to nasx. From outside the LAN set TAGHISTORY_HOST to nasx's VPN address.')]
+[doc('Build and deploy the sync server + web app to nasx. From outside the LAN set TAGHISTORY_HOST to the VPN address of nasx.')]
 deploy-server:
     scripts/deploy-server.sh

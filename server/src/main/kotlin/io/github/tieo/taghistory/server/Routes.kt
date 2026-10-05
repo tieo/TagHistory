@@ -11,7 +11,10 @@ import io.ktor.server.plugins.compression.Compression
 import io.ktor.server.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.server.plugins.statuspages.StatusPages
 import io.ktor.server.request.receive
+import io.ktor.http.ContentType
+import io.ktor.server.response.header
 import io.ktor.server.response.respond
+import io.ktor.server.response.respondBytes
 import io.ktor.server.routing.delete
 import io.ktor.server.routing.get
 import io.ktor.server.routing.post
@@ -21,7 +24,7 @@ import org.slf4j.LoggerFactory
 import java.io.File
 
 /** HTTP surface of [TagHistoryServer]; see [ServerApi] for the contract. */
-fun Application.tagHistoryModule(server: TagHistoryServer, webDir: File?) {
+fun Application.tagHistoryModule(server: TagHistoryServer, webDir: File?, emojiFonts: EmojiFonts? = null) {
     val log = LoggerFactory.getLogger("TagHistoryRoutes")
 
     install(ContentNegotiation) { json(io.github.tieo.taghistory.server.ServerClient.WireJson) }
@@ -98,6 +101,18 @@ fun Application.tagHistoryModule(server: TagHistoryServer, webDir: File?) {
             val lat = requireNotNull(call.request.queryParameters["lat"]?.toDoubleOrNull()) { "lat is missing" }
             val lon = requireNotNull(call.request.queryParameters["lon"]?.toDoubleOrNull()) { "lon is missing" }
             call.respond(GeocodeResult(server.geocode(lat, lon)))
+        }
+
+        get(ServerApi.EMOJI_FONT) {
+            val text = requireNotNull(call.request.queryParameters["text"]) { "text is missing" }
+            require(text.length <= 512) { "text is too long" }
+            val font = emojiFonts?.subset(text)
+            if (font == null) {
+                call.respond(HttpStatusCode.NotFound, ApiError("No emoji font"))
+            } else {
+                call.response.header("Cache-Control", "public, max-age=31536000")
+                call.respondBytes(font, ContentType("font", "woff2"))
+            }
         }
 
         if (webDir != null) {

@@ -85,6 +85,12 @@ class ServerClient(
             parameter("lon", longitude)
         }.decode<GeocodeResult>().address
 
+    /** Emoji font for exactly [text]'s characters, or null when unavailable. */
+    suspend fun emojiFont(text: String): ByteArray? {
+        val response = http.get(url(ServerApi.EMOJI_FONT)) { parameter("text", text) }
+        return if (response.status.isSuccess()) response.body<ByteArray>() else null
+    }
+
     private fun url(path: String) = baseUrl + path
 
     private inline fun <reified T> io.ktor.client.request.HttpRequestBuilder.jsonBody(body: T) {

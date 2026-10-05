@@ -70,6 +70,10 @@ class WasmAppHost(
 
     private val editor by lazy { ServerBeaconEditor(client, beaconRepo) }
 
+    /** Every emoji the tags show, for loading a font that has them. */
+    fun emojiInUse(): String =
+        beaconRepo.getAllBeaconInformation().values.mapNotNull { it.displayEmoji }.toSet().joinToString("")
+
     fun buildFactories(appVersion: String): AppHostFactories = AppHostFactories(
         createLogin = {
             val login = ServerLogin(client)
@@ -135,6 +139,8 @@ class WasmAppHost(
         reverseGeocode = { lat, lon -> runCatching { client.geocode(lat, lon) }.getOrNull() },
         onShareGpx = null,
         onExportTags = null,
+        syncsOnDevice = false,
+        supportsNearby = false,
     )
 
     /** Lets the user pick an OpenTagViewer export zip and uploads it. */

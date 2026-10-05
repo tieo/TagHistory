@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -62,6 +63,12 @@ fun SettingsScreen(
     onRefreshNow: (suspend () -> String?)? = null,
     isIgnoringBatteryOptimizations: (() -> Boolean)? = null,
     requestIgnoreBatteryOptimizations: (() -> Unit)? = null,
+    /**
+     * Whether this device runs the background sync itself. A server client
+     * does not (the server syncs on its own schedule), so the switch and
+     * interval are left out there and only the run log remains.
+     */
+    syncsOnDevice: Boolean = true,
     modifier: Modifier = Modifier,
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -86,8 +93,12 @@ fun SettingsScreen(
     var confirmingSignOut by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
 
+    // A phone-width column, centered: on a desktop browser full-width
+    // buttons and switches are hard to scan.
+    Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
     Column(
-        modifier = modifier
+        modifier = Modifier
+            .widthIn(max = 720.dp)
             .fillMaxSize()
             .safeDrawingPadding()
             .verticalScroll(rememberScrollState())
@@ -115,6 +126,7 @@ fun SettingsScreen(
 
         // ---------- Background sync ----------
         SettingsSection("Background sync") {
+            if (syncsOnDevice) {
             SwitchRow(
                 label = "Auto-refresh when in background",
                 subtitle = "Sync beacon reports without opening the app",
@@ -144,10 +156,11 @@ fun SettingsScreen(
                     )
                 }
             }
+            }
             // The run log stays reachable with sync switched off: it is how
             // to check what the background did before it was disabled.
             if (onOpenSyncActivity != null) {
-                HorizontalDivider()
+                if (syncsOnDevice) HorizontalDivider()
                 OutlinedButton(
                     onClick = onOpenSyncActivity,
                     modifier = Modifier.fillMaxWidth().testTag("btn_sync_activity"),
@@ -304,12 +317,21 @@ fun SettingsScreen(
             }
         }
     }
+    }
 
     if (confirmingSignOut) {
         AlertDialog(
             onDismissRequest = { confirmingSignOut = false },
             title = { Text("Sign out?") },
-            text = { Text("Your Apple account credentials will be removed from this device. Background sync will stop until you sign in again.") },
+            text = {
+                Text(
+                    if (syncsOnDevice) {
+                        "Your Apple account credentials will be removed from this device. Background sync will stop until you sign in again."
+                    } else {
+                        "The server signs out of your Apple account and stops syncing your tags until you sign in again."
+                    },
+                )
+            },
             confirmButton = {
                 TextButton(onClick = {
                     confirmingSignOut = false

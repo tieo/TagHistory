@@ -54,7 +54,7 @@ fun main(args: Array<String>) {
     val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     server.start(scope)
     embeddedServer(ServerCIO, host = config.bindHost, port = config.port) {
-        tagHistoryModule(server, config.webDir)
+        tagHistoryModule(server, config.webDir, EmojiFonts(HttpClient(CIO)))
     }.start(wait = true)
 }
 

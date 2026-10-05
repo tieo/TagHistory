@@ -18,6 +18,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalFontFamilyResolver
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.platform.Font
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.ComposeViewport
 import io.github.tieo.taghistory.data.storage.SettingsFactory
@@ -41,6 +44,7 @@ fun main() {
         var factories by remember { mutableStateOf<AppHostFactories?>(null) }
         var error by remember { mutableStateOf<String?>(null) }
         var attempt by remember { mutableIntStateOf(0) }
+        val fontResolver = LocalFontFamilyResolver.current
         LaunchedEffect(attempt) {
             error = null
             try {
@@ -49,6 +53,15 @@ fun main() {
                 val status = client.status()
                 val host = WasmAppHost(db, SettingsFactory(), client, serverSignedIn = status.signedIn)
                 if (status.signedIn) runCatching { host.replicator.pull() }
+                // The canvas has no emoji font; fetch one covering just the
+                // emoji the tags use, before the first frame, since text laid
+                // out before a font arrives keeps its missing-glyph boxes.
+                runCatching {
+                    val emoji = host.emojiInUse()
+                    if (emoji.isNotEmpty()) {
+                        client.emojiFont(emoji)?.let { fontResolver.preload(FontFamily(Font("emoji:$emoji", it))) }
+                    }
+                }
                 factories = host.buildFactories(appVersion = "web")
             } catch (e: Throwable) {
                 if (e is kotlinx.coroutines.CancellationException) throw e
