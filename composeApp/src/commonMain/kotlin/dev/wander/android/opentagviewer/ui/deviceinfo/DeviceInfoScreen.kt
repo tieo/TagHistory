@@ -133,6 +133,17 @@ fun DeviceInfoScreen(
         )
     }
 
+    state.editError?.let { message ->
+        AlertDialog(
+            onDismissRequest = viewModel::dismissEditError,
+            title = { Text("Couldn't save the change") },
+            text = { Text(message) },
+            confirmButton = {
+                TextButton(onClick = viewModel::dismissEditError) { Text("OK") }
+            },
+        )
+    }
+
     if (confirmingRemove) {
         AlertDialog(
             onDismissRequest = { confirmingRemove = false },

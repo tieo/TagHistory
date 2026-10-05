@@ -25,6 +25,11 @@ class SettingsViewModel(
     private val settingsRepo: UserSettingsRepository,
     private val authRepo: UserAuthRepository,
     private val scope: CoroutineScope? = null,
+    /**
+     * Ends the session. The standalone app forgets its Apple session; a
+     * server client signs the server out.
+     */
+    private val signOutAction: suspend () -> Unit = { authRepo.clearUser() },
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(SettingsUiState())
@@ -62,7 +67,7 @@ class SettingsViewModel(
 
     fun signOut() {
         runScope.launch {
-            authRepo.clearUser()
+            signOutAction()
             _state.update { it.copy(signedOut = true) }
         }
     }

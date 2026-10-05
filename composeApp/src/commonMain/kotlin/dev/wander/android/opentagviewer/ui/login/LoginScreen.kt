@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
@@ -69,7 +70,10 @@ fun LoginScreen(
     modifier: Modifier = Modifier,
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
-    Box(modifier = modifier.fillMaxSize().safeDrawingPadding()) {
+    Box(modifier = modifier.fillMaxSize().safeDrawingPadding(), contentAlignment = Alignment.TopCenter) {
+        // A form column wider than a phone only stretches the fields on a
+        // desktop browser; phones are narrower than the cap and unchanged.
+        Box(modifier = Modifier.widthIn(max = 480.dp).fillMaxSize()) {
         when (state.page) {
             LoginUiState.Page.LOGIN -> LoginForm(
                 state = state,
@@ -90,6 +94,7 @@ fun LoginScreen(
                 onSubmit = viewModel::submitTwoFactorCode,
                 onBack = viewModel::reset,
             )
+        }
         }
     }
 }

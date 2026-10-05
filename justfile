@@ -121,3 +121,10 @@ lefthook-install:
 [doc('Run all lefthook hooks against staged files (mirrors what runs on commit).')]
 lefthook-run:
     lefthook run pre-commit
+
+# ─── Sync server ──────────────────────────────────────────────────────
+
+[group('server')]
+[doc('Build and deploy the sync server + web app to nasx. From outside the LAN set TAGHISTORY_HOST to nasx's VPN address.')]
+deploy-server:
+    scripts/deploy-server.sh

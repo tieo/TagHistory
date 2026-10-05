@@ -165,14 +165,10 @@ kotlin {
                 implementation(libs.kotlincrypto.hmac.sha2)
                 implementation(libs.kotlinx.crypto.aes)
                 implementation(libs.ionspin.bignum)
-                // SqlDelight wasm DB stack — async driver + the
-                // synchronous() coroutine bridge so non-suspend
-                // call sites can keep using SqlDriver.execute(...).
-                implementation(libs.sqldelight.web.worker.driver)
-                implementation(libs.sqldelight.async.coroutines.extensions)
-                // sqljs WASM glue + bundled worker.
+                // sql.js runs SQLite on the page; SqlJsDriver serves the
+                // synchronous SQLDelight calls the shared code makes.
                 implementation(npm("sql.js", "1.10.3"))
-                implementation(npm("@cashapp/sqldelight-sqljs-worker", "2.1.0"))
+                implementation(libs.kotlinx.browser)
             }
         }
         val desktopTest by getting {

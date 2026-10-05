@@ -53,3 +53,16 @@ INSERT OR REPLACE INTO LocationReport(
     :hashId, :beaconId, :publishedAt, :description, :timestamp, :confidence,
     :latitude, :longitude, :horizontalAccuracy, :status, :lastUpdate
 );
+
+-- Replication feed for server clients, in write order. The implicit rowid
+-- grows with every insert and INSERT OR REPLACE gives a rewritten row a new
+-- one, so a client that remembers the last seq it applied receives every row
+-- written after it, rewrites included.
+replicationPage:
+SELECT rowid AS seq, LocationReport.* FROM LocationReport
+WHERE rowid > :afterSeq
+ORDER BY rowid
+LIMIT :limit;
+
+countAll:
+SELECT COUNT(*) FROM LocationReport;

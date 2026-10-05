@@ -141,11 +141,7 @@ kotlin {
                 implementation(compose.material3)
                 implementation(compose.materialIconsExtended)
                 implementation(compose.ui)
-                // IDB-backed SqlDelight driver. sql.js npm is the
-                // underlying SQLite WASM; the worker JS lives in
-                // src/wasmJsMain/resources/idb-sqljs-worker.js.
-                implementation(libs.sqldelight.web.worker.driver)
-                implementation(libs.sqldelight.async.coroutines.extensions)
+                // The database driver (sql.js on the page) lives in :shared.
                 implementation(npm("sql.js", "1.10.3"))
             }
         }

@@ -6,7 +6,9 @@ import io.github.tieo.taghistory.data.model.BeaconData
 import io.github.tieo.taghistory.data.model.BeaconInformation
 import io.github.tieo.taghistory.data.model.BeaconLocationReport
 import io.github.tieo.taghistory.data.model.UserMapCameraPosition
+import io.github.tieo.taghistory.data.repo.BeaconEditor
 import io.github.tieo.taghistory.data.repo.BeaconRepository
+import io.github.tieo.taghistory.data.repo.LocalBeaconEditor
 import io.github.tieo.taghistory.data.repo.UserAuthRepository
 import io.github.tieo.taghistory.data.repo.UserDataRepository
 import io.github.tieo.taghistory.sync.SyncEvent
@@ -77,6 +79,13 @@ class MapViewModel(
     private val scope: CoroutineScope? = null,
     /** All DB/IO work hops to this. Tests can inject the test scheduler's dispatcher. */
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.Default,
+    /** Where renames and removals are written; see [BeaconEditor]. */
+    private val editor: BeaconEditor = LocalBeaconEditor(beaconRepo),
+    /**
+     * Whether there is a session to show tags for. The standalone app holds
+     * the Apple session itself; a server client asks whether the server does.
+     */
+    private val isSignedIn: () -> Boolean = { authRepo.getUserAuth() != null },
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(MapUiState())
@@ -260,7 +269,7 @@ class MapViewModel(
      */
     fun boot(): Job = confinedScope.launch {
         val bootData = withContext(ioDispatcher) {
-            authRepo.getUserAuth() ?: return@withContext null
+            if (!isSignedIn()) return@withContext null
             BootData(
                 beacons = beaconRepo.getAllBeacons(),
                 lastLocations = beaconRepo.getLastLocationsForAll(),
@@ -626,7 +635,7 @@ class MapViewModel(
         confinedScope.launch {
             withContext(ioDispatcher) {
                 val now = kotlin.time.Clock.System.now().toEpochMilliseconds()
-                beaconRepo.storeUserBeaconOptions(
+                editor.setOptions(
                     io.github.tieo.taghistory.db.UserBeaconOptions(
                         beacon_id = beaconId,
                         last_update = now,
@@ -647,7 +656,7 @@ class MapViewModel(
     fun removeBeacon(beaconId: String) {
         confinedScope.launch {
             withContext(ioDispatcher) {
-                beaconRepo.markBeaconAsRemoved(beaconId)
+                editor.remove(beaconId)
             }
             beaconsById.remove(beaconId)
             latestLocationByBeacon.remove(beaconId)

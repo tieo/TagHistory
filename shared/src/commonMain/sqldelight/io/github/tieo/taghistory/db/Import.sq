@@ -28,3 +28,9 @@ SELECT last_insert_rowid();
 
 deleteById:
 DELETE FROM Import WHERE id = :importId;
+
+-- Client-side copy of a server import row, keeping the server's id so the
+-- beacon rows' import_id references stay valid.
+upsertReplicated:
+INSERT OR REPLACE INTO Import(id, version, imported_at, exported_at, source_user, via)
+VALUES (:id, :version, :importedAt, :exportedAt, :sourceUser, :via);

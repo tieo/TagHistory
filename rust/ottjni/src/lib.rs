@@ -15,7 +15,7 @@ mod anisette;
 mod errors;
 mod jni_util;
 
-pub use anisette::AnisetteConfig;
+pub use anisette::{fetch_headers, AnisetteConfig};
 pub use errors::{JniBridgeError, JniBridgeResult};
 
 /// Android-side logger setup. Called once on library load via

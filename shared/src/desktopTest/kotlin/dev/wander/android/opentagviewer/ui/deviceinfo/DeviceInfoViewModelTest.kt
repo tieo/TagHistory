@@ -7,6 +7,7 @@ import java.util.Properties
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -88,6 +89,26 @@ class DeviceInfoViewModelTest {
         seedBeacon("b1", "Keys", null)
         val vm = DeviceInfoViewModel(beaconRepo, "b1", scope = this)
         vm.remove()
+        advanceUntilIdle()
         assertTrue(vm.state.value.removed)
+        assertTrue(beaconRepo.getAllBeacons().none { it.beaconId == "b1" })
+    }
+
+    @Test
+    fun `a removal the server refuses leaves the beacon in place`() = runTest {
+        seedBeacon("b1", "Keys", null)
+        val refusing = object : io.github.tieo.taghistory.data.repo.BeaconEditor {
+            override suspend fun setOptions(options: io.github.tieo.taghistory.db.UserBeaconOptions) = error("offline")
+            override suspend fun remove(beaconId: String) = error("offline")
+        }
+        val vm = DeviceInfoViewModel(beaconRepo, "b1", scope = this, editor = refusing)
+        vm.remove()
+        advanceUntilIdle()
+        assertFalse(vm.state.value.removed)
+        assertEquals("offline", vm.state.value.editError)
+        assertTrue(beaconRepo.getAllBeacons().any { it.beaconId == "b1" })
+
+        vm.dismissEditError()
+        assertEquals(null, vm.state.value.editError)
     }
 }

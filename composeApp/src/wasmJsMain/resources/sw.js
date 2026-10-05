@@ -1,17 +1,12 @@
-// Service worker for TagHistory web preview.
-// Caches the wasm bundle + static assets on install so the app loads
-// offline after the first visit. Network-first for HTML (so updates
-// to index.html land on next reload), cache-first for everything
-// else (wasm/js chunks are content-hashed).
+// Service worker for the TagHistory web app.
+// Network first for every same-origin GET, so a deploy reaches the next page
+// load; each successful response is cached as the fallback when the network
+// is gone. The app's bundle names are stable across builds, so serving them
+// cache-first would pin a browser to the build it first saw.
 
-const CACHE = "taghistory-v1";
-const PRECACHE = ["/", "/index.html", "/manifest.webmanifest"];
+const CACHE = "taghistory-v2";
 
-self.addEventListener("install", (event) => {
-    event.waitUntil(
-        caches.open(CACHE).then((c) => c.addAll(PRECACHE)).then(() => self.skipWaiting()),
-    );
-});
+self.addEventListener("install", () => self.skipWaiting());
 
 self.addEventListener("activate", (event) => {
     event.waitUntil(
@@ -25,34 +20,21 @@ self.addEventListener("fetch", (event) => {
     const req = event.request;
     if (req.method !== "GET") return;
     const url = new URL(req.url);
+    if (url.origin !== self.location.origin) return;
 
-    // Never cache the CORS proxy, IndexedDB sync, or Apple endpoints.
-    if (
-        url.pathname.startsWith("/anisette") ||
-        url.pathname.startsWith("/gsa") ||
-        url.pathname.startsWith("/mobileme") ||
-        url.pathname.startsWith("/findmy")
-    ) {
-        return;
-    }
-
-    if (req.mode === "navigate" || req.destination === "document") {
-        event.respondWith(
-            fetch(req).catch(() => caches.match(req).then((m) => m || caches.match("/"))),
-        );
-        return;
-    }
+    // Server API responses are live data; the app keeps its own copy in
+    // IndexedDB.
+    if (url.pathname.startsWith("/api/")) return;
 
     event.respondWith(
-        caches.match(req).then((cached) => {
-            if (cached) return cached;
-            return fetch(req).then((res) => {
-                if (res.ok && url.origin === self.location.origin) {
+        fetch(req)
+            .then((res) => {
+                if (res.ok) {
                     const copy = res.clone();
                     caches.open(CACHE).then((c) => c.put(req, copy));
                 }
                 return res;
-            });
-        }),
+            })
+            .catch(() => caches.match(req).then((m) => m || caches.match("/"))),
     );
 });

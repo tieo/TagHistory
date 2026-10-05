@@ -1,18 +1,8 @@
 package io.github.tieo.taghistory.host
 
 import io.github.tieo.taghistory.AppHostFactories
-import io.github.tieo.taghistory.anisette.AnisetteJsProvider
-import io.github.tieo.taghistory.apple.account.AppleAccount
-import io.github.tieo.taghistory.apple.account.AppleLoginService
-import io.github.tieo.taghistory.apple.anisette.AnisetteClient
-import io.github.tieo.taghistory.apple.findmy.FindMyAccessory
-import io.github.tieo.taghistory.apple.gsa.GsaClient
-import io.github.tieo.taghistory.apple.http.HttpTransport
-import io.github.tieo.taghistory.apple.http.defaultPlatformHttpTransport
-import io.github.tieo.taghistory.apple.mobileme.MobileMeClient
-import io.github.tieo.taghistory.apple.reports.AppleReportsService
-import io.github.tieo.taghistory.apple.reports.LocationReportsClient
 import io.github.tieo.taghistory.data.repo.BeaconRepository
+import io.github.tieo.taghistory.data.repo.SyncRunRepository
 import io.github.tieo.taghistory.data.repo.UserAuthRepository
 import io.github.tieo.taghistory.data.repo.UserDataRepository
 import io.github.tieo.taghistory.data.repo.UserSettingsRepository
@@ -20,108 +10,110 @@ import io.github.tieo.taghistory.data.storage.SecureBlobStore
 import io.github.tieo.taghistory.data.storage.SettingsFactory
 import io.github.tieo.taghistory.data.storage.SettingsStoreNames
 import io.github.tieo.taghistory.db.TagHistoryDatabase
+import io.github.tieo.taghistory.server.ServerBeaconEditor
+import io.github.tieo.taghistory.server.ServerClient
+import io.github.tieo.taghistory.server.ServerLogin
+import io.github.tieo.taghistory.server.ServerReplicator
 import io.github.tieo.taghistory.ui.deviceinfo.DeviceInfoViewModel
 import io.github.tieo.taghistory.ui.history.HistoryViewModel
 import io.github.tieo.taghistory.ui.login.AppleLoginViewModel
 import io.github.tieo.taghistory.ui.map.MapViewModel
 import io.github.tieo.taghistory.ui.nearby.NearbyViewModel
 import io.github.tieo.taghistory.ui.settings.SettingsViewModel
+import kotlinx.browser.window
 
 /**
- * Browser host.
+ * Browser host. The web app is a client of the TagHistory sync server it is
+ * served from: the server holds the Apple session and the full history, and
+ * this host replicates the server's tables into the browser's own database
+ * (sql.js persisted to IndexedDB). Every screen and view model is the
+ * standalone app's, reading local rows; only the edges differ:
  *
- * Anisette headers are generated on-device through the bundled
- * [AnisetteJsProvider] (Unicorn-Engine WASM emulator running Apple's
- * own libCoreADI / libstoreservicescore — same identity bytes the
- * Android ottjni bridge produces, no third-party server). When the
- * anisette dist files are not deployed, sign-in surfaces a clear
- * setup message instead of leaking the user's machine ID anywhere.
+ *  - "Fetching reports" is a pull from the server, which already fetched
+ *    them from Apple.
+ *  - Sign-in relays the user's Apple ID and second factor to the server.
+ *  - Renames, removals, imports and sign-out are server calls.
  */
 class WasmAppHost(
     private val db: TagHistoryDatabase,
     private val settingsFactory: SettingsFactory,
-    private val crypto: SecureBlobStore,
-    private val anisetteProvider: AnisetteJsProvider?,
+    private val client: ServerClient,
+    /** Whether the server held an Apple session when the page loaded. */
+    serverSignedIn: Boolean,
 ) {
-    private val httpTransport: HttpTransport = defaultPlatformHttpTransport()
-    private val anisette = anisetteProvider?.let { AnisetteClient(it) }
+    private var signedIn = serverSignedIn
 
     private val beaconRepo by lazy { BeaconRepository(db) }
+    private val syncRunRepo by lazy { SyncRunRepository(db) }
     private val userSettingsRepo by lazy {
         UserSettingsRepository(settingsFactory.create(SettingsStoreNames.USER_SETTINGS))
     }
     private val userDataRepo by lazy {
         UserDataRepository(settingsFactory.create(SettingsStoreNames.USER_CACHE))
     }
+
+    // Unused for the session (the server holds it) but required by the
+    // shared view models' constructors.
     private val userAuthRepo by lazy {
-        UserAuthRepository(
-            settingsFactory.create(SettingsStoreNames.USER_AUTH),
-            crypto,
-            "apple_account_key",
+        UserAuthRepository(settingsFactory.create(SettingsStoreNames.USER_AUTH), SecureBlobStore(), "unused")
+    }
+
+    val replicator by lazy {
+        ServerReplicator(
+            client = client,
+            db = db,
+            beaconRepo = beaconRepo,
+            cursors = settingsFactory.create(REPLICATION_STORE),
+            nowMs = { kotlin.time.Clock.System.now().toEpochMilliseconds() },
         )
     }
 
-    private fun createLoginViewModel(onLoggedIn: suspend () -> Unit): AppleLoginViewModel {
-        val account = AppleAccount()
-        val service = anisette?.let { ani ->
-            AppleLoginService(
-                account = account,
-                http = httpTransport,
-                anisette = ani,
-                gsa = GsaClient(httpTransport, ani),
-                mobileMe = MobileMeClient(httpTransport, ani),
-            )
-        }
-        return AppleLoginViewModel(
-            startLogin = { email, password ->
-                if (service == null) {
-                    throw IllegalStateException(
-                        "Anisette bridge not installed. Run scripts/build-web-anisette.sh " +
-                            "to vendor lbr77/anisette-js + extract the Apple libs before signing in.",
-                    )
-                }
-                service.login(email, password)
-            },
-            onLoggedIn = {
-                runCatching {
-                    val json = account.exportToJson()
-                    val envelope = crypto.encrypt(json.encodeToByteArray(), "apple_account_key")
-                    userAuthRepo.storeUserAuth(envelope)
-                }
-                onLoggedIn()
-            },
-        )
-    }
+    private val editor by lazy { ServerBeaconEditor(client, beaconRepo) }
 
     fun buildFactories(appVersion: String): AppHostFactories = AppHostFactories(
-        createLogin = { createLoginViewModel(onLoggedIn = {}) },
+        createLogin = {
+            val login = ServerLogin(client)
+            AppleLoginViewModel(
+                startLogin = { email, password -> login.login(email, password) },
+                onLoggedIn = {
+                    signedIn = true
+                    replicator.pull()
+                },
+            )
+        },
         createMap = {
-            val reportsClient = anisette?.let { LocationReportsClient(httpTransport, it) }
             MapViewModel(
                 beaconRepo = beaconRepo,
                 userDataRepo = userDataRepo,
                 authRepo = userAuthRepo,
-                fetchReports = { beaconsById, hoursBack ->
-                    if (reportsClient == null || anisette == null) return@MapViewModel emptyMap()
-                    val auth = userAuthRepo.getUserAuth() ?: return@MapViewModel emptyMap()
-                    val plain = userAuthRepo.decrypt(auth.data).decodeToString()
-                    val account = AppleAccount.restoreFromJson(plain)
-                    val accessories = loadAccessoriesQuiet(
-                        beaconsById.mapValues { it.value.ownedBeaconInfo },
-                    )
-                    if (accessories.isEmpty()) return@MapViewModel emptyMap()
-                    AppleReportsService(reportsClient, account)
-                        .fetchLastReportsByBeacon(accessories, hoursBack)
+                // The server already fetched from Apple; refreshing here means
+                // copying whatever it stored since the last pull. The rows land
+                // in the local tables, and the map observes those.
+                fetchReports = { _, _ ->
+                    replicator.pull()
+                    emptyMap()
                 },
+                reverseGeocode = { lat, lon -> runCatching { client.geocode(lat, lon) }.getOrNull() },
+                // A pull is one cheap request when nothing is new, so the
+                // app's Apple rate limit does not apply.
                 minRefreshIntervalMs = 0L,
+                editor = editor,
+                isSignedIn = { signedIn },
             )
         },
-        isLoggedIn = { userAuthRepo.getUserAuth() != null },
-        createSettings = { SettingsViewModel(userSettingsRepo, userAuthRepo) },
-        createDeviceInfo = { beaconId -> DeviceInfoViewModel(beaconRepo, beaconId) },
-        createHistory = { beaconId ->
-            HistoryViewModel(beaconRepo = beaconRepo, beaconId = beaconId)
+        isLoggedIn = { signedIn },
+        createSettings = {
+            SettingsViewModel(
+                settingsRepo = userSettingsRepo,
+                authRepo = userAuthRepo,
+                signOutAction = {
+                    client.logout()
+                    signedIn = false
+                },
+            )
         },
+        createDeviceInfo = { beaconId -> DeviceInfoViewModel(beaconRepo, beaconId, editor = editor) },
+        createHistory = { beaconId -> HistoryViewModel(beaconRepo = beaconRepo, beaconId = beaconId) },
         createNearby = { null as NearbyViewModel? },
         appVersion = appVersion,
         openUrl = { url -> openInNewTab(url) },
@@ -129,25 +121,35 @@ class WasmAppHost(
             openInNewTab("https://www.openstreetmap.org/?mlat=$lat&mlon=$lon#map=17/$lat/$lon")
         },
         settingsFlow = userSettingsRepo.flow,
-        onImport = null,
-        onRefreshNow = { "Refresh not wired on web yet" },
-        reverseGeocode = null,
+        syncRuns = { syncRunRepo.observeRecent() },
+        onImport = { importFromFile() },
+        onRefreshNow = {
+            val run = client.syncNow()
+            replicator.pull()
+            if (run.outcome == "SUCCESS") {
+                "Refreshed ${run.beaconCount} beacons • ${run.persistedReports} reports"
+            } else {
+                run.detail ?: run.outcome
+            }
+        },
+        reverseGeocode = { lat, lon -> runCatching { client.geocode(lat, lon) }.getOrNull() },
         onShareGpx = null,
         onExportTags = null,
     )
+
+    /** Lets the user pick an OpenTagViewer export zip and uploads it. */
+    private suspend fun importFromFile(): String? {
+        val bytes = pickFile(".zip") ?: return null
+        val result = client.import(bytes)
+        replicator.pull()
+        return "Imported ${result.imported} beacon${if (result.imported == 1) "" else "s"}"
+    }
+
+    private companion object {
+        const val REPLICATION_STORE = "server_replication"
+    }
 }
 
 private fun openInNewTab(url: String) {
-    js("window.open(url, '_blank')")
-}
-
-private fun loadAccessoriesQuiet(
-    input: Map<String, io.github.tieo.taghistory.db.OwnedBeacons?>,
-): Map<String, FindMyAccessory> = buildMap {
-    for ((id, owned) in input) {
-        val content = owned?.content ?: continue
-        runCatching { FindMyAccessory.fromPlist(content.encodeToByteArray()) }
-            .getOrNull()
-            ?.let { put(id, it) }
-    }
+    window.open(url, "_blank")
 }

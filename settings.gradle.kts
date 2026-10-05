@@ -70,3 +70,5 @@ include(":composeApp")
 // Android application host — thin module wrapping :composeApp's androidMain (AGP 9 no longer
 // allows com.android.application + kotlin-multiplatform in the same module).
 include(":androidApp")
+
+include(":server")

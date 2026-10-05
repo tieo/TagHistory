@@ -37,3 +37,16 @@ SELECT started_at FROM SyncRunRecord WHERE outcome = 'SUCCESS' ORDER BY started_
 
 pruneOlderThan:
 DELETE FROM SyncRunRecord WHERE started_at < :cutoff;
+
+-- Replication feed for server clients: runs in id order after a cursor.
+since:
+SELECT * FROM SyncRunRecord WHERE id > :afterId ORDER BY id LIMIT :limit;
+
+-- Client-side copy of a server run, keeping the server's id so a re-pull
+-- overwrites instead of duplicating.
+upsertReplicated:
+INSERT OR REPLACE INTO SyncRunRecord(
+    id, started_at, trigger_kind, outcome, detail, persisted_reports, beacon_count, window_hours, duration_ms
+) VALUES (
+    :id, :startedAt, :triggerKind, :outcome, :detail, :persistedReports, :beaconCount, :windowHours, :durationMs
+);

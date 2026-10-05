@@ -5,8 +5,11 @@ import io.github.tieo.taghistory.data.model.BeaconData
 import io.github.tieo.taghistory.data.model.BeaconInformation
 import io.github.tieo.taghistory.data.model.BeaconLocationReport
 import io.github.tieo.taghistory.data.model.ImportData
+import io.github.tieo.taghistory.db.BeaconNamingRecord
 import io.github.tieo.taghistory.db.DailyHistoryFetchRecord
 import io.github.tieo.taghistory.db.Import
+import io.github.tieo.taghistory.db.LocationReport
+import io.github.tieo.taghistory.db.OwnedBeacons
 import io.github.tieo.taghistory.db.TagHistoryDatabase
 import io.github.tieo.taghistory.db.UserBeaconOptions
 import io.github.tieo.taghistory.util.BeaconCombinerUtil
@@ -284,6 +287,73 @@ class BeaconRepository(
             }
         }
         return stamped
+    }
+
+    /**
+     * Make the local beacon tables match a server snapshot: every row in it
+     * is written with the server's ids, and a local beacon the server no
+     * longer lists is marked removed. Returns whether anything a screen shows
+     * (the beacon set, names, emoji, overrides) changed.
+     */
+    fun applyServerSnapshot(
+        imports: List<Import>,
+        owned: List<OwnedBeacons>,
+        naming: List<BeaconNamingRecord>,
+        options: List<UserBeaconOptions>,
+    ): Boolean {
+        val before = getAllBeacons()
+        db.transaction {
+            for (row in imports) {
+                db.importQueries.upsertReplicated(
+                    id = row.id,
+                    version = row.version,
+                    importedAt = row.imported_at,
+                    exportedAt = row.exported_at,
+                    sourceUser = row.source_user,
+                    via = row.via,
+                )
+            }
+            for (row in owned) {
+                db.ownedBeaconQueries.upsert(row.id, row.import_id, row.content, row.version, false)
+            }
+            for (row in naming) {
+                db.beaconNamingRecordQueries.upsert(row.id, row.import_id, row.version, row.content, false)
+            }
+            for (row in options) {
+                db.userBeaconOptionsQueries.upsert(row.beacon_id, row.last_update, row.ui_name, row.ui_emoji)
+            }
+            val live = owned.map { it.id }.toSet()
+            for (local in db.ownedBeaconQueries.getAll().executeAsList()) {
+                if (local.id !in live) {
+                    db.beaconNamingRecordQueries.setRemoved(local.id)
+                    db.ownedBeaconQueries.setRemoved(local.id)
+                }
+            }
+        }
+        invalidateInfoCache()
+        return getAllBeacons() != before
+    }
+
+    /** Write replicated report rows exactly as the server stored them. */
+    fun storeReplicatedReports(rows: List<LocationReport>) {
+        if (rows.isEmpty()) return
+        db.transaction {
+            for (r in rows) {
+                db.locationReportQueries.upsert(
+                    hashId = r.hash_id,
+                    beaconId = r.beacon_id,
+                    publishedAt = r.published_at,
+                    description = r.description,
+                    timestamp = r.timestamp,
+                    confidence = r.confidence,
+                    latitude = r.latitude,
+                    longitude = r.longitude,
+                    horizontalAccuracy = r.horizontal_accuracy,
+                    status = r.status,
+                    lastUpdate = r.last_update,
+                )
+            }
+        }
     }
 
     fun markBeaconAsRemoved(beaconId: String) {

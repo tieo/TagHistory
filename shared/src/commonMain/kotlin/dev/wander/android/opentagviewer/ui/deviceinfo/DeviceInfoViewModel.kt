@@ -4,7 +4,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.github.tieo.taghistory.data.model.BeaconInformation
 import io.github.tieo.taghistory.data.model.BeaconLocationReport
+import io.github.tieo.taghistory.data.repo.BeaconEditor
 import io.github.tieo.taghistory.data.repo.BeaconRepository
+import io.github.tieo.taghistory.data.repo.LocalBeaconEditor
 import io.github.tieo.taghistory.db.UserBeaconOptions
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -27,6 +29,7 @@ class DeviceInfoViewModel(
     private val beaconId: String,
     private val nowMs: () -> Long = { Clock.System.now().toEpochMilliseconds() },
     private val scope: CoroutineScope? = null,
+    private val editor: BeaconEditor = LocalBeaconEditor(beaconRepo),
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(DeviceInfoUiState())
@@ -52,20 +55,41 @@ class DeviceInfoViewModel(
     }
 
     fun rename(newName: String, newEmoji: String?) {
-        beaconRepo.storeUserBeaconOptions(
-            UserBeaconOptions(
-                beacon_id = beaconId,
-                last_update = nowMs(),
-                ui_name = newName,
-                ui_emoji = newEmoji,
-            )
-        )
-        load()
+        runScope.launch {
+            edit {
+                editor.setOptions(
+                    UserBeaconOptions(
+                        beacon_id = beaconId,
+                        last_update = nowMs(),
+                        ui_name = newName,
+                        ui_emoji = newEmoji,
+                    )
+                )
+            } ?: return@launch
+            load()
+        }
     }
 
     fun remove() {
-        beaconRepo.markBeaconAsRemoved(beaconId)
-        _state.update { it.copy(removed = true) }
+        runScope.launch {
+            edit { editor.remove(beaconId) } ?: return@launch
+            _state.update { it.copy(removed = true) }
+        }
+    }
+
+    fun dismissEditError() = _state.update { it.copy(editError = null) }
+
+    /**
+     * Runs an edit; a failure (the server unreachable or refusing) leaves
+     * the screen as it was and is shown instead of escaping the scope.
+     */
+    private suspend fun edit(block: suspend () -> Unit): Unit? = try {
+        block()
+    } catch (e: kotlinx.coroutines.CancellationException) {
+        throw e
+    } catch (e: Throwable) {
+        _state.update { it.copy(editError = e.message ?: e::class.simpleName ?: "Error") }
+        null
     }
 
 }
@@ -78,4 +102,6 @@ data class DeviceInfoUiState(
     val lastLocation: BeaconLocationReport? = null,
     val notFound: Boolean = false,
     val removed: Boolean = false,
+    /** Why the last rename or removal failed, until dismissed. */
+    val editError: String? = null,
 )
