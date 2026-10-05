@@ -27,7 +27,7 @@ cp -r "$APPLE_LIBS" "$STAGE/apple-libs/"
 cp -r composeApp/build/dist/wasmJs/productionExecutable "$STAGE/web"
 
 echo "==> Uploading to $HOST"
-rsync -a --delete -e "ssh -o HostKeyAlias=nasx" "$STAGE/" "root@$HOST:/var/lib/taghistory-deploy/"
+rsync -a --delete --chown=root:root -e "ssh -o HostKeyAlias=nasx" "$STAGE/" "root@$HOST:/var/lib/taghistory-deploy/"
 "${SSH[@]}" "chmod -R a+rX /var/lib/taghistory-deploy && systemctl restart taghistory"
 
 echo "==> Waiting for the server"
