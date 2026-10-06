@@ -1,0 +1,46 @@
+appId: io.github.tieo.taghistory
+name: Settings — Sync server card connects only with an address and reports a failed connect
+---
+- runFlow:
+    file: 00_seed_test_data.yaml
+
+- tapOn:
+    id: "btn_settings"
+- extendedWaitUntil:
+    visible:
+      text: "Settings"
+    timeout: 25000
+
+- scrollUntilVisible:
+    element:
+      id: "btn_server_connect"
+    direction: DOWN
+    timeout: 25000
+    centerElement: true
+- assertVisible:
+    id: "field_server_address"
+- assertVisible:
+    id: "btn_server_connect"
+    enabled: false
+
+# Nothing listens on this port: connecting fails, the card stays on the
+# address field and says why instead of leaving for the browser.
+- tapOn:
+    id: "field_server_address"
+- inputText: "127.0.0.1:9"
+- hideKeyboard
+- assertVisible:
+    id: "btn_server_connect"
+    enabled: true
+- tapOn:
+    id: "btn_server_connect"
+- extendedWaitUntil:
+    visible:
+      id: "server_message"
+    timeout: 25000
+- assertVisible:
+    id: "field_server_address"
+- assertNotVisible:
+    id: "btn_server_disconnect"
+- assertVisible:
+    id: "btn_server_connect"

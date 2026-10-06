@@ -176,11 +176,6 @@ fun SettingsScreen(
             }
         }
 
-        // ---------- Sync server ----------
-        if (serverSync != null) {
-            SettingsSection("Sync server") { ServerSyncSection(serverSync) }
-        }
-
         // ---------- Data ----------
         SettingsSection("Data") {
             if (onRefreshNow != null) {
@@ -287,6 +282,11 @@ fun SettingsScreen(
                     modifier = Modifier.testTag("import_message"),
                 )
             }
+        }
+
+        // ---------- Sync server ----------
+        if (serverSync != null) {
+            SettingsSection("Sync server") { ServerSyncSection(serverSync) }
         }
 
         // ---------- Account ----------
