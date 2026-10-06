@@ -148,6 +148,15 @@ kotlin {
     }
 }
 
+// wasm-opt comes from the machine (binaryen in the Nix profile) instead of a
+// download from a GitHub release, which stalls and holds the whole build.
+plugins.withType<org.jetbrains.kotlin.gradle.targets.wasm.binaryen.BinaryenPlugin> {
+    the<org.jetbrains.kotlin.gradle.targets.wasm.binaryen.BinaryenEnvSpec>().apply {
+        download.set(false)
+        command.set("wasm-opt")
+    }
+}
+
 compose.desktop {
     application {
         mainClass = "io.github.tieo.taghistory.MainKt"
