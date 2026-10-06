@@ -1,5 +1,6 @@
 package io.github.tieo.taghistory.ui.sync
 
+import io.github.tieo.taghistory.ui.util.compactAgo
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -73,7 +74,7 @@ private fun SyncActivityHeader(runs: List<SyncRun>, nowMs: Long) {
         Text("Background sync", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
         Text(
             if (lastSuccess != null) {
-                "Last successful sync ${ago(nowMs - lastSuccess.startedAtMs)} ago"
+                "Last successful sync ${compactAgo(nowMs - lastSuccess.startedAtMs)} ago"
             } else {
                 "No successful background sync recorded yet"
             },
@@ -81,7 +82,7 @@ private fun SyncActivityHeader(runs: List<SyncRun>, nowMs: Long) {
         )
         if (lastEffective != null && lastEffective !== lastSuccess) {
             Text(
-                "Last attempt ${ago(nowMs - lastEffective.startedAtMs)} ago (${lastEffective.outcome.name.lowercase()})",
+                "Last attempt ${compactAgo(nowMs - lastEffective.startedAtMs)} ago (${lastEffective.outcome.name.lowercase()})",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -146,12 +147,3 @@ private fun OutcomeBadge(outcome: SyncOutcome) {
     }
 }
 
-private fun ago(ms: Long): String {
-    val s = ms / 1000
-    return when {
-        s < 60 -> "${s}s"
-        s < 3600 -> "${s / 60}m"
-        s < 86400 -> "${s / 3600}h ${(s % 3600) / 60}m"
-        else -> "${s / 86400}d ${(s % 86400) / 3600}h"
-    }
-}

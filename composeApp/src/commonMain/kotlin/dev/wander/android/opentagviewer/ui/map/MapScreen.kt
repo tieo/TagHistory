@@ -1,5 +1,7 @@
 package io.github.tieo.taghistory.ui.map
 
+import io.github.tieo.taghistory.ui.util.coarseCoords
+import io.github.tieo.taghistory.ui.util.lastUpdatedLabel
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.ui.draw.clip
@@ -523,7 +525,7 @@ private fun TagGlassRow(
                 )
                 AddressLine(card.addressLine, hasLocation, isFetching, card.latitude, card.longitude)
                 Text(
-                    lastUpdatedLabel(card.lastUpdatedMs),
+                    lastUpdatedLabel(card.lastUpdatedMs, kotlin.time.Clock.System.now().toEpochMilliseconds()),
                     fontSize = 11.sp,
                     color = MaterialTheme.colorScheme.outline,
                 )
@@ -601,15 +603,6 @@ private fun RowActionIcon(
 }
 
 /** "48.2094, 9.7203" — a location shown as coordinates when no street resolved. */
-private fun coarseCoords(lat: Double, lon: Double): String {
-    fun r(v: Double): String {
-        val n = kotlin.math.round(v * 10_000.0).toLong()
-        val whole = n / 10_000
-        val frac = (kotlin.math.abs(n) % 10_000).toString().padStart(4, '0')
-        return "$whole.$frac"
-    }
-    return "${r(lat)}, ${r(lon)}"
-}
 
 @Composable
 private fun AddressLine(
@@ -649,19 +642,6 @@ private fun AddressLine(
     }
 }
 
-@OptIn(ExperimentalTime::class)
-private fun lastUpdatedLabel(lastUpdatedMs: Long?): String {
-    if (lastUpdatedMs == null) return "Not yet reported"
-    val delta = Clock.System.now().toEpochMilliseconds() - lastUpdatedMs
-    val s = delta / 1_000
-    return when {
-        s < 0 -> "Updated just now"
-        s < 60 -> "Updated just now"
-        s < 3_600 -> "Updated ${s / 60} min ago"
-        s < 86_400 -> "Updated ${s / 3_600} h ago"
-        else -> "Updated ${s / 86_400} d ago"
-    }
-}
 
 /**
  * Minimal M3 skeleton shimmer card shown while the first refresh is

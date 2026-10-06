@@ -1,5 +1,7 @@
 package io.github.tieo.taghistory.ui.deviceinfo
 
+import io.github.tieo.taghistory.ui.util.absoluteDate
+import io.github.tieo.taghistory.ui.util.relativeTime
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -43,7 +45,6 @@ import io.github.tieo.taghistory.data.model.BeaconLocationReport
 import io.github.tieo.taghistory.ui.nav.PushedScreenScaffold
 import kotlin.time.Clock
 import kotlin.time.ExperimentalTime
-import kotlin.time.Instant
 
 @OptIn(ExperimentalTime::class)
 @Composable
@@ -185,7 +186,7 @@ private fun EmojiHero(emoji: String?, name: String) {
 @Composable
 private fun LastSeenCard(loc: BeaconLocationReport) {
     DetailSection("Last seen") {
-        FieldRow("When", relativeTime(loc.timestamp))
+        FieldRow("When", relativeTime(loc.timestamp, kotlin.time.Clock.System.now().toEpochMilliseconds()))
         FieldRow("Accuracy", "±${loc.horizontalAccuracy} m")
         if (loc.confidence > 0) FieldRow("Confidence", loc.confidence.toString())
     }
@@ -311,23 +312,5 @@ private fun RenameDialog(
     )
 }
 
-@OptIn(ExperimentalTime::class)
-private fun relativeTime(ms: Long): String {
-    val delta = Clock.System.now().toEpochMilliseconds() - ms
-    if (delta < 0) return absoluteDate(ms)
-    val s = delta / 1_000
-    return when {
-        s < 60 -> "just now"
-        s < 3_600 -> "${s / 60} min ago"
-        s < 86_400 -> "${s / 3_600} h ago"
-        s < 86_400 * 7 -> "${s / 86_400} d ago"
-        else -> absoluteDate(ms)
-    }
-}
 
-@OptIn(ExperimentalTime::class)
-private fun absoluteDate(ms: Long): String {
-    // Plain ISO-8601 — good enough until we wire kotlinx-datetime for locale-aware output.
-    return Instant.fromEpochMilliseconds(ms).toString().substringBefore('T').take(10)
-}
 

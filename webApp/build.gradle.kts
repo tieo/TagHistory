@@ -62,8 +62,9 @@ plugins.withType<org.jetbrains.kotlin.gradle.targets.wasm.binaryen.BinaryenPlugi
     }
 }
 
-// Tailwind scans the Kotlin sources for the class names they use.
-val kotlinSources = layout.projectDirectory.dir("src").asFile.absolutePath + "/**/*.kt"
+// Tailwind scans the sources for the class names they use: the Kotlin UI and
+// the map bridge, which builds the marker chips.
+val kotlinSources = layout.projectDirectory.dir("src").asFile.absolutePath + "/**/*.{kt,mjs}"
 tasks.named<Copy>("wasmJsProcessResources") {
     filesMatching("tailwind/tailwind.config.js") { filter { it.replace("SOURCES", kotlinSources) } }
 }

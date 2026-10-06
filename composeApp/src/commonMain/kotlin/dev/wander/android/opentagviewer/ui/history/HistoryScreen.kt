@@ -1,5 +1,7 @@
 package io.github.tieo.taghistory.ui.history
 
+import io.github.tieo.taghistory.ui.util.formatDistance
+import io.github.tieo.taghistory.ui.util.formatDuration
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -84,7 +86,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlin.math.PI
 import kotlin.math.atan2
 import kotlin.math.cos
-import kotlin.math.roundToInt
 import kotlin.math.sin
 import kotlin.math.sqrt
 import kotlin.time.Clock
@@ -1372,21 +1373,8 @@ private fun haversineMeters(lat1: Double, lon1: Double, lat2: Double, lon2: Doub
     return r * c
 }
 
-private fun formatDistance(meters: Double): String =
-    if (meters < 1_000.0) "${meters.roundToInt()} m"
-    else "${(meters / 1_000.0).fmtFixed(1)} km"
 
-private fun formatDuration(ms: Long): String {
-    if (ms < 60_000L) return "${(ms / 1_000L).coerceAtLeast(0)} s"
-    val minutes = (ms / 60_000L)
-    if (minutes < 60L) return "${minutes} min"
-    val hours = minutes / 60L
-    val remMin = minutes % 60L
-    return if (remMin == 0L) "${hours} h" else "${hours} h ${remMin} min"
-}
 
-private fun formatSpeed(kmh: Double): String =
-    if (kmh < 1.0) "<1 km/h" else "${kmh.roundToInt()} km/h"
 
 private fun buildDayBuckets(points: List<HistoryPoint>): List<DayBucket> =
     points.groupBy { localDayStart(it.timestampMs) }
