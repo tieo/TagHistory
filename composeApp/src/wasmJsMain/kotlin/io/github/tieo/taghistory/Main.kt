@@ -9,6 +9,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -28,6 +29,8 @@ import io.github.tieo.taghistory.db.DatabaseDriverFactory
 import io.github.tieo.taghistory.db.createDatabase
 import io.github.tieo.taghistory.host.WasmAppHost
 import io.github.tieo.taghistory.server.ServerClient
+import io.github.tieo.taghistory.ui.login.CredentialsForm
+import io.github.tieo.taghistory.ui.login.LocalCredentialsForm
 import io.github.tieo.taghistory.ui.theme.TagHistoryTheme
 import kotlinx.browser.document
 import kotlinx.browser.window
@@ -70,7 +73,9 @@ fun main() {
         }
         val f = factories
         if (f != null) {
-            App(factories = f)
+            CompositionLocalProvider(LocalCredentialsForm provides { CredentialsForm(it) }) {
+                App(factories = f)
+            }
         } else {
             TagHistoryTheme {
                 Surface(modifier = Modifier.fillMaxSize()) {
