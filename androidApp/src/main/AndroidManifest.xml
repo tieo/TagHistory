@@ -68,6 +68,24 @@
             </intent-filter>
         </activity>
 
+        <!-- Sync server sign-in: the server's callback page sends the browser
+             here with the authorization code. -->
+        <activity
+            android:name="io.github.tieo.taghistory.OAuthRedirectActivity"
+            android:exported="true"
+            android:excludeFromRecents="true"
+            android:noHistory="true"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data
+                    android:scheme="io.github.tieo.taghistory"
+                    android:path="/oauth2redirect" />
+            </intent-filter>
+        </activity>
+
         <!-- Doze-proof background-sync backstop: an allow-while-idle alarm fires
              this receiver, which enqueues an expedited sync and re-arms itself.
              Not exported: only our own PendingIntent triggers it. -->

@@ -52,6 +52,13 @@ class BeaconSyncOrchestrator(
     private val syncRunRepo: SyncRunRepository? = null,
     /** Injectable clock for tests. */
     private val nowMs: () -> Long = { defaultNowMs() },
+    /**
+     * Runs after a successful fetch was stored; the standalone app trades
+     * reports with its optional sync server here. Returns a line for the
+     * run's detail, or null when there was nothing to do. Must not throw:
+     * the fetch already succeeded.
+     */
+    private val afterFetch: (suspend () -> String?)? = null,
 ) {
 
     fun interface ReportsFetcher {
@@ -191,8 +198,10 @@ class BeaconSyncOrchestrator(
                 "Background sync persisted $total reports across ${reports.size} beacons",
                 mapOf("persisted" to total.toString(), "beacons" to reports.size.toString()),
             )
+            val afterFetchLine = afterFetch?.invoke()
             finish(
                 SyncOutcome.SUCCESS,
+                detail = afterFetchLine,
                 persisted = total,
                 beacons = reports.size,
                 window = effectiveHours,

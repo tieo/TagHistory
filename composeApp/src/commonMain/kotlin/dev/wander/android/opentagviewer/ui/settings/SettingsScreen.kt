@@ -29,6 +29,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -44,6 +45,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import io.github.tieo.taghistory.server.ServerConnection
+import io.github.tieo.taghistory.server.ServerSyncController
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
@@ -69,6 +76,7 @@ fun SettingsScreen(
      * interval are left out there and only the run log remains.
      */
     syncsOnDevice: Boolean = true,
+    serverSync: ServerSyncController? = null,
     modifier: Modifier = Modifier,
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -166,6 +174,11 @@ fun SettingsScreen(
                     modifier = Modifier.fillMaxWidth().testTag("btn_sync_activity"),
                 ) { Text("Sync activity") }
             }
+        }
+
+        // ---------- Sync server ----------
+        if (serverSync != null) {
+            SettingsSection("Sync server") { ServerSyncSection(serverSync) }
         }
 
         // ---------- Data ----------
@@ -346,6 +359,100 @@ fun SettingsScreen(
                 }
             },
         )
+    }
+}
+
+/**
+ * The optional sync server: an address field while there is none, the
+ * browser sign-in while it runs, then the server with its last exchange.
+ */
+@Composable
+private fun ServerSyncSection(controller: ServerSyncController) {
+    val ui by controller.state.collectAsStateWithLifecycle()
+    when (val connection = ui.connection) {
+        ServerConnection.State.Disconnected -> {
+            var address by remember { mutableStateOf("") }
+            OutlinedTextField(
+                value = address,
+                onValueChange = { address = it },
+                label = { Text("Server address") },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri, imeAction = ImeAction.Go),
+                keyboardActions = KeyboardActions(onGo = { if (address.isNotBlank()) controller.connect(address) }),
+                modifier = Modifier.fillMaxWidth().testTag("field_server_address"),
+            )
+            Button(
+                onClick = { controller.connect(address) },
+                enabled = address.isNotBlank() && !ui.busy,
+                modifier = Modifier.fillMaxWidth().testTag("btn_server_connect"),
+            ) { BusyLabel(ui.busy, "Connect") }
+        }
+        is ServerConnection.State.AwaitingBrowser -> {
+            ServerRow(connection.serverUrl, "Waiting for the sign-in in the browser")
+            OutlinedButton(
+                onClick = controller::cancelSignIn,
+                modifier = Modifier.fillMaxWidth().testTag("btn_server_cancel"),
+            ) { Text("Cancel") }
+        }
+        is ServerConnection.State.Connected -> {
+            ServerRow(connection.serverUrl, null)
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedButton(
+                    onClick = controller::syncNow,
+                    enabled = !ui.busy,
+                    modifier = Modifier.weight(1f).testTag("btn_server_sync"),
+                ) { BusyLabel(ui.busy, "Sync now") }
+                TextButton(
+                    onClick = controller::disconnect,
+                    modifier = Modifier.weight(1f).testTag("btn_server_disconnect"),
+                ) { Text("Disconnect") }
+            }
+        }
+        is ServerConnection.State.SignInExpired -> {
+            ServerRow(connection.serverUrl, "Sign-in expired", isError = true)
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Button(
+                    onClick = { controller.connect(connection.serverUrl) },
+                    enabled = !ui.busy,
+                    modifier = Modifier.weight(1f).testTag("btn_server_sign_in"),
+                ) { BusyLabel(ui.busy, "Sign in") }
+                TextButton(
+                    onClick = controller::disconnect,
+                    modifier = Modifier.weight(1f).testTag("btn_server_disconnect"),
+                ) { Text("Disconnect") }
+            }
+        }
+    }
+    ui.message?.let {
+        Text(
+            it,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.testTag("server_message"),
+        )
+    }
+}
+
+@Composable
+private fun ServerRow(serverUrl: String, status: String?, isError: Boolean = false) {
+    Column {
+        Text(serverUrl.substringAfter("://"), style = MaterialTheme.typography.bodyLarge)
+        if (status != null) {
+            Text(
+                status,
+                style = MaterialTheme.typography.bodySmall,
+                color = if (isError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+}
+
+@Composable
+private fun BusyLabel(busy: Boolean, label: String) {
+    if (busy) {
+        AlwaysSpinningIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+    } else {
+        Text(label)
     }
 }
 

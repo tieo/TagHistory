@@ -157,6 +157,8 @@ data class AppHostFactories(
     val syncsOnDevice: Boolean = true,
     /** False where the host has no Bluetooth scanner for the Nearby screen. */
     val supportsNearby: Boolean = true,
+    /** The standalone app's optional sync server; null where the app is a server client. */
+    val serverSync: io.github.tieo.taghistory.server.ServerSyncController? = null,
 )
 
 @Composable
@@ -374,6 +376,7 @@ private fun AuthedNav(
                         isIgnoringBatteryOptimizations = factories.isIgnoringBatteryOptimizations,
                         requestIgnoreBatteryOptimizations = factories.requestIgnoreBatteryOptimizations,
                         syncsOnDevice = factories.syncsOnDevice,
+                        serverSync = factories.serverSync,
                     )
                 }
                 is Screen.Information -> {

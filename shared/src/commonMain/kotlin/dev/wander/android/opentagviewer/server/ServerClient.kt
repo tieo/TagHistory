@@ -2,7 +2,9 @@ package io.github.tieo.taghistory.server
 
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
+import io.ktor.client.plugins.HttpSend
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
+import io.ktor.client.plugins.plugin
 import io.ktor.client.request.delete
 import io.ktor.client.request.get
 import io.ktor.client.request.parameter
@@ -12,6 +14,8 @@ import io.ktor.client.request.setBody
 import io.ktor.client.statement.HttpResponse
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.ContentType
+import io.ktor.http.HttpHeaders
+import io.ktor.http.HttpStatusCode
 import io.ktor.http.contentType
 import io.ktor.http.isSuccess
 import io.ktor.serialization.kotlinx.json.json
@@ -20,18 +24,39 @@ import kotlinx.serialization.json.Json
 /** A server call that came back with a non-2xx status. */
 class ServerException(val status: Int, message: String) : RuntimeException(message)
 
+/** Access tokens for a server behind an OIDC-guarded proxy. */
+fun interface BearerSource {
+    /** A token to send; [renew] asks for a fresh one after the proxy refused the last. */
+    suspend fun token(renew: Boolean): String
+}
+
 /**
  * Typed client for [ServerApi]. [baseUrl] is the server origin without a
  * trailing slash; the web app passes its own page origin, so requests carry
- * the reverse proxy's session cookie.
+ * the reverse proxy's session cookie. The Android app passes [bearer]
+ * instead: the proxy answers a refused token with a login redirect (or 401),
+ * so the request is retried once with a renewed token.
  */
 class ServerClient(
     private val baseUrl: String,
     engineClient: HttpClient = HttpClient(),
+    bearer: BearerSource? = null,
 ) {
     private val http = engineClient.config {
         install(ContentNegotiation) { json(WireJson) }
         expectSuccess = false
+        // A login redirect is an auth failure to report, not a page to load.
+        followRedirects = false
+    }.apply {
+        if (bearer != null) {
+            plugin(HttpSend).intercept { request ->
+                request.headers[HttpHeaders.Authorization] = "Bearer ${bearer.token(renew = false)}"
+                val first = execute(request)
+                if (!first.response.status.isAuthRefusal()) return@intercept first
+                request.headers[HttpHeaders.Authorization] = "Bearer ${bearer.token(renew = true)}"
+                execute(request)
+            }
+        }
     }
 
     suspend fun status(): ServerStatus = http.get(url(ServerApi.STATUS)).decode()
@@ -95,6 +120,9 @@ class ServerClient(
     }
 
     private fun url(path: String) = baseUrl + path
+
+    private fun HttpStatusCode.isAuthRefusal() =
+        this == HttpStatusCode.Unauthorized || this == HttpStatusCode.Found
 
     private inline fun <reified T> io.ktor.client.request.HttpRequestBuilder.jsonBody(body: T) {
         contentType(ContentType.Application.Json)

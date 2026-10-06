@@ -144,6 +144,25 @@ class AndroidAppHost private constructor(
         )
     }
 
+    private val appScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + Dispatchers.IO)
+
+    /** Optional sync server: the app trades reports with it after each fetch. */
+    val serverSync by lazy {
+        io.github.tieo.taghistory.server.ServerSyncController.create(
+            db = db,
+            connectionSettings = settingsFactory.create(SETTINGS_STORE_SYNC_SERVER),
+            cursorSettings = settingsFactory.create(SETTINGS_STORE_SYNC_SERVER_CURSORS),
+            blobs = crypto,
+            scope = appScope,
+            openBrowser = { url ->
+                context.startActivity(
+                    Intent(Intent.ACTION_VIEW, Uri.parse(url)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+                )
+            },
+            nowMs = { System.currentTimeMillis() },
+        )
+    }
+
     fun createLoginViewModel(onLoggedIn: suspend () -> Unit = {}): AppleLoginViewModel {
         val account = AppleAccount()
         val service = AppleLoginService(
@@ -334,6 +353,7 @@ class AndroidAppHost private constructor(
         // (a 2h manual reload measured 9.3s while a 168h sweep ran alongside).
         maxHoursBack = 24 * 7,
         syncRunRepo = syncRunRepo,
+        afterFetch = { serverSync.exchangeIfConnected() },
     )
 
     /** Durable background-sync run log for the Sync-activity screen. */
@@ -363,6 +383,7 @@ class AndroidAppHost private constructor(
             val reports = appleReportsFetcher.fetch(account, accessories, hoursBack = 24 * 7)
             if (reports.isNotEmpty()) beaconRepo.storeToLocationCache(reports)
             val total = reports.values.sumOf { it.size }
+            serverSync.exchangeIfConnected()
             "Refreshed ${reports.size} beacons • $total reports"
         }
     }
@@ -502,6 +523,7 @@ class AndroidAppHost private constructor(
         onExportTags = { beaconIds -> runExportSelected(context, beaconIds, beaconRepo) },
         isIgnoringBatteryOptimizations = { isIgnoringBatteryOptimizations() },
         requestIgnoreBatteryOptimizations = { requestIgnoreBatteryOptimizations() },
+        serverSync = serverSync,
     )
 
     /** True when the OS is NOT battery-optimizing us (background work runs near schedule). */
@@ -592,6 +614,8 @@ class AndroidAppHost private constructor(
         private const val SETTINGS_STORE_USER_SETTINGS = "user_settings"
         private const val SETTINGS_STORE_USER_DATA = "user_data"
         private const val SETTINGS_STORE_USER_AUTH = "user_auth"
+        private const val SETTINGS_STORE_SYNC_SERVER = "sync_server"
+        private const val SETTINGS_STORE_SYNC_SERVER_CURSORS = "sync_server_cursors"
         /** Matches the alias the Java app used so Keystore entries carry over. */
         private const val KEYSTORE_ALIAS_APPLE_ACCOUNT = "apple_account_key"
 
