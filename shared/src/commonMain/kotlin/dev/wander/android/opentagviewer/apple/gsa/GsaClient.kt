@@ -56,7 +56,9 @@ class GsaClient(
 
         val resp = http.execute(req)
         if (!resp.isOk()) {
-            throw GsaRequestException("GSA request failed: HTTP ${resp.statusCode}")
+            // Apple explains a refusal in the body; keep it for the log.
+            val detail = resp.body.decodeToString().take(300).replace(Regex("\\s+"), " ").trim()
+            throw GsaRequestException("GSA request failed: HTTP ${resp.statusCode}" + if (detail.isEmpty()) "" else ": $detail")
         }
 
         val parsed = XmlPlist.parse(resp.body)

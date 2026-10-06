@@ -136,8 +136,15 @@ class AnisetteClient(
         // Python pins these hard-coded values — match exactly. See
         // BaseAnisetteProvider.router / .client in findmy/reports/anisette.py.
         private const val ROUTER = "17106176"
-        private const val CLIENT_INFO =
+        /**
+         * Must not name `com.apple.dt.Xcode`: Apple's edge refuses every Grand
+         * Slam request whose client info does, before any credential is read,
+         * with an HTML page that surfaces as HTTP 503. `com.apple.akd` is the
+         * daemon that performs these requests on macOS and is answered
+         * normally. Same string as FindMy.py's `BaseAnisetteProvider.client`.
+         */
+        internal const val CLIENT_INFO =
             "<MacBookPro18,3> <Mac OS X;13.4.1;22F8> " +
-                "<com.apple.AOSKit/282 (com.apple.dt.Xcode/3594.4.19)>"
+                "<com.apple.AuthKit/1 (com.apple.akd/1.0)>"
     }
 }

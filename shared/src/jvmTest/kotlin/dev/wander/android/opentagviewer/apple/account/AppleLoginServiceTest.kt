@@ -175,7 +175,11 @@ class AppleLoginServiceTest {
         assertEquals("POST", captured.method)
         assertEquals("text/x-xml-plist", captured.headers["Content-Type"])
         assertTrue(captured.headers["User-Agent"]!!.startsWith("akd/1.0"))
-        assertTrue(captured.headers.containsKey("X-MMe-Client-Info"))
+        // Apple's edge answers 503 to any Grand Slam request whose client
+        // info names Xcode; it has to identify as akd.
+        val clientInfo = captured.headers["X-MMe-Client-Info"]!!
+        assertTrue("com.apple.akd/" in clientInfo, clientInfo)
+        assertTrue("Xcode" !in clientInfo, clientInfo)
 
         val parsed = XmlPlist.parse(captured.body!!) as PlistValue.Dict
         val request = parsed.dict("Request")!!
