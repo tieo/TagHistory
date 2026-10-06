@@ -155,9 +155,12 @@ class ServerApiTest {
         )
 
         assertEquals(2, client.uploadReports(batch).stored)
-        client.uploadReports(batch)
+        val firstPage = client.reports(after = 0)
+        assertEquals(0, client.uploadReports(batch).stored)
 
         val page = client.reports(after = 0)
+        // A repeated upload leaves the rows in place, so nothing replicates again.
+        assertEquals(firstPage.next, page.next)
         assertEquals(listOf(1_000L, 2_000L), page.reports.map { it.timestamp }.sorted())
         assertTrue(page.reports.all { it.beaconId == Fixtures.BEACON_A })
     }

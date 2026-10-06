@@ -182,6 +182,35 @@ class BeaconRepository(
     }
 
     /**
+     * Stores reports another device fetched, keeping rows whose hash is
+     * already present untouched. Returns how many were new.
+     */
+    fun storeUploadedReports(reportsForBeaconId: Map<String, List<BeaconLocationReport>>): Int {
+        val now = nowMs()
+        var added = 0L
+        db.transaction {
+            for ((beaconId, reports) in reportsForBeaconId) {
+                for (r in reports) {
+                    added += db.locationReportQueries.insertIfAbsent(
+                        hashId = BeaconLocationReportHasher.getSha256HashFor(beaconId, r),
+                        beaconId = beaconId,
+                        publishedAt = r.publishedAt,
+                        description = r.description,
+                        timestamp = r.timestamp,
+                        confidence = r.confidence,
+                        latitude = r.latitude,
+                        longitude = r.longitude,
+                        horizontalAccuracy = r.horizontalAccuracy,
+                        status = r.status,
+                        lastUpdate = now,
+                    ).value
+                }
+            }
+        }
+        return added.toInt()
+    }
+
+    /**
      * Most recent report per beacon. MAX(timestamp)-per-group query —
      * SQLite pulls the row matching the max correctly because we select
      * the aggregated column and the other columns aren't grouped-ambiguous

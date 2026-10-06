@@ -54,6 +54,18 @@ INSERT OR REPLACE INTO LocationReport(
     :latitude, :longitude, :horizontalAccuracy, :status, :lastUpdate
 );
 
+-- Stores a report a client handed over unless the hash is already known.
+-- A client mostly uploads what the server fetched itself; leaving those rows
+-- alone keeps their seq, so replication does not send them out again.
+insertIfAbsent:
+INSERT OR IGNORE INTO LocationReport(
+    hash_id, beacon_id, published_at, description, timestamp, confidence,
+    latitude, longitude, horizontal_accuracy, status, last_update
+) VALUES (
+    :hashId, :beaconId, :publishedAt, :description, :timestamp, :confidence,
+    :latitude, :longitude, :horizontalAccuracy, :status, :lastUpdate
+);
+
 -- Replication feed for server clients, in write order. The implicit rowid
 -- grows with every insert and INSERT OR REPLACE gives a rewritten row a new
 -- one, so a client that remembers the last seq it applied receives every row

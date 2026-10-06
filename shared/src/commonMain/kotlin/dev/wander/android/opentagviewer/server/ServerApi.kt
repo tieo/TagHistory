@@ -171,7 +171,7 @@ data class ReportUpload(
 
 @Serializable
 data class UploadResult(
-    /** Reports stored; ones for beacons the server does not know are skipped. */
+    /** Reports that were new to the server; known ones and unknown beacons are skipped. */
     val stored: Int,
 )
 

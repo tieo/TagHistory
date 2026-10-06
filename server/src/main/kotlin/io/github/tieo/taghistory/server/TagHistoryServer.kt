@@ -242,9 +242,9 @@ class TagHistoryServer(
     }
 
     /**
-     * Stores reports a client fetched itself. They go through the same path
-     * as the server's own fetches, so the hash and the dedupe are the same;
-     * reports for beacons the server does not know are dropped.
+     * Stores reports a client fetched itself and returns how many were new.
+     * They hash like the server's own fetches, so a report both sides fetched
+     * is stored once; reports for beacons the server does not know are dropped.
      */
     suspend fun uploadReports(uploads: List<ReportUpload>): Int = withContext(io) {
         val known = beaconRepo.getAllBeacons().map { it.beaconId }.toSet()
@@ -263,8 +263,7 @@ class TagHistoryServer(
                 )
             },
         )
-        beaconRepo.storeToLocationCache(byBeacon)
-        byBeacon.values.sumOf { it.size }
+        beaconRepo.storeUploadedReports(byBeacon)
     }
 
     suspend fun syncRuns(after: Long): List<SyncRunDto> = withContext(io) {
