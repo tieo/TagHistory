@@ -6,8 +6,13 @@ import org.jetbrains.kotlin.gradle.ExperimentalWasmDsl
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
     alias(libs.plugins.kotlin.compose)
-    alias(libs.plugins.kilua)
 }
+
+// Kilua's own Gradle plugin is left out: it pulls the Compose Multiplatform
+// Gradle plugin at an alpha version onto the build classpath, which would move
+// the Android app to it. The parts of it this module needs are below: the
+// compiler opt ins, the Tailwind source path and keeping the Tailwind input
+// out of the distribution.
 
 @OptIn(ExperimentalWasmDsl::class)
 kotlin {
@@ -24,6 +29,8 @@ kotlin {
         binaries.executable()
         compilerOptions {
             target.set("es2015")
+            optIn.add("kotlin.time.ExperimentalTime")
+            optIn.add("kotlin.js.ExperimentalWasmJsInterop")
         }
     }
     sourceSets {
@@ -53,4 +60,13 @@ plugins.withType<org.jetbrains.kotlin.gradle.targets.wasm.binaryen.BinaryenPlugi
         download.set(false)
         command.set("wasm-opt")
     }
+}
+
+// Tailwind scans the Kotlin sources for the class names they use.
+val kotlinSources = layout.projectDirectory.dir("src").asFile.absolutePath + "/**/*.kt"
+tasks.named<Copy>("wasmJsProcessResources") {
+    filesMatching("tailwind/tailwind.config.js") { filter { it.replace("SOURCES", kotlinSources) } }
+}
+tasks.named<Sync>("wasmJsBrowserDistribution") {
+    exclude("/tailwind/**", "/modules/**")
 }

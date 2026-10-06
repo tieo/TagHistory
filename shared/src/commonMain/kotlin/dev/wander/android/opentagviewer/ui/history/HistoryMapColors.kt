@@ -9,18 +9,18 @@ import io.github.tieo.taghistory.ui.map.MapBasemap
  * deep teal on the pastel light style, warm coral on near-black, hot magenta
  * through busy aerial imagery.
  */
-internal fun historyLineColor(basemap: MapBasemap): Long = when (basemap) {
+fun historyLineColor(basemap: MapBasemap): Long = when (basemap) {
     MapBasemap.LIGHT -> 0xFF0F766E
     MapBasemap.DARK -> 0xFFFB923C
     MapBasemap.SATELLITE -> 0xFFEC4899
 }
 
 /** Selected point halo and accuracy fill, paired with [historyLineColor]. */
-internal fun historySelectedColor(basemap: MapBasemap): Long = when (basemap) {
+fun historySelectedColor(basemap: MapBasemap): Long = when (basemap) {
     MapBasemap.LIGHT -> 0xFFB45309
     MapBasemap.DARK -> 0xFFFCD34D
     MapBasemap.SATELLITE -> 0xFF38BDF8
 }
 
 /** `#rrggbb` for an ARGB color, for map style JSON. */
-internal fun cssHex(argb: Long): String = "#" + (argb and 0xFFFFFF).toString(16).padStart(6, '0')
+fun cssHex(argb: Long): String = "#" + (argb and 0xFFFFFF).toString(16).padStart(6, '0')

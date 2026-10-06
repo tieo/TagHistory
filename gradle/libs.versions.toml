@@ -189,7 +189,6 @@ bouncycastle-bcprov = { group = "org.bouncycastle", name = "bcprov-jdk18on", ver
 guava = { group = "com.google.guava", name = "guava", version.ref = "guava" }
 
 [plugins]
-kilua = { id = "dev.kilua", version.ref = "kilua" }
 android-application = { id = "com.android.application", version.ref = "agp" }
 android-library = { id = "com.android.library", version.ref = "agp" }
 android-kotlin-multiplatform-library = { id = "com.android.kotlin.multiplatform.library", version.ref = "agp" }
