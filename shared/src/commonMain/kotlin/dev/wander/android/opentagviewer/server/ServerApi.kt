@@ -24,6 +24,13 @@ object ServerApi {
     const val SYNC_RUNS = "/api/sync-runs"
     const val SYNC = "/api/sync"
     const val GEOCODE = "/api/geocode"
+    /**
+     * OIDC redirect target for the app. Authelia answers with a form POST,
+     * which an app scheme cannot receive, so the server passes the code on
+     * to [APP_REDIRECT].
+     */
+    const val OAUTH2_CALLBACK = "/oauth2/callback"
+    const val APP_REDIRECT = "io.github.tieo.taghistory:/oauth2redirect"
     /** `?text=` returns an emoji font covering exactly those characters. */
     const val EMOJI_FONT = "/api/emoji-font"
 
@@ -146,6 +153,26 @@ data class ReportsPage(
     /** Cursor to pass as `after` for the next page. */
     val next: Long,
     val hasMore: Boolean,
+)
+
+/** A report a client fetched itself and hands to the server (`POST` [ServerApi.REPORTS]). */
+@Serializable
+data class ReportUpload(
+    val beaconId: String,
+    val publishedAt: Long,
+    val description: String?,
+    val timestamp: Long,
+    val confidence: Long,
+    val latitude: Double,
+    val longitude: Double,
+    val horizontalAccuracy: Long,
+    val status: Long,
+)
+
+@Serializable
+data class UploadResult(
+    /** Reports stored; ones for beacons the server does not know are skipped. */
+    val stored: Int,
 )
 
 @Serializable

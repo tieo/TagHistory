@@ -11,10 +11,13 @@ import io.ktor.server.plugins.compression.Compression
 import io.ktor.server.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.server.plugins.statuspages.StatusPages
 import io.ktor.server.request.receive
+import io.ktor.server.request.receiveParameters
 import io.ktor.http.ContentType
+import io.ktor.http.encodeURLParameter
 import io.ktor.server.response.header
 import io.ktor.server.response.respond
 import io.ktor.server.response.respondBytes
+import io.ktor.server.response.respondText
 import io.ktor.server.routing.delete
 import io.ktor.server.routing.get
 import io.ktor.server.routing.post
@@ -91,6 +94,9 @@ fun Application.tagHistoryModule(server: TagHistoryServer, webDir: File?, emojiF
             val limit = call.request.queryParameters["limit"]?.toIntOrNull() ?: ServerApi.MAX_REPORTS_PAGE
             call.respond(server.reports(after, limit))
         }
+        post(ServerApi.REPORTS) {
+            call.respond(UploadResult(server.uploadReports(call.receive<List<ReportUpload>>())))
+        }
         get(ServerApi.SYNC_RUNS) {
             val after = call.request.queryParameters["after"]?.toLongOrNull() ?: 0L
             call.respond(server.syncRuns(after))
@@ -101,6 +107,11 @@ fun Application.tagHistoryModule(server: TagHistoryServer, webDir: File?, emojiF
             val lat = requireNotNull(call.request.queryParameters["lat"]?.toDoubleOrNull()) { "lat is missing" }
             val lon = requireNotNull(call.request.queryParameters["lon"]?.toDoubleOrNull()) { "lon is missing" }
             call.respond(GeocodeResult(server.geocode(lat, lon)))
+        }
+
+        post(ServerApi.OAUTH2_CALLBACK) {
+            val form = call.receiveParameters()
+            call.respondText(oauthHandoffPage(form), ContentType.Text.Html)
         }
 
         get(ServerApi.EMOJI_FONT) {
@@ -119,4 +130,25 @@ fun Application.tagHistoryModule(server: TagHistoryServer, webDir: File?, emojiF
             staticFiles("/", webDir) { default("index.html") }
         }
     }
+}
+
+/**
+ * Hands an OIDC authorization response to the app. The page sends the
+ * browser to the app's redirect URI at once; the link is there for browsers
+ * that only open an app from a tap. The code is useless without the PKCE
+ * verifier the app kept, so passing it through the browser exposes nothing.
+ */
+internal fun oauthHandoffPage(form: io.ktor.http.Parameters): String {
+    val query = listOf("code", "state", "iss", "error", "error_description")
+        .mapNotNull { key -> form[key]?.let { "$key=${it.encodeURLParameter()}" } }
+        .joinToString("&")
+    val target = "${ServerApi.APP_REDIRECT}?$query"
+    val attr = target.replace("&", "&amp;").replace("\"", "&quot;")
+    return """<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TagHistory</title>
+<style>body{font-family:system-ui,sans-serif;background:#131318;color:#e7e0e8;display:flex;min-height:100vh;align-items:center;justify-content:center;margin:0}
+a{background:#d0bcff;color:#381e72;padding:14px 28px;border-radius:24px;text-decoration:none;font-weight:600}</style>
+</head><body><a href="$attr">Open TagHistory</a>
+<script>location.replace(document.querySelector("a").href)</script></body></html>"""
 }

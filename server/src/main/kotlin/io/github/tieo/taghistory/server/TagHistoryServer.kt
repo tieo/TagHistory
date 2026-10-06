@@ -11,6 +11,7 @@ import io.github.tieo.taghistory.apple.mobileme.MobileMeClient
 import io.github.tieo.taghistory.apple.reports.AppleReportsService
 import io.github.tieo.taghistory.apple.reports.LocationReportsClient
 import io.github.tieo.taghistory.data.importer.AppleExportParser
+import io.github.tieo.taghistory.data.model.BeaconLocationReport
 import io.github.tieo.taghistory.data.model.UserSettings
 import io.github.tieo.taghistory.data.repo.BeaconRepository
 import io.github.tieo.taghistory.data.repo.GeocodeCacheRepository
@@ -238,6 +239,32 @@ class TagHistoryServer(
             )
         }
         ReportsPage(reports = page, next = page.lastOrNull()?.seq ?: after, hasMore = rows.size > size)
+    }
+
+    /**
+     * Stores reports a client fetched itself. They go through the same path
+     * as the server's own fetches, so the hash and the dedupe are the same;
+     * reports for beacons the server does not know are dropped.
+     */
+    suspend fun uploadReports(uploads: List<ReportUpload>): Int = withContext(io) {
+        val known = beaconRepo.getAllBeacons().map { it.beaconId }.toSet()
+        val byBeacon = uploads.filter { it.beaconId in known }.groupBy(
+            keySelector = { it.beaconId },
+            valueTransform = { upload ->
+                BeaconLocationReport(
+                    publishedAt = upload.publishedAt,
+                    description = upload.description.orEmpty(),
+                    timestamp = upload.timestamp,
+                    confidence = upload.confidence,
+                    latitude = upload.latitude,
+                    longitude = upload.longitude,
+                    horizontalAccuracy = upload.horizontalAccuracy,
+                    status = upload.status,
+                )
+            },
+        )
+        beaconRepo.storeToLocationCache(byBeacon)
+        byBeacon.values.sumOf { it.size }
     }
 
     suspend fun syncRuns(after: Long): List<SyncRunDto> = withContext(io) {

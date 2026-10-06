@@ -8,6 +8,7 @@ import io.github.tieo.taghistory.data.storage.SecureBlobStore
 import io.github.tieo.taghistory.data.storage.SecureBlobStoreException
 import io.github.tieo.taghistory.db.OwnedBeacons
 import io.ktor.client.request.get
+import io.ktor.client.request.post
 import io.ktor.client.request.put
 import io.ktor.client.request.setBody
 import io.ktor.client.statement.bodyAsText
@@ -135,5 +136,46 @@ class ServerApiTest {
         assertEquals(2, status.beaconCount)
         assertEquals(0, status.reportCount)
         assertEquals(f.server.instanceId, status.instanceId)
+    }
+
+    @Test
+    fun uploaded_reports_are_stored_once_and_unknown_beacons_skipped() = testApplication {
+        val f = ServerFixture()
+        application { tagHistoryModule(f.server, webDir = null) }
+        f.server.import(Fixtures.exportZip())
+        val client = ServerClient("", createClient { })
+        fun upload(beaconId: String, timestamp: Long) = ReportUpload(
+            beaconId = beaconId, publishedAt = 0, description = null, timestamp = timestamp,
+            confidence = 0, latitude = 48.1, longitude = 11.5, horizontalAccuracy = 20, status = 0,
+        )
+        val batch = listOf(
+            upload(Fixtures.BEACON_A, 1_000),
+            upload(Fixtures.BEACON_A, 2_000),
+            upload("00000000-0000-4000-8000-000000000000", 1_000),
+        )
+
+        assertEquals(2, client.uploadReports(batch).stored)
+        client.uploadReports(batch)
+
+        val page = client.reports(after = 0)
+        assertEquals(listOf(1_000L, 2_000L), page.reports.map { it.timestamp }.sorted())
+        assertTrue(page.reports.all { it.beaconId == Fixtures.BEACON_A })
+    }
+
+    @Test
+    fun oauth_callback_hands_the_code_to_the_app() = testApplication {
+        application { tagHistoryModule(ServerFixture().server, webDir = null) }
+
+        val response = client.post(ServerApi.OAUTH2_CALLBACK) {
+            contentType(ContentType.Application.FormUrlEncoded)
+            setBody("code=a%2Bb&state=s1&iss=https%3A%2F%2Fauth.example&scope=x")
+        }
+
+        assertEquals(HttpStatusCode.OK, response.status)
+        val body = response.bodyAsText()
+        assertTrue(
+            "href=\"${ServerApi.APP_REDIRECT}?code=a%2Bb&amp;state=s1&amp;iss=https%3A%2F%2Fauth.example\"" in body,
+            body,
+        )
     }
 }

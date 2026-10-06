@@ -73,6 +73,9 @@ class ServerClient(
             parameter("limit", limit)
         }.decode()
 
+    suspend fun uploadReports(reports: List<ReportUpload>): UploadResult =
+        http.post(url(ServerApi.REPORTS)) { jsonBody(reports) }.decode()
+
     suspend fun syncRuns(after: Long): List<SyncRunDto> =
         http.get(url(ServerApi.SYNC_RUNS)) { parameter("after", after) }.decode()
 
