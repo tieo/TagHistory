@@ -106,6 +106,7 @@ class WasmAppHost(
             )
         },
         isLoggedIn = { signedIn },
+        openLogin = { openLoginPage() },
         createSettings = {
             SettingsViewModel(
                 settingsRepo = userSettingsRepo,
@@ -158,4 +159,9 @@ class WasmAppHost(
 
 private fun openInNewTab(url: String) {
     window.open(url, "_blank")
+}
+
+/** The Apple sign-in page served next to the app; see `login.html`. */
+fun openLoginPage() {
+    kotlinx.browser.window.location.replace("login.html")
 }

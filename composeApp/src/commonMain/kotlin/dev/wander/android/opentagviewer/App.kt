@@ -157,6 +157,12 @@ data class AppHostFactories(
     val syncsOnDevice: Boolean = true,
     /** False where the host has no Bluetooth scanner for the Nearby screen. */
     val supportsNearby: Boolean = true,
+    /**
+     * Leaves for a sign-in page outside the app instead of [createLogin]'s
+     * screen. The web signs in on a plain HTML page that password managers
+     * can fill.
+     */
+    val openLogin: (() -> Unit)? = null,
     /** The standalone app's optional sync server; null where the app is a server client. */
     val serverSync: io.github.tieo.taghistory.server.ServerSyncController? = null,
 )
@@ -174,7 +180,10 @@ fun App(factories: AppHostFactories) {
             contentColor = MaterialTheme.colorScheme.onSurface,
         ) {
             var showLogin by remember { mutableStateOf(!factories.isLoggedIn()) }
-            if (showLogin) {
+            val openLogin = factories.openLogin
+            if (showLogin && openLogin != null) {
+                LaunchedEffect(Unit) { openLogin() }
+            } else if (showLogin) {
                 val vm = remember { factories.createLogin() }
                 LaunchedEffect(vm) {
                     vm.state.collect { s -> if (s.finished) showLogin = false }

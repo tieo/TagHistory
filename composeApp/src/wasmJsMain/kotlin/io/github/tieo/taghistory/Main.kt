@@ -9,7 +9,6 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -28,9 +27,8 @@ import io.github.tieo.taghistory.data.storage.SettingsFactory
 import io.github.tieo.taghistory.db.DatabaseDriverFactory
 import io.github.tieo.taghistory.db.createDatabase
 import io.github.tieo.taghistory.host.WasmAppHost
+import io.github.tieo.taghistory.host.openLoginPage
 import io.github.tieo.taghistory.server.ServerClient
-import io.github.tieo.taghistory.ui.login.CredentialsForm
-import io.github.tieo.taghistory.ui.login.LocalCredentialsForm
 import io.github.tieo.taghistory.ui.theme.TagHistoryTheme
 import kotlinx.browser.document
 import kotlinx.browser.window
@@ -54,8 +52,14 @@ fun main() {
                 val db = createDatabase(DatabaseDriverFactory())
                 val client = ServerClient(window.location.origin)
                 val status = client.status()
+                // Without an Apple session there is nothing to show yet; the
+                // sign-in page opens the app again once the server has one.
+                if (!status.signedIn) {
+                    openLoginPage()
+                    return@LaunchedEffect
+                }
                 val host = WasmAppHost(db, SettingsFactory(), client, serverSignedIn = status.signedIn)
-                if (status.signedIn) runCatching { host.replicator.pull() }
+                runCatching { host.replicator.pull() }
                 // The canvas has no emoji font; fetch one covering just the
                 // emoji the tags use, before the first frame, since text laid
                 // out before a font arrives keeps its missing-glyph boxes.
@@ -73,9 +77,7 @@ fun main() {
         }
         val f = factories
         if (f != null) {
-            CompositionLocalProvider(LocalCredentialsForm provides { CredentialsForm(it) }) {
-                App(factories = f)
-            }
+            App(factories = f)
         } else {
             TagHistoryTheme {
                 Surface(modifier = Modifier.fillMaxSize()) {

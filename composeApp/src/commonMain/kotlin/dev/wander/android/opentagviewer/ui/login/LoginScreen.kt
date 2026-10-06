@@ -40,7 +40,6 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -121,87 +120,53 @@ private fun LoginForm(
             textAlign = TextAlign.Center,
         )
         Spacer(Modifier.height(12.dp))
-        val platformForm = LocalCredentialsForm.current
-        if (platformForm != null) {
-            platformForm(
-                CredentialsFormState(
-                    email = state.email,
-                    password = state.password,
-                    isLoggingIn = state.isLoggingIn,
-                    onEmailChange = onEmailChange,
-                    onPasswordChange = onPasswordChange,
-                    onSubmit = onSubmit,
-                ),
+        OutlinedTextField(
+            value = state.email,
+            onValueChange = onEmailChange,
+            label = { Text("Apple ID email or phone") },
+            singleLine = true,
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+            modifier = Modifier.fillMaxWidth().testTag("field_email"),
+            enabled = !state.isLoggingIn,
+        )
+        OutlinedTextField(
+            value = state.password,
+            onValueChange = onPasswordChange,
+            label = { Text("Password") },
+            singleLine = true,
+            visualTransformation = PasswordVisualTransformation(),
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+            modifier = Modifier.fillMaxWidth().testTag("field_password"),
+            enabled = !state.isLoggingIn,
+        )
+        val loginError = state.loginError
+        if (loginError != null) {
+            Text(
+                loginError,
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.bodySmall,
             )
-            state.loginError?.let { LoginError(it) }
-        } else {
-            OutlinedTextField(
-                value = state.email,
-                onValueChange = onEmailChange,
-                label = { Text("Apple ID email or phone") },
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
-                modifier = Modifier.fillMaxWidth().testTag("field_email"),
-                enabled = !state.isLoggingIn,
-            )
-            OutlinedTextField(
-                value = state.password,
-                onValueChange = onPasswordChange,
-                label = { Text("Password") },
-                singleLine = true,
-                visualTransformation = PasswordVisualTransformation(),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                modifier = Modifier.fillMaxWidth().testTag("field_password"),
-                enabled = !state.isLoggingIn,
-            )
-            state.loginError?.let { LoginError(it) }
-            Button(
-                onClick = onSubmit,
-                enabled = !state.isLoggingIn && state.isEmailValid && state.isPasswordValid,
-                modifier = Modifier.fillMaxWidth().testTag("btn_login"),
-                contentPadding = PaddingValues(vertical = 14.dp),
-            ) {
-                if (state.isLoggingIn) {
-                    AlwaysSpinningIndicator(
-                        modifier = Modifier.size(20.dp),
-                        strokeWidth = 2.dp,
-                        color = MaterialTheme.colorScheme.onPrimary,
-                    )
-                } else {
-                    Text("Log in", fontWeight = FontWeight.SemiBold)
-                    Spacer(Modifier.width(8.dp))
-                    Icon(Icons.Filled.ArrowForward, contentDescription = null, modifier = Modifier.size(18.dp))
-                }
+        }
+        Button(
+            onClick = onSubmit,
+            enabled = !state.isLoggingIn && state.isEmailValid && state.isPasswordValid,
+            modifier = Modifier.fillMaxWidth().testTag("btn_login"),
+            contentPadding = PaddingValues(vertical = 14.dp),
+        ) {
+            if (state.isLoggingIn) {
+                AlwaysSpinningIndicator(
+                    modifier = Modifier.size(20.dp),
+                    strokeWidth = 2.dp,
+                    color = MaterialTheme.colorScheme.onPrimary,
+                )
+            } else {
+                Text("Log in", fontWeight = FontWeight.SemiBold)
+                Spacer(Modifier.width(8.dp))
+                Icon(Icons.Filled.ArrowForward, contentDescription = null, modifier = Modifier.size(18.dp))
             }
         }
     }
 }
-
-@Composable
-private fun LoginError(message: String) {
-    Text(
-        message,
-        color = MaterialTheme.colorScheme.error,
-        style = MaterialTheme.typography.bodySmall,
-    )
-}
-
-/** What a platform credentials form shows and reports back; see [LocalCredentialsForm]. */
-class CredentialsFormState(
-    val email: String,
-    val password: String,
-    val isLoggingIn: Boolean,
-    val onEmailChange: (String) -> Unit,
-    val onPasswordChange: (String) -> Unit,
-    val onSubmit: () -> Unit,
-)
-
-/**
- * Replaces the email and password fields and the login button. The web
- * provides a real HTML form here: a password manager neither sees nor fills
- * fields drawn on the canvas. Null keeps the Compose fields.
- */
-val LocalCredentialsForm = staticCompositionLocalOf<(@Composable (CredentialsFormState) -> Unit)?> { null }
 
 @Composable
 private fun TwoFactorMethodChooser(
