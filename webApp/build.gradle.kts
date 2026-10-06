@@ -72,5 +72,7 @@ tasks.named<Copy>("wasmJsProcessResources") {
     filesMatching("tailwind/tailwind.config.js") { filter { it.replace("SOURCES", sources) } }
 }
 tasks.named<Sync>("wasmJsBrowserDistribution") {
-    exclude("/tailwind/**", "/modules/**")
+    // The Tailwind input and the map bridge are bundled by webpack; their
+    // sources are not served.
+    exclude("/tailwind/**", "/modules/**", "/map/**")
 }

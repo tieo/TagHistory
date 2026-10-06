@@ -153,17 +153,7 @@ data class AppHostFactories(
      * hourly sync worker gets parked by Doze for many hours.
      */
     val requestIgnoreBatteryOptimizations: (() -> Unit)? = null,
-    /** False on a server client: the server runs the sync, not this device. */
-    val syncsOnDevice: Boolean = true,
-    /** False where the host has no Bluetooth scanner for the Nearby screen. */
-    val supportsNearby: Boolean = true,
-    /**
-     * Leaves for a sign-in page outside the app instead of [createLogin]'s
-     * screen. The web signs in on a plain HTML page that password managers
-     * can fill.
-     */
-    val openLogin: (() -> Unit)? = null,
-    /** The standalone app's optional sync server; null where the app is a server client. */
+    /** The optional sync server connection; null on hosts that do not offer one. */
     val serverSync: io.github.tieo.taghistory.server.ServerSyncController? = null,
 )
 
@@ -176,14 +166,11 @@ fun App(factories: AppHostFactories) {
     TagHistoryTheme(darkTheme = darkTheme) {
         Surface(
             modifier = Modifier.fillMaxSize().withTestTagsAsResourceId(),
-            color = rootSurfaceColor(MaterialTheme.colorScheme.surface),
+            color = MaterialTheme.colorScheme.surface,
             contentColor = MaterialTheme.colorScheme.onSurface,
         ) {
             var showLogin by remember { mutableStateOf(!factories.isLoggedIn()) }
-            val openLogin = factories.openLogin
-            if (showLogin && openLogin != null) {
-                LaunchedEffect(Unit) { openLogin() }
-            } else if (showLogin) {
+            if (showLogin) {
                 val vm = remember { factories.createLogin() }
                 LaunchedEffect(vm) {
                     vm.state.collect { s -> if (s.finished) showLogin = false }
@@ -291,8 +278,7 @@ private fun AuthedNav(
 
     val current = nav.current
 
-    // Transparent: the root surface below already paints the theme color, and
-    // on the web the map shows through both (see rootSurfaceColor).
+    // Transparent: the root surface below already paints the theme color.
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         containerColor = Color.Transparent,
@@ -378,13 +364,12 @@ private fun AuthedNav(
                     SettingsScreen(
                         viewModel = settingsVm,
                         onOpenInformation = { nav = nav.push(Screen.Information) },
-                        onOpenNearby = if (factories.supportsNearby) ({ nav = nav.push(Screen.Nearby) }) else null,
+                        onOpenNearby = { nav = nav.push(Screen.Nearby) },
                         onOpenSyncActivity = { nav = nav.push(Screen.SyncActivity) },
                         onImport = onImport,
                         onRefreshNow = refreshNow,
                         isIgnoringBatteryOptimizations = factories.isIgnoringBatteryOptimizations,
                         requestIgnoreBatteryOptimizations = factories.requestIgnoreBatteryOptimizations,
-                        syncsOnDevice = factories.syncsOnDevice,
                         serverSync = factories.serverSync,
                     )
                 }

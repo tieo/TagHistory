@@ -29,10 +29,14 @@ export function mount(container, lat, lon, zoom, style, overlays, onReady, onIdl
         style: parseStyle(style),
         center: [lon, lat],
         zoom,
-        attributionControl: { compact: true },
+        attributionControl: false,
     });
     const h = { map, data, layers: spec.layers, markers: new Map(), padding: { top: 0, right: 0, bottom: 0, left: 0 } };
     map.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), "top-right");
+    // On a phone the panel covers the bottom of the map, so the credits go to
+    // the top instead.
+    const narrow = container.clientWidth < 640;
+    map.addControl(new maplibregl.AttributionControl({ compact: true }), narrow ? "top-left" : "bottom-right");
     // Ready once the style is in: camera and data calls work from here, while
     // "load" would also wait for every visible tile.
     let announced = false;

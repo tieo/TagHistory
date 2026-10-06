@@ -14,7 +14,7 @@ APPLE_LIBS=androidApp/src/main/assets/apple-libs/x86_64
 [ -f "$APPLE_LIBS/libCoreADI.so" ] || { echo "missing $APPLE_LIBS (Apple's ADI libraries are not in git)" >&2; exit 1; }
 
 echo "==> Building server and web app"
-./gradlew --max-workers=2 :server:installDist :composeApp:wasmJsBrowserDistribution
+./gradlew --max-workers=2 :server:installDist :webApp:wasmJsBrowserDistribution
 echo "==> Building libottjni.so"
 (cd rust && cargo build --release -p ottjni)
 
@@ -24,7 +24,7 @@ cp -r server/build/install/taghistory-server "$STAGE/server"
 cp rust/target/release/libottjni.so "$STAGE/"
 mkdir -p "$STAGE/apple-libs"
 cp -r "$APPLE_LIBS" "$STAGE/apple-libs/"
-cp -r composeApp/build/dist/wasmJs/productionExecutable "$STAGE/web"
+cp -r webApp/build/dist/wasmJs/productionExecutable "$STAGE/web"
 
 echo "==> Uploading to $HOST"
 rsync -a --delete --chown=root:root -e "ssh -o HostKeyAlias=nasx" "$STAGE/" "root@$HOST:/var/lib/taghistory-deploy/"

@@ -23,6 +23,12 @@ import io.github.tieo.taghistory.server.ServerClient
 import io.github.tieo.taghistory.web.host.WebHost
 import io.github.tieo.taghistory.web.host.openLoginPage
 import io.github.tieo.taghistory.web.ui.BUTTON_PRIMARY
+import io.github.tieo.taghistory.web.ui.aboutPage
+import io.github.tieo.taghistory.web.ui.deviceInfoPage
+import io.github.tieo.taghistory.web.ui.manageTagsPage
+import io.github.tieo.taghistory.web.ui.settingsPage
+import io.github.tieo.taghistory.web.ui.syncActivityPage
+import io.github.tieo.taghistory.web.ui.historyPage
 import io.github.tieo.taghistory.web.ui.mapPage
 import io.github.tieo.taghistory.web.ui.textButton
 import kotlinx.browser.window
@@ -81,12 +87,31 @@ class App : Application() {
                     false -> Theme.Light
                 }
             }
-            val dark = ThemeManager.theme == Theme.Dark ||
-                (ThemeManager.theme == Theme.Auto && window.matchMedia("(prefers-color-scheme: dark)").matches)
+            val dark = settings.useDarkTheme ?: window.matchMedia("(prefers-color-scheme: dark)").matches
+            val mapState by h.map.state.collectAsState()
             browserRouter {
-                route("/") {
-                    view { mapPage(h.map, dark, h::syncNow) }
+                route("/settings") {
+                    route("/sync") { view { syncActivityPage(h.syncRuns()) } }
+                    view { settingsPage(remember { h.settings() }, h::syncNow) }
                 }
+                route("/about") { view { aboutPage() } }
+                route("/tags") {
+                    string { tag ->
+                        route("/history") {
+                            view {
+                                val vm = remember(tag.value) { h.history(tag.value) }
+                                historyPage(vm, tag.value, mapState.cards, dark)
+                            }
+                        }
+                        view {
+                            val vm = remember(tag.value) { h.deviceInfo(tag.value) }
+                            deviceInfoPage(vm, onRemoved = h.map::reboot)
+                        }
+                    }
+                    view { manageTagsPage(h.map, h::importFromFile) }
+                }
+                // The root, and any path no route above knows: the map.
+                view { mapPage(h.map, dark, h::syncNow) }
             }
         }
     }

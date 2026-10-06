@@ -70,12 +70,6 @@ fun SettingsScreen(
     onRefreshNow: (suspend () -> String?)? = null,
     isIgnoringBatteryOptimizations: (() -> Boolean)? = null,
     requestIgnoreBatteryOptimizations: (() -> Unit)? = null,
-    /**
-     * Whether this device runs the background sync itself. A server client
-     * does not (the server syncs on its own schedule), so the switch and
-     * interval are left out there and only the run log remains.
-     */
-    syncsOnDevice: Boolean = true,
     serverSync: ServerSyncController? = null,
     modifier: Modifier = Modifier,
 ) {
@@ -134,7 +128,6 @@ fun SettingsScreen(
 
         // ---------- Background sync ----------
         SettingsSection("Background sync") {
-            if (syncsOnDevice) {
             SwitchRow(
                 label = "Auto-refresh when in background",
                 subtitle = "Sync beacon reports without opening the app",
@@ -164,11 +157,10 @@ fun SettingsScreen(
                     )
                 }
             }
-            }
             // The run log stays reachable with sync switched off: it is how
             // to check what the background did before it was disabled.
             if (onOpenSyncActivity != null) {
-                if (syncsOnDevice) HorizontalDivider()
+                HorizontalDivider()
                 OutlinedButton(
                     onClick = onOpenSyncActivity,
                     modifier = Modifier.fillMaxWidth().testTag("btn_sync_activity"),
@@ -338,11 +330,7 @@ fun SettingsScreen(
             title = { Text("Sign out?") },
             text = {
                 Text(
-                    if (syncsOnDevice) {
-                        "Your Apple account credentials will be removed from this device. Background sync will stop until you sign in again."
-                    } else {
-                        "The server signs out of your Apple account and stops syncing your tags until you sign in again."
-                    },
+                    "Your Apple account credentials will be removed from this device. Background sync will stop until you sign in again.",
                 )
             },
             confirmButton = {

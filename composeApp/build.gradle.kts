@@ -66,17 +66,6 @@ kotlin {
         }
     }
 
-    @OptIn(org.jetbrains.kotlin.gradle.ExperimentalWasmDsl::class)
-    wasmJs {
-        outputModuleName.set("composeApp")
-        browser {
-            commonWebpackConfig {
-                outputFileName = "composeApp.js"
-            }
-        }
-        binaries.executable()
-    }
-
     sourceSets {
         commonMain.dependencies {
             implementation(project(":shared"))
@@ -133,27 +122,6 @@ kotlin {
                 implementation(libs.sqldelight.sqlite.driver)
             }
         }
-
-        val wasmJsMain by getting {
-            dependencies {
-                implementation(compose.runtime)
-                implementation(compose.foundation)
-                implementation(compose.material3)
-                implementation(compose.materialIconsExtended)
-                implementation(compose.ui)
-                // The database driver (sql.js on the page) lives in :shared.
-                implementation(npm("sql.js", "1.10.3"))
-            }
-        }
-    }
-}
-
-// wasm-opt comes from the machine (binaryen in the Nix profile) instead of a
-// download from a GitHub release, which stalls and holds the whole build.
-plugins.withType<org.jetbrains.kotlin.gradle.targets.wasm.binaryen.BinaryenPlugin> {
-    the<org.jetbrains.kotlin.gradle.targets.wasm.binaryen.BinaryenEnvSpec>().apply {
-        download.set(false)
-        command.set("wasm-opt")
     }
 }
 
