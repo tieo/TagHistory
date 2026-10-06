@@ -2,3 +2,8 @@
 @import "tailwindcss";
 /* Dark mode follows the `dark` class Kilua's ThemeManager sets on <html>. */
 @custom-variant dark (&:where(.dark, .dark *));
+
+/* Native controls (scrollbars, form fields) follow the theme. */
+html { color-scheme: light; }
+html.dark { color-scheme: dark; }
+body { @apply bg-zinc-50 text-zinc-900 antialiased dark:bg-zinc-950 dark:text-zinc-100; }

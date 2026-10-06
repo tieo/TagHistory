@@ -40,6 +40,8 @@ kotlin {
             implementation(libs.kilua.routing)
             implementation(libs.kilua.tailwindcss)
             implementation(libs.kilua.lucide)
+            implementation(libs.kilua.jetpack)
+            implementation(libs.androidx.lifecycle.viewmodel)
             implementation(libs.kotlinx.browser)
             implementation(libs.multiplatform.settings)
             // The database driver (sql.js on the page) lives in :shared.
@@ -64,9 +66,10 @@ plugins.withType<org.jetbrains.kotlin.gradle.targets.wasm.binaryen.BinaryenPlugi
 
 // Tailwind scans the sources for the class names they use: the Kotlin UI and
 // the map bridge, which builds the marker chips.
-val kotlinSources = layout.projectDirectory.dir("src").asFile.absolutePath + "/**/*.{kt,mjs}"
 tasks.named<Copy>("wasmJsProcessResources") {
-    filesMatching("tailwind/tailwind.config.js") { filter { it.replace("SOURCES", kotlinSources) } }
+    // A local value, so the configuration cache does not hold the script.
+    val sources = layout.projectDirectory.dir("src").asFile.absolutePath + "/**/*.{kt,mjs}"
+    filesMatching("tailwind/tailwind.config.js") { filter { it.replace("SOURCES", sources) } }
 }
 tasks.named<Sync>("wasmJsBrowserDistribution") {
     exclude("/tailwind/**", "/modules/**")

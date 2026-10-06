@@ -57,6 +57,7 @@ kilua = { module = "dev.kilua:kilua", version.ref = "kilua" }
 kilua-routing = { module = "dev.kilua:kilua-routing", version.ref = "kilua" }
 kilua-tailwindcss = { module = "dev.kilua:kilua-tailwindcss", version.ref = "kilua" }
 kilua-lucide = { module = "dev.kilua:kilua-lucide", version.ref = "kilua" }
+kilua-jetpack = { module = "dev.kilua:kilua-jetpack", version.ref = "kilua" }
 # ---------------------------------------------------------------
 # KMP core
 # ---------------------------------------------------------------
