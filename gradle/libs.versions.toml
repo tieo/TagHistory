@@ -7,6 +7,7 @@
 # maven repo — the build runs with --offline in sandboxed sessions.
 # ---------------------------------------------------------------
 kotlin = "2.4.20"
+kilua = "0.0.36"
 composeMultiplatform = "1.10.0"
 coroutines = "1.10.2"
 serialization = "1.9.0"
@@ -52,6 +53,10 @@ guava = "33.4.6-android"
 ktlint = "14.2.0"
 
 [libraries]
+kilua = { module = "dev.kilua:kilua", version.ref = "kilua" }
+kilua-routing = { module = "dev.kilua:kilua-routing", version.ref = "kilua" }
+kilua-tailwindcss = { module = "dev.kilua:kilua-tailwindcss", version.ref = "kilua" }
+kilua-lucide = { module = "dev.kilua:kilua-lucide", version.ref = "kilua" }
 # ---------------------------------------------------------------
 # KMP core
 # ---------------------------------------------------------------
@@ -184,6 +189,7 @@ bouncycastle-bcprov = { group = "org.bouncycastle", name = "bcprov-jdk18on", ver
 guava = { group = "com.google.guava", name = "guava", version.ref = "guava" }
 
 [plugins]
+kilua = { id = "dev.kilua", version.ref = "kilua" }
 android-application = { id = "com.android.application", version.ref = "agp" }
 android-library = { id = "com.android.library", version.ref = "agp" }
 android-kotlin-multiplatform-library = { id = "com.android.kotlin.multiplatform.library", version.ref = "agp" }

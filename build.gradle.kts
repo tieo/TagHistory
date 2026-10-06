@@ -13,6 +13,7 @@ plugins {
     alias(libs.plugins.compose.multiplatform) apply false
     alias(libs.plugins.sqldelight) apply false
     alias(libs.plugins.ktlint) apply false
+    alias(libs.plugins.kilua) apply false
 }
 
 // Apply ktlint to every Kotlin / KMP module so format + lint runs against

@@ -1,0 +1,4 @@
+@config "./tailwind.config.js";
+@import "tailwindcss";
+/* Dark mode follows the `dark` class Kilua's ThemeManager sets on <html>. */
+@custom-variant dark (&:where(.dark, .dark *));

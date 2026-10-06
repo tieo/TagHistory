@@ -72,3 +72,4 @@ include(":composeApp")
 include(":androidApp")
 
 include(":server")
+include(":webApp")
