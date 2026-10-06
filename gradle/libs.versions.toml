@@ -6,7 +6,7 @@
 # exists under ~/.gradle/caches/modules-2/files-2.1 or on a reachable
 # maven repo — the build runs with --offline in sandboxed sessions.
 # ---------------------------------------------------------------
-kotlin = "2.3.0"
+kotlin = "2.4.20"
 composeMultiplatform = "1.10.0"
 coroutines = "1.10.2"
 serialization = "1.9.0"

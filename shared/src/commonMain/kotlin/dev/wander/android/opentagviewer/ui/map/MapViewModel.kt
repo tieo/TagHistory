@@ -103,6 +103,7 @@ class MapViewModel(
      * check-then-set such as the isRefreshing latch atomic with respect to
      * every other confined task.
      */
+    @OptIn(ExperimentalStdlibApi::class) // CoroutineDispatcher's polymorphic context key
     private val confinedScope: CoroutineScope by lazy {
         val base = scope ?: viewModelScope
         val dispatcher = base.coroutineContext[CoroutineDispatcher]
