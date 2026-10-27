@@ -6,11 +6,17 @@ name: Seed test data — fake auth + 3 beacons + location reports
 # to MainActivity. Structural assertion: btn_settings visible on map = auth
 # succeeded and at least one beacon card rendered.
 #
+# The wipe must not launch the app: a MainActivity started before the seed
+# reads the signed out state, keeps it when the seed hands off to it, and
+# every retry then finds the beacons already seeded and changes nothing. So
+# the deep link cold starts the process into TestSeedActivity, and
+# MainActivity is created only after the auth is written.
+#
 # The openLink + map-landing pair is wrapped in retry because the deep
 # link is occasionally dropped when fired while the process is still
 # restarting after the state wipe; one retry reliably re-fires it.
-- launchApp:
-    clearState: true
+- stopApp
+- clearState
 - retry:
     maxRetries: 4
     commands:
