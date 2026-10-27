@@ -65,9 +65,18 @@ class GsaClient(
 
         val resp = http.execute(req)
         if (!resp.isOk()) {
-            // Apple explains a refusal in the body; keep it for the log.
-            val detail = resp.body.decodeToString().take(300).replace(Regex("\\s+"), " ").trim()
-            throw GsaRequestException("GSA request failed: HTTP ${resp.statusCode}" + if (detail.isEmpty()) "" else ": $detail")
+            // Apple explains a refusal in the body. The message ends up on the
+            // sign-in screen, so an HTML error page shrinks to its title.
+            val body = resp.body.decodeToString()
+            val title = Regex("<title>(.*?)</title>", RegexOption.IGNORE_CASE).find(body)?.groupValues?.get(1)?.trim()
+            val detail = body.take(300).replace(Regex("\\s+"), " ").trim()
+            throw GsaRequestException(
+                "GSA request failed: HTTP " + when {
+                    !title.isNullOrEmpty() -> title.removePrefix("${resp.statusCode}").trim().let { "${resp.statusCode} $it" }
+                    detail.isEmpty() -> "${resp.statusCode}"
+                    else -> "${resp.statusCode}: $detail"
+                },
+            )
         }
 
         val parsed = XmlPlist.parse(resp.body)
