@@ -3,6 +3,7 @@ package io.github.tieo.taghistory.apple.account
 import io.github.tieo.taghistory.apple.anisette.AnisetteClient
 import io.github.tieo.taghistory.apple.crypto.GsaCrypto
 import io.github.tieo.taghistory.apple.crypto.Srp6aGsa
+import io.github.tieo.taghistory.apple.gsa.GSA_CONNECTION
 import io.github.tieo.taghistory.apple.gsa.GsaClient
 import io.github.tieo.taghistory.apple.http.HttpRequest
 import io.github.tieo.taghistory.apple.http.HttpTransport
@@ -320,6 +321,7 @@ class AppleLoginService(
             "User-Agent" to "Xcode",
             "Accept-Language" to "en-us",
             "X-Apple-Identity-Token" to identityToken,
+            GSA_CONNECTION,
         )
         extraHeaders?.let { headers.putAll(it) }
         headers.putAll(anisette.getHeaders(withClientInfo = true))

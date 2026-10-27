@@ -110,6 +110,7 @@ class MacAnisetteProviderTest {
         p.getHeaders()
 
         assertEquals(listOf("lookup", "start", "finish"), apple.requests.map { it.url.substringAfterLast('/') })
+        apple.requests.forEach { assertEquals("close", it.headers["Connection"], it.url) }
         val (ptm, tk, routing) = opened.single().finished!!
         assertContentEquals("PTM".encodeToByteArray(), ptm)
         assertContentEquals("TK".encodeToByteArray(), tk)

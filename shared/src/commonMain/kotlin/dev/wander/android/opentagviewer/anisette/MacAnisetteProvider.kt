@@ -1,5 +1,6 @@
 package io.github.tieo.taghistory.anisette
 
+import io.github.tieo.taghistory.apple.gsa.GSA_CONNECTION
 import io.github.tieo.taghistory.apple.http.HttpRequest
 import io.github.tieo.taghistory.apple.http.HttpTransport
 import io.github.tieo.taghistory.apple.plist.PlistValue
@@ -180,6 +181,7 @@ class MacAnisetteProvider(
             "X-Apple-I-MD-LU" to file.localUserUuid,
             "X-Apple-Client-App-Name" to "Setup",
             "X-Apple-I-SRL-NO" to file.serial,
+            GSA_CONNECTION,
         ).apply { if (clientTime) put("X-Apple-I-Client-Time", isoTime()) }
 
     private fun isoTime(): String {

@@ -177,6 +177,9 @@ kotlin {
                 implementation(kotlin("test-junit"))
                 implementation(libs.kotlinx.coroutines.test.jvm)
                 implementation(libs.ktor.client.mock.jvm)
+                // The Android app's engine, to check on the wire what it does
+                // with a connection.
+                implementation(libs.ktor.client.okhttp)
             }
         }
     }

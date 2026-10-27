@@ -59,6 +59,7 @@ class GsaClient(
                 "Accept" to "*/*",
                 "User-Agent" to "akd/1.0 CFNetwork/978.0.7 Darwin/18.7.0",
                 "X-MMe-Client-Info" to anisette.machine().clientInfo,
+                GSA_CONNECTION,
             ),
             body = plistBody,
         )
@@ -107,3 +108,11 @@ class GsaClient(
 
 /** Thrown for transport-level GSA failures (non-2xx response, unparseable body). */
 class GsaRequestException(message: String) : RuntimeException(message)
+
+/**
+ * Sent on every request to gsa.apple.com. Apple's edge answers a request that
+ * arrives on a connection an earlier gsa.apple.com request kept alive with
+ * `429 Too Many Requests` (an HTML page, before Grand Slam sees it), so each
+ * request closes its connection and the next one opens a fresh one.
+ */
+val GSA_CONNECTION: Pair<String, String> = "Connection" to "close"

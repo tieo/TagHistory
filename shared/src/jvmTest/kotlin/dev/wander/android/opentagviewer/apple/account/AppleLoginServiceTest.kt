@@ -229,12 +229,16 @@ class AppleLoginServiceTest {
                 )
             )
         }
-        val (svc, _) = buildService(acct, handlers)
+        val (svc, http) = buildService(acct, handlers)
 
         // submit throws because gsaAuthenticate returns INVALID_CREDENTIALS
         // after the 2FA submit — that's fine, we only care about the SMS
         // request shape.
         runCatching { svc.submitSms(42, "123456") }
+
+        // The code and the sign-in round after it each on a fresh connection.
+        assertEquals(2, http.received.size)
+        http.received.forEach { assertEquals("close", it.headers["Connection"], it.url) }
 
         assertEquals("POST", smsRequest.method)
         assertEquals("application/json", smsRequest.headers["Content-Type"])
