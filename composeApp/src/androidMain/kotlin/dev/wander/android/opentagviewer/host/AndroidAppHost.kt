@@ -164,16 +164,21 @@ class AndroidAppHost private constructor(
     }
 
     fun createLoginViewModel(onLoggedIn: suspend () -> Unit = {}): AppleLoginViewModel {
-        val account = AppleAccount()
-        val service = AppleLoginService(
-            account = account,
-            http = http,
-            anisette = anisette,
-            gsa = GsaClient(http, anisette),
-            mobileMe = MobileMeClient(http, anisette),
-        )
+        // Every sign-in starts from a fresh account: one that failed half way
+        // (say MobileMe refused after the second factor) is stuck in its
+        // state, and Start over must not reuse it.
+        var account = AppleAccount()
         return AppleLoginViewModel(
-            startLogin = { email, password -> service.login(email, password) },
+            startLogin = { email, password ->
+                account = AppleAccount()
+                AppleLoginService(
+                    account = account,
+                    http = http,
+                    anisette = anisette,
+                    gsa = GsaClient(http, anisette),
+                    mobileMe = MobileMeClient(http, anisette),
+                ).login(email, password)
+            },
             onLoggedIn = {
                 // Persist the successful login blob so MapViewModel can
                 // rehydrate the account on the next screen.
