@@ -44,6 +44,15 @@ sealed class TwoFactorChallenge {
         override val displayName: String get() = "SMS $phoneNumber"
     }
 
+    companion object {
+        /**
+         * An SMS challenge that talks to nobody, for screens shown without
+         * Apple: the gallery and the debug build's code-entry activity.
+         * Submitting any code signs in.
+         */
+        fun preview(phoneNumber: String): TwoFactorChallenge = Sms(0, phoneNumber, PreviewCoordinator)
+    }
+
     /** Push-style prompt on another Apple device the user is signed into. */
     @ConsistentCopyVisibility
     data class TrustedDevice internal constructor(
@@ -63,4 +72,11 @@ interface TwoFactorCoordinator {
     suspend fun submitSms(phoneNumberId: Int, code: String): LoginResult
     suspend fun requestTrustedDevice()
     suspend fun submitTrustedDevice(code: String): LoginResult
+}
+
+private object PreviewCoordinator : TwoFactorCoordinator {
+    override suspend fun requestSms(phoneNumberId: Int) {}
+    override suspend fun submitSms(phoneNumberId: Int, code: String) = LoginResult.LoggedIn
+    override suspend fun requestTrustedDevice() {}
+    override suspend fun submitTrustedDevice(code: String) = LoginResult.LoggedIn
 }

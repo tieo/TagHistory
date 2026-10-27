@@ -49,6 +49,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.text.font.FontWeight
@@ -267,8 +268,10 @@ private fun TwoFactorCodeEntry(
         modifier = Modifier.fillMaxSize().padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
+        // The content takes what the keyboard leaves and scrolls inside it,
+        // so "Start over" keeps its size below it instead of being squeezed.
         Column(
-            modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState()),
+            modifier = Modifier.fillMaxWidth().weight(1f).verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
@@ -320,7 +323,6 @@ private fun TwoFactorCodeEntry(
                 )
             }
         }
-        Spacer(Modifier.weight(1f))
         OutlinedButton(
             onClick = onBack,
             modifier = Modifier.padding(top = 24.dp).testTag("btn_start_over"),
@@ -342,10 +344,14 @@ private fun OtpSlots(
     enabled: Boolean,
     focusRequester: FocusRequester,
 ) {
+    // Closing the keyboard leaves the field focused, so a tap has to bring
+    // the keyboard back itself; asking for focus again changes nothing.
+    val keyboard = LocalSoftwareKeyboardController.current
     Box {
         // Invisible input that captures keystrokes + paste for the whole
-        // 6-char code. Zero-size + alpha=0 keeps it interactive but
-        // hidden; visible slots below render the characters.
+        // 6-char code; the visible slots render the characters. It spans the
+        // slots, because the screen scrolls the focused field into view when
+        // the keyboard opens, and that has to bring all six slots.
         BasicTextField(
             value = code,
             onValueChange = onChange,
@@ -353,7 +359,7 @@ private fun OtpSlots(
             enabled = enabled,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
             modifier = Modifier
-                .size(1.dp)
+                .matchParentSize()
                 .alpha(0f)
                 .focusRequester(focusRequester),
         )
@@ -361,7 +367,10 @@ private fun OtpSlots(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             modifier = Modifier
                 .testTag("field_otp_code")
-                .clickable(enabled = enabled) { focusRequester.requestFocus() },
+                .clickable(enabled = enabled) {
+                    focusRequester.requestFocus()
+                    keyboard?.show()
+                },
         ) {
             repeat(6) { i ->
                 OtpSlot(char = code.getOrNull(i), filled = i < code.length)
