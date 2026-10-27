@@ -1,9 +1,7 @@
 [workspace]
 resolver = "2"
 members = [
-    "android-loader",
-    "android-loader/sysv64",
-    "omnisette",
+    "adi-core",
     "ottjni",
 ]
 

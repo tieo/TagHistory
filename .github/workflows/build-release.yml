@@ -64,8 +64,10 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-cargo-
 
-      - name: Install cargo-ndk
-        run: cargo install cargo-ndk --locked
+      # Unicorn (cmake, ninja, bindgen over libclang) for the native bridge,
+      # 7z to unpack Apple's CoreADI from the iTunes installer.
+      - name: Install native build tools
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends cmake ninja-build libclang-dev p7zip-full
 
       - name: Change wrapper permissions
         run: chmod +x ./gradlew

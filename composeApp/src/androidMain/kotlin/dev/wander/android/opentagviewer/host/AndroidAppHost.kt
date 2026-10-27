@@ -8,7 +8,7 @@ import android.location.LocationManager
 import android.net.Uri
 import android.util.Log
 import io.github.tieo.taghistory.AppHostFactories
-import io.github.tieo.taghistory.anisette.NativeAnisetteProvider
+import io.github.tieo.taghistory.anisette.androidAnisetteProvider
 import io.github.tieo.taghistory.apple.account.AppleAccount
 import io.github.tieo.taghistory.apple.account.AppleLoginService
 import io.github.tieo.taghistory.apple.anisette.AnisetteClient
@@ -622,7 +622,7 @@ class AndroidAppHost private constructor(
         fun create(context: Context): AndroidAppHost {
             val app = context.applicationContext
             val http = defaultPlatformHttpTransport()
-            val anisette = AnisetteClient(NativeAnisetteProvider(app))
+            val anisette = AnisetteClient(androidAnisetteProvider(app, http))
             // AndroidSqliteDriver's constructor is sync; the suspend
             // contract is for wasm's async sqljs path. Block here at
             // app-init — single-shot, off the UI thread already.

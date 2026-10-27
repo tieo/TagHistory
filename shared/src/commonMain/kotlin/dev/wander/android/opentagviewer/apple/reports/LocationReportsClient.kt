@@ -92,9 +92,7 @@ class LocationReportsClient(
             "Accept" to "application/json",
             "Authorization" to "Basic $basic",
         )
-        headers.putAll(
-            anisette.getHeaders(account.uid, account.devid, "0", withClientInfo = false)
-        )
+        headers.putAll(anisette.getHeaders())
 
         val resp = http.execute(
             HttpRequest(

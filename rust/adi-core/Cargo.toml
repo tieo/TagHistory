@@ -1,0 +1,17 @@
+[package]
+name = "adi-core"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+description = "Apple's macOS CoreADI under Unicorn: anisette (MID/OTP), provisioning and resync"
+license = "MIT"
+
+# Vendored from https://github.com/sacca97/os-findmy-e (native/adi-core) at
+# 374d83854f657a7fdca45f813387d99d491db0e2, without its C and JNI layers
+# (ottjni carries the JNI binding this app uses). `provisioning_finish` also
+# drops the legacy adi.pb, so a machine provisioned in this session reads as
+# provisioned without a reload.
+
+[dependencies]
+unicorn-engine = { version = "2.1", default-features = false, features = ["arch_x86"] }
+sha2 = "0.10"

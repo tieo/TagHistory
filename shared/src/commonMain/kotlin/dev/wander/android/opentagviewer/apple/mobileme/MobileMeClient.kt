@@ -1,5 +1,6 @@
 package io.github.tieo.taghistory.apple.mobileme
 
+import io.github.tieo.taghistory.anisette.MacAnisetteProvider
 import io.github.tieo.taghistory.apple.anisette.AnisetteClient
 import io.github.tieo.taghistory.apple.http.HttpRequest
 import io.github.tieo.taghistory.apple.http.HttpTransport
@@ -33,28 +34,26 @@ class MobileMeClient(
         username: String,
         idmsPet: String,
         adsid: String,
-        userId: String,
-        deviceId: String,
     ): PlistValue.Dict {
+        val machine = anisette.machine()
         val body = linkedMapOf<String, Any?>(
             "apple-id" to username,
             "delegates" to linkedMapOf<String, Any?>("com.apple.mobileme" to emptyMap<String, Any?>()),
             "password" to idmsPet,
-            "client-id" to userId,
+            "client-id" to machine.localUserUuid,
         )
         val plistBody = XmlPlist.encode(anyToPlist(body))
 
         val headers = linkedMapOf<String, String>().apply {
             put("X-Apple-ADSID", adsid)
-            put("User-Agent", "com.apple.iCloudHelper/282 CFNetwork/1408.0.4 Darwin/22.5.0")
-            put(
-                "X-Mme-Client-Info",
-                "<MacBookPro18,3> <Mac OS X;13.4.1;22F8> " +
-                    "<com.apple.AOSKit/282 (com.apple.accountsd/113)>",
-            )
-            putAll(anisette.getHeaders(userId, deviceId, "0"))
+            // The delegate answers status 1 ("Apple ID or password entered
+            // incorrectly") unless the client info names the same machine
+            // as the anisette.
+            put("User-Agent", "com.apple.iCloudHelper/282 ${MacAnisetteProvider.CFNETWORK_DARWIN}")
+            put("X-Mme-Client-Info", machine.clientInfoFor("com.apple.AOSKit/282 (com.apple.accountsd/113)"))
+            putAll(anisette.getHeaders())
             put("Authorization", basicAuth(username, idmsPet))
-            put("Content-Type", "text/x-xml-plist")
+            put("Content-Type", "application/octet-stream")
             put("Accept", "*/*")
         }
 

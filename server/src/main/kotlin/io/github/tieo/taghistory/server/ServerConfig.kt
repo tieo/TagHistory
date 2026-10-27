@@ -12,7 +12,7 @@ data class ServerConfig(
     val blobKeyFile: File,
     /** Host-built `libottjni.so`. */
     val ottjniLibrary: File,
-    /** Directory holding Apple's x86_64 `libCoreADI.so` and `libstoreservicescore.so`. */
+    /** Directory holding `CoreADI.x86_64`, Apple's macOS CoreADI from iTunes 12.8.3 for Mac. */
     val appleLibsDir: File,
     /** Built web app to serve at `/`, or null to serve only the API. */
     val webDir: File?,

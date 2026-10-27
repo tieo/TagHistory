@@ -24,9 +24,9 @@ __pycache__/
 # Rust-built JNI bridge — produced by `cargoBuildOttjni` Gradle task from rust/
 composeApp/src/androidMain/jniLibs/
 
-# Apple .so files extracted from Apple Music APK by `extractAppleLibs`
-# Gradle task; repackaged under <filesDir>/anisette/lib/ at runtime.
-androidApp/src/main/assets/apple-libs/
+# Apple's macOS CoreADI, extracted from the iTunes 12.8.3 for Mac installer
+# by the `extractCoreAdi` Gradle task; not ours to commit.
+androidApp/src/main/assets/coreadi/
 
 # Rust cargo target
 rust/target

@@ -1,6 +1,6 @@
 package io.github.tieo.taghistory.apple.account
 
-import io.github.tieo.taghistory.anisette.AnisetteProvider
+import io.github.tieo.taghistory.anisette.FakeAnisetteProvider
 import io.github.tieo.taghistory.apple.anisette.AnisetteClient
 import io.github.tieo.taghistory.apple.gsa.GsaClient
 import io.github.tieo.taghistory.apple.http.HttpRequest
@@ -31,13 +31,7 @@ import kotlin.test.fail
  */
 class AppleLoginServiceTest {
 
-    private fun fixedAnisette() = object : AnisetteProvider {
-        override suspend fun version() = "test-version"
-        override suspend fun getHeaders() = linkedMapOf(
-            "X-Apple-I-MD" to "md-value",
-            "X-Apple-I-MD-M" to "mdm-value",
-        )
-    }
+    private fun fixedAnisette() = FakeAnisetteProvider()
 
     /**
      * Minimal programmable [HttpTransport] — take a list of `(predicate,
@@ -68,8 +62,6 @@ class AppleLoginServiceTest {
         val anisette = AnisetteClient(
             provider = fixedAnisette(),
             clockMillis = { 1714000000000 }, // 2024-04-24T22:13:20Z
-            timeZoneAbbreviation = { "UTC" },
-            locale = { "en_US" },
         )
         val gsa = GsaClient(http, anisette)
         val mobileMe = MobileMeClient(http, anisette)

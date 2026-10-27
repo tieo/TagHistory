@@ -1,7 +1,7 @@
 import java.io.File
 import java.net.URI
+import java.nio.ByteBuffer
 import java.security.MessageDigest
-import java.util.zip.ZipFile
 
 plugins {
     alias(libs.plugins.android.application)
@@ -57,9 +57,8 @@ android {
 
     packaging {
         jniLibs {
-            // Required on Android 6.0+ for apps that run libraries from mmap'd
-            // memory (our Rust ELF loader for Apple's .so). Also unblocks
-            // 16 KB page-aligned arm64 devices.
+            // Keep libottjni.so uncompressed and page aligned in the APK, so
+            // it loads straight from the APK, also on 16 KB page devices.
             useLegacyPackaging = false
         }
         resources {
@@ -79,51 +78,49 @@ dependencies {
 }
 
 // ---------------------------------------------------------------
-// Apple .so extraction pipeline
+// Apple CoreADI extraction pipeline
 // ---------------------------------------------------------------
 //
-// omnisette / StoreServicesCoreADIProxy needs Apple's libCoreADI.so and
-// libstoreservicescore.so. Same approach as Dadoum/anisette-v3-server:
-// pull them out of the public Apple Music for Android APK served from
-// apps.mzstatic.com, then bundle the two ABIs we build for as Android
-// assets. The first time AnisetteService runs, it copies the assets
-// into the app-private filesDir where the Rust side mmaps them via
-// android-loader's bigger_pages branch.
+// Anisette comes from Apple's macOS CoreADI, which the Rust ottjni bridge
+// runs under Unicorn: Apple refuses its Android ADI for sign-in and gives Find
+// My tokens only to Mac and iOS identities. CoreADI 4.19 ships inside the
+// iTunes 12.8.3 for Mac installer that Apple still serves; this pulls the
+// x86_64 slice out of it and bundles it as an asset. The image the Rust side
+// loads is pinned by SHA-256 too, since its entry point offset is only known
+// for that build.
 //
-// The APK URL is pinned by SHA-256 so an Apple rotation breaks the
-// build loudly instead of shipping unexpected binaries.
+// The DMG, the installer package and its payload need 7z, which runs through
+// `nix shell` unless OTTJNI_SKIP_NIX=1 says it is on PATH (CI images).
 //
-// This pipeline lives here (not in :composeApp) because AGP 9's KMP
-// library plugin does NOT forward src/androidMain/assets/ into the
-// AAR — only jniLibs. The legacy application plugin's mergeDebugAssets
-// picks up src/main/assets/ correctly, so the .so files land here.
+// This lives here (not in :composeApp) because AGP 9's KMP library plugin
+// does NOT forward src/androidMain/assets/ into the AAR, only jniLibs.
 
-val appleMusicApkUrl =
-    "https://apps.mzstatic.com/content/android-apple-music-apk/applemusic.apk"
-// Apple Music 4.9.6.1447 (Last-Modified 2025-04-15)
-val appleMusicApkSha256 =
-    "9aab4e3bfd44b509dd657b030d46df536c5592512c256fc59012cce47a2e9c9c"
-val appleLibAbis = listOf("arm64-v8a", "x86_64")
-val appleLibNames = listOf("libCoreADI.so", "libstoreservicescore.so")
+val itunesDmgUrl =
+    "https://secure-appldnld.apple.com/itunes12/041-56365-20210413-79A5AC6D-6B0A-46EC-B399-5A381183E3BE/iTunes12.8.3.dmg"
+val itunesDmgSha256 = "dd08b9967db3e5847955fa168ce880303abf5f36de12abb2061e7ef1a25be214"
+val coreAdiSha256 = "2eafc3c79c7f41a8afbfbeaaf23ee5dab5ad5bda55ec8e54dbc0ddf1d20ce630"
+val coreAdiCacheDir = layout.buildDirectory.dir("coreadi-cache")
+val coreAdiAsset = layout.projectDirectory.file("src/main/assets/coreadi/CoreADI.x86_64")
+val skipNix = System.getenv("OTTJNI_SKIP_NIX") == "1"
 
-val appleLibCacheDir = layout.buildDirectory.dir("apple-libs-cache")
-val appleLibAssetsDir = layout.projectDirectory.dir("src/main/assets/apple-libs")
-
-val fetchAppleMusicApk by tasks.registering {
+val extractCoreAdi by tasks.registering {
     group = "apple-libs"
-    description = "Download Apple Music APK (pinned by SHA-256) to the build cache."
+    description = "Extract Apple's macOS CoreADI (x86_64) from iTunes 12.8.3 for Mac into assets/coreadi/."
 
-    val cacheDir = appleLibCacheDir
-    val expectedSha = appleMusicApkSha256
-    val url = appleMusicApkUrl
+    val cacheDir = coreAdiCacheDir
+    val out = coreAdiAsset
+    val dmgUrl = itunesDmgUrl
+    val dmgSha = itunesDmgSha256
+    val imageSha = coreAdiSha256
+    val nix = !skipNix
 
-    outputs.file(cacheDir.map { it.file("applemusic.apk") })
-    outputs.cacheIf { true }
+    inputs.property("dmgSha", dmgSha)
+    inputs.property("imageSha", imageSha)
+    outputs.file(out)
 
     doLast {
-        val dst = cacheDir.get().file("applemusic.apk").asFile
-        dst.parentFile.mkdirs()
-
+        // A local function: a script-level one would capture the build script,
+        // which the configuration cache cannot serialize.
         fun sha256(f: File): String {
             val md = MessageDigest.getInstance("SHA-256")
             f.inputStream().use { input ->
@@ -137,73 +134,58 @@ val fetchAppleMusicApk by tasks.registering {
             return md.digest().joinToString("") { b -> "%02x".format(b) }
         }
 
-        if (dst.exists() && sha256(dst) == expectedSha) {
-            logger.lifecycle("fetchAppleMusicApk: cache hit at $dst")
-            return@doLast
-        }
+        val dst = out.asFile
+        if (dst.isFile && sha256(dst) == imageSha) return@doLast
 
-        logger.lifecycle("fetchAppleMusicApk: downloading $url -> $dst")
-        URI(url).toURL().openStream().use { input ->
-            dst.outputStream().use { output -> input.copyTo(output) }
-        }
-
-        val got = sha256(dst)
-        if (got != expectedSha) {
-            dst.delete()
-            throw GradleException(
-                "Apple Music APK SHA-256 mismatch — Apple likely rotated the URL.\n" +
-                    "  url:      $url\n" +
-                    "  expected: $expectedSha\n" +
-                    "  got:      $got\n" +
-                    "If the new version is fine, update appleMusicApkSha256 in androidApp/build.gradle.kts."
-            )
-        }
-    }
-}
-
-val extractAppleLibs by tasks.registering {
-    group = "apple-libs"
-    description = "Extract libCoreADI.so + libstoreservicescore.so per ABI into assets/apple-libs/."
-
-    dependsOn(fetchAppleMusicApk)
-
-    val apk = appleLibCacheDir.map { it.file("applemusic.apk") }
-    val outDir = appleLibAssetsDir
-    val abis = appleLibAbis
-    val names = appleLibNames
-
-    inputs.file(apk)
-    inputs.property("abis", abis)
-    inputs.property("names", names)
-    abis.forEach { abi ->
-        names.forEach { n -> outputs.file(outDir.file("$abi/$n")) }
-    }
-
-    doLast {
-        val apkFile = apk.get().asFile
-        val root = outDir.asFile
-        if (root.exists()) root.deleteRecursively()
-        root.mkdirs()
-
-        ZipFile(apkFile).use { zip ->
-            abis.forEach { abi ->
-                val abiDir = File(root, abi).apply { mkdirs() }
-                names.forEach { name ->
-                    val entryPath = "lib/$abi/$name"
-                    val entry = zip.getEntry(entryPath)
-                        ?: throw GradleException(
-                            "APK entry not found: $entryPath — Apple Music layout changed."
-                        )
-                    val dst = File(abiDir, name)
-                    zip.getInputStream(entry).use { input ->
-                        dst.outputStream().use { output -> input.copyTo(output) }
-                    }
-                    logger.info("extractAppleLibs: wrote $dst (${dst.length()} bytes)")
-                }
+        val work = cacheDir.get().asFile.apply { mkdirs() }
+        val dmg = File(work, "iTunes12.8.3.dmg")
+        if (!dmg.isFile || sha256(dmg) != dmgSha) {
+            logger.lifecycle("extractCoreAdi: downloading $dmgUrl")
+            URI(dmgUrl).toURL().openStream().use { input -> dmg.outputStream().use { input.copyTo(it) } }
+            val got = sha256(dmg)
+            if (got != dmgSha) {
+                dmg.delete()
+                throw GradleException("iTunes DMG SHA-256 mismatch: expected $dmgSha, got $got ($dmgUrl)")
             }
         }
+
+        fun sevenZip(vararg args: String) {
+            val command = (if (nix) listOf("nix", "shell", "nixpkgs#p7zip", "--command", "7z") else listOf("7z")) +
+                args.toList()
+            val process = ProcessBuilder(command).directory(work).redirectErrorStream(true).start()
+            val log = process.inputStream.bufferedReader().readText()
+            if (process.waitFor() != 0) throw GradleException("7z ${args.joinToString(" ")} failed:\n$log")
+        }
+        sevenZip("x", dmg.name, "iTunes/Install iTunes.pkg", "-oipkg", "-y")
+        sevenZip("x", "ipkg/iTunes/Install iTunes.pkg", "CoreADI.pkg/Payload", "-opkg", "-y")
+        // The payload is a gzipped cpio archive holding the universal framework binary.
+        sevenZip("x", "pkg/CoreADI.pkg/Payload", "-opayload", "-y")
+        val cpio = File(work, "payload").walk().first { it.isFile }
+        sevenZip("x", cpio.relativeTo(work).path, "-oroot", "-y")
+        val fat = File(work, "root/System/Library/PrivateFrameworks/CoreADI.framework/Versions/A/CoreADI").readBytes()
+
+        // Universal binary: big-endian header, then (cputype, subtype, offset, size, align) per slice.
+        val header = ByteBuffer.wrap(fat)
+        check(header.getInt(0) == 0xCAFEBABE.toInt()) { "CoreADI is not a universal binary" }
+        val x86_64 = 0x01000007
+        val slice = (0 until header.getInt(4)).map { 8 + 20 * it }
+            .firstOrNull { header.getInt(it) == x86_64 }
+            ?: throw GradleException("CoreADI has no x86_64 slice")
+        val image = fat.copyOfRange(header.getInt(slice + 8), header.getInt(slice + 8) + header.getInt(slice + 12))
+
+        dst.parentFile.mkdirs()
+        dst.writeBytes(image)
+        val got = sha256(dst)
+        if (got != imageSha) {
+            dst.delete()
+            throw GradleException("CoreADI x86_64 SHA-256 mismatch: expected $imageSha, got $got")
+        }
+        File(work, "ipkg").deleteRecursively()
+        File(work, "pkg").deleteRecursively()
+        File(work, "payload").deleteRecursively()
+        File(work, "root").deleteRecursively()
+        logger.lifecycle("extractCoreAdi: wrote $dst (${dst.length()} bytes)")
     }
 }
 
-tasks.named("preBuild") { dependsOn(extractAppleLibs) }
-
+tasks.named("preBuild") { dependsOn(extractCoreAdi) }

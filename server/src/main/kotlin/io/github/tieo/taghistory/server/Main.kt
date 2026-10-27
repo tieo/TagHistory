@@ -1,6 +1,14 @@
 package io.github.tieo.taghistory.server
 
-import io.github.tieo.taghistory.anisette.DesktopAnisetteProvider
+import io.github.tieo.taghistory.anisette.AnisetteProvider
+import io.github.tieo.taghistory.anisette.desktopAnisetteProvider
+import io.github.tieo.taghistory.apple.account.AppleAccount
+import io.github.tieo.taghistory.apple.account.AppleLoginException
+import io.github.tieo.taghistory.apple.account.AppleLoginService
+import io.github.tieo.taghistory.apple.anisette.AnisetteClient
+import io.github.tieo.taghistory.apple.gsa.GsaClient
+import io.github.tieo.taghistory.apple.http.HttpTransport
+import io.github.tieo.taghistory.apple.mobileme.MobileMeClient
 import io.github.tieo.taghistory.apple.http.KtorHttpTransport
 import io.github.tieo.taghistory.apple.http.createPlatformHttpClient
 import io.github.tieo.taghistory.data.storage.SecureBlobStore
@@ -15,12 +23,14 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.runBlocking
 import java.io.File
-import java.nio.file.Files
+import kotlin.random.Random
 
 /**
  * Runs the server. `anisette-check` instead generates one set of anisette
- * headers and prints their names, which verifies the native bridge and the
- * Apple libraries on a host without signing in to anything.
+ * headers, then starts a sign-in for a made-up `.invalid` Apple ID and
+ * prints Apple's verdict. That verifies the native bridge, CoreADI and that
+ * Apple accepts the machine, without signing in to anything: Apple answers
+ * the first step before it looks at any password.
  */
 fun main(args: Array<String>) {
     val config = ServerConfig.fromEnvironment()
@@ -29,12 +39,19 @@ fun main(args: Array<String>) {
     System.setProperty("taghistory.ottjni.path", config.ottjniLibrary.absolutePath)
 
     config.dataDir.mkdirs()
-    val anisetteDir = File(config.dataDir, "anisette")
-    linkAppleLibs(config.appleLibsDir, File(anisetteDir, "lib/x86_64"))
+    val http = KtorHttpTransport(createPlatformHttpClient())
+    val anisette = desktopAnisetteProvider(
+        image = File(config.appleLibsDir, "CoreADI.x86_64"),
+        configDir = File(config.dataDir, "anisette"),
+        http = http,
+    )
 
     if (args.firstOrNull() == "anisette-check") {
-        val headers = runBlocking { DesktopAnisetteProvider(anisetteDir).getHeaders() }
-        println("anisette OK: " + headers.keys.sorted().joinToString())
+        runBlocking {
+            println("anisette OK: " + anisette.getHeaders().keys.sorted().joinToString())
+            println("machine: " + anisette.machine().clientInfo)
+            println("Grand Slam: " + probeGrandSlam(anisette, http))
+        }
         return
     }
 
@@ -45,8 +62,8 @@ fun main(args: Array<String>) {
         db = db,
         settings = fileSettings(File(config.dataDir, "settings.properties")),
         blobStore = SecureBlobStore(config.blobKeyFile),
-        anisetteProvider = DesktopAnisetteProvider(anisetteDir),
-        http = KtorHttpTransport(createPlatformHttpClient()),
+        anisetteProvider = anisette,
+        http = http,
         syncIntervalMinutes = config.syncIntervalMinutes,
         geocoder = NominatimGeocoder(HttpClient(CIO)),
     )
@@ -59,17 +76,23 @@ fun main(args: Array<String>) {
 }
 
 /**
- * Omnisette looks for Apple's libraries inside the anisette directory, which
- * must stay writable and persistent for the provisioning state. The libraries
- * themselves are deployed read-only elsewhere and linked in.
+ * Apple's answer to a sign-in for an address that cannot exist. A machine
+ * Apple refuses gets `-80045` ("This action cannot be completed at this
+ * time"); an accepted one gets Apple's verdict on the address.
  */
-private fun linkAppleLibs(source: File, target: File) {
-    target.mkdirs()
-    for (name in listOf("libCoreADI.so", "libstoreservicescore.so")) {
-        val from = File(source, name)
-        check(from.isFile) { "Apple library $from is missing" }
-        val link = File(target, name).toPath()
-        Files.deleteIfExists(link)
-        Files.createSymbolicLink(link, from.toPath().toAbsolutePath())
+private suspend fun probeGrandSlam(anisette: AnisetteProvider, http: HttpTransport): String {
+    val client = AnisetteClient(anisette)
+    val service = AppleLoginService(
+        AppleAccount(),
+        http,
+        client,
+        GsaClient(http, client),
+        MobileMeClient(http, client),
+    )
+    val address = "probe-" + Random.nextLong().toULong().toString(16) + "@example.invalid"
+    return try {
+        "unexpected: " + service.login(address, "not-a-password")
+    } catch (e: AppleLoginException) {
+        e.message.orEmpty()
     }
 }

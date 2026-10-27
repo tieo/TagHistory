@@ -170,7 +170,7 @@ val ndkHomeProvider: Provider<String> = providers.provider {
 
 val cargoBuildOttjni by tasks.registering(Exec::class) {
     group = "rust"
-    description = "Cross-compile ottjni for all configured Android ABIs and drop into jniLibs/."
+    description = "Cross-compile ottjni (with unicorn) for all configured Android ABIs into jniLibs/."
 
     inputs.dir(rustDir)
     inputs.file(rustDir.file("Cargo.toml"))
@@ -192,27 +192,23 @@ val cargoBuildOttjni by tasks.registering(Exec::class) {
         logger.lifecycle("cargoBuildOttjni: using NDK at $ndk")
     }
 
-    // Build the cargo-ndk argument list. We invoke it through `nix shell` so
-    // contributors don't have to manually install rustup + cargo-ndk — the
-    // single prerequisite is a working Nix installation. Set
-    // OTTJNI_SKIP_NIX=1 to bypass the wrapper when cargo + cargo-ndk are
-    // already on PATH (e.g. inside CI images).
-    val cargoArgs = mutableListOf("cargo", "ndk")
-    rustAbis.keys.forEach { abi -> cargoArgs += listOf("-t", abi) }
-    cargoArgs += listOf(
-        "--platform", "24",
-        "--output-dir", jniLibsDir.asFile.absolutePath,
-        "build", "--release", "-p", "ottjni",
-    )
+    // rust/build-android.sh cross-compiles unicorn (C, cmake) and ottjni. It
+    // runs through `nix shell` so the single prerequisite is a working Nix
+    // installation; OTTJNI_SKIP_NIX=1 bypasses the wrapper when cargo, cmake,
+    // ninja and libclang are already on the host (CI images).
+    val buildArgs = listOf("./build-android.sh", jniLibsDir.asFile.absolutePath) + rustAbis.keys
 
     commandLine = if (System.getenv("OTTJNI_SKIP_NIX") == "1") {
-        cargoArgs
+        buildArgs
     } else {
         listOf(
             "nix", "shell",
-            "nixpkgs#rustup", "nixpkgs#cargo-ndk",
-            "--command",
-        ) + cargoArgs
+            "nixpkgs#rustup", "nixpkgs#cmake", "nixpkgs#ninja", "nixpkgs#pkg-config",
+            "--command", "sh", "-c",
+            // bindgen finds libclang through LIBCLANG_PATH.
+            "LIBCLANG_PATH=\$(nix build --no-link --print-out-paths nixpkgs#llvmPackages.libclang.lib)/lib exec \"\$@\"",
+            "sh",
+        ) + buildArgs
     }
 }
 
@@ -220,7 +216,7 @@ tasks.matching { it.name.startsWith("merge") && it.name.endsWith("JniLibFolders"
     .configureEach { dependsOn(cargoBuildOttjni) }
 
 // ---------------------------------------------------------------
-// Apple .so extraction pipeline lives in :androidApp
+// Apple CoreADI extraction pipeline lives in :androidApp
 // ---------------------------------------------------------------
 //
 // AGP 9's com.android.kotlin.multiplatform.library plugin does not
@@ -228,7 +224,7 @@ tasks.matching { it.name.startsWith("merge") && it.name.endsWith("JniLibFolders"
 // propagated via mergeAndroidMainJniLibFolders, but there is no
 // equivalent for assets as of AGP 9.1.1). Keeping the cargo pipeline
 // here so ottjni rides the library's jniLib plumbing, but moving the
-// Apple .so extraction to :androidApp (the legacy application plugin)
+// CoreADI extraction to :androidApp (the legacy application plugin)
 // where `src/main/assets/` is picked up by mergeDebugAssets as it
 // always has been.
 

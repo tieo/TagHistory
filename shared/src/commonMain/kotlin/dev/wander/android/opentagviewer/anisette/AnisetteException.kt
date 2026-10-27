@@ -1,11 +1,11 @@
 package io.github.tieo.taghistory.anisette
 
 /**
- * Thrown when anisette header generation fails — native ottjni errors,
- * config/staging errors, or a device without a supported ABI for Apple's
- * bundled .so files.
+ * Thrown when anisette fails: CoreADI errors from ottjni, a missing CoreADI
+ * image, or Apple refusing to provision or resync the machine. ottjni throws
+ * it through JNI's `(String)` constructor, which [JvmOverloads] provides.
  */
-class AnisetteException(
+class AnisetteException @kotlin.jvm.JvmOverloads constructor(
     message: String,
     cause: Throwable? = null,
 ) : RuntimeException(message, cause)

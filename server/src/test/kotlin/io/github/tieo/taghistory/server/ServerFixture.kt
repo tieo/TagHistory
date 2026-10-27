@@ -1,6 +1,7 @@
 package io.github.tieo.taghistory.server
 
 import io.github.tieo.taghistory.anisette.AnisetteProvider
+import io.github.tieo.taghistory.anisette.MachineIdentity
 import io.github.tieo.taghistory.apple.http.HttpTransport
 import io.github.tieo.taghistory.data.storage.SecureBlobStore
 import io.github.tieo.taghistory.db.DatabaseDriverFactory
@@ -63,6 +64,8 @@ object Fixtures {
 /** Anisette is only reached by sign-in and sync, which these tests stub out. */
 object UnusedAnisette : AnisetteProvider {
     override suspend fun getHeaders(): Map<String, String> = error("anisette must not be reached")
+    override suspend fun machine(): MachineIdentity = error("anisette must not be reached")
+    override suspend fun resync(sim: ByteArray) = error("anisette must not be reached")
     override suspend fun version(): String = error("anisette must not be reached")
 }
 

@@ -161,13 +161,13 @@ class AppleLoginService(
             "ps" to listOf("s2k", "s2k_fo"),
             "o" to "init",
         )
-        val initResp = gsa.request(account.uid, account.devid, init)
+        val initResp = gsa.request(init)
 
         val initStatus = requireStatus(initResp)
         if (initStatus.int64("ec") != 0L) {
             throw AppleLoginException(
                 AppleLoginException.Kind.INVALID_CREDENTIALS,
-                "Email verification failed: ${initStatus.string("em")}",
+                "Email verification failed: ${initStatus.string("em")} (${initStatus.int64("ec")})",
             )
         }
         val sp = initResp.string("sp")
@@ -199,13 +199,13 @@ class AppleLoginService(
             "u" to u,
             "o" to "complete",
         )
-        val completeResp = gsa.request(account.uid, account.devid, complete)
+        val completeResp = gsa.request(complete)
 
         val completeStatus = requireStatus(completeResp)
         if (completeStatus.int64("ec") != 0L) {
             throw AppleLoginException(
                 AppleLoginException.Kind.INVALID_CREDENTIALS,
-                "Password authentication failed: ${completeStatus.string("em")}",
+                "Password authentication failed: ${completeStatus.string("em")} (${completeStatus.int64("ec")})",
             )
         }
 
@@ -275,7 +275,7 @@ class AppleLoginService(
         val uname = account.username
             ?: throw AppleLoginException(AppleLoginException.Kind.INVALID_STATE, "No username")
 
-        val response = mobileMe.login(uname, idmsPet, adsid, account.uid, account.devid)
+        val response = mobileMe.login(uname, idmsPet, adsid)
 
         val delegates = response.dict("delegates")
         val mobileMeData = delegates?.dict("com.apple.mobileme")
@@ -322,9 +322,7 @@ class AppleLoginService(
             "X-Apple-Identity-Token" to identityToken,
         )
         extraHeaders?.let { headers.putAll(it) }
-        headers.putAll(
-            anisette.getHeaders(account.uid, account.devid, "0", withClientInfo = true)
-        )
+        headers.putAll(anisette.getHeaders(withClientInfo = true))
 
         val body = data?.let {
             // Apple's 2FA endpoints return 415 if we send JSON without a

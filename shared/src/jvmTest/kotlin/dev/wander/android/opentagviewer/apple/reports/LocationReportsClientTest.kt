@@ -1,6 +1,6 @@
 package io.github.tieo.taghistory.apple.reports
 
-import io.github.tieo.taghistory.anisette.AnisetteProvider
+import io.github.tieo.taghistory.anisette.FakeAnisetteProvider
 import io.github.tieo.taghistory.apple.account.AppleAccount
 import io.github.tieo.taghistory.apple.account.AppleLoginException
 import io.github.tieo.taghistory.apple.account.LoginState
@@ -38,16 +38,8 @@ class LocationReportsClientTest {
     fun setUp() {
         transport = FakeTransport()
         anisette = AnisetteClient(
-            provider = object : AnisetteProvider {
-                override suspend fun version() = "test-version"
-                override suspend fun getHeaders() = linkedMapOf(
-                    "X-Apple-I-MD" to "OTP",
-                    "X-Apple-I-MD-M" to "MACHINE",
-                )
-            },
+            provider = FakeAnisetteProvider(linkedMapOf("X-Apple-I-MD" to "OTP", "X-Apple-I-MD-M" to "MACHINE")),
             clockMillis = { 1714000000000 },
-            timeZoneAbbreviation = { "UTC" },
-            locale = { "en_US" },
         )
         account = AppleAccount(uid = "uid-1", devid = "dev-1")
         account.username = "me@example.com"

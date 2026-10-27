@@ -6,6 +6,8 @@ import io.github.tieo.taghistory.apple.http.HttpTransport
 import io.github.tieo.taghistory.apple.plist.PlistValue
 import io.github.tieo.taghistory.apple.plist.XmlPlist
 import io.github.tieo.taghistory.apple.plist.anyToPlist
+import kotlin.io.encoding.Base64
+import kotlin.io.encoding.ExperimentalEncodingApi
 
 /**
  * Low-level client for Apple's Grand Slam Authentication endpoint.
@@ -27,16 +29,23 @@ class GsaClient(
      * Perform one GSA request. [parameters] are merged into the `Request`
      * dictionary at the top level (alongside `cpd`). Returns the parsed
      * `Response` sub-dictionary from the plist body.
+     *
+     * When Apple asks the machine to resync (`hsc 434` with the SIM in
+     * `X-Apple-I-MD-DATA`), the machine answers and the request goes out once
+     * more with fresh anisette; Apple accepts the machine again after that.
      */
-    suspend fun request(
-        userId: String,
-        deviceId: String,
-        parameters: Map<String, Any?>,
-    ): PlistValue.Dict {
+    suspend fun request(parameters: Map<String, Any?>): PlistValue.Dict {
+        val first = send(parameters)
+        val sim = resyncSim(first) ?: return first
+        anisette.resync(sim)
+        return send(parameters)
+    }
+
+    private suspend fun send(parameters: Map<String, Any?>): PlistValue.Dict {
         val bodyDict = linkedMapOf<String, Any?>(
             "Header" to linkedMapOf<String, Any?>("Version" to "1.0.1"),
             "Request" to linkedMapOf<String, Any?>().apply {
-                put("cpd", anisette.getCpd(userId, deviceId, "0"))
+                put("cpd", anisette.getCpd())
                 putAll(parameters)
             },
         )
@@ -49,7 +58,7 @@ class GsaClient(
                 "Content-Type" to "text/x-xml-plist",
                 "Accept" to "*/*",
                 "User-Agent" to "akd/1.0 CFNetwork/978.0.7 Darwin/18.7.0",
-                "X-MMe-Client-Info" to anisette.clientInfo(),
+                "X-MMe-Client-Info" to anisette.machine().clientInfo,
             ),
             body = plistBody,
         )
@@ -68,8 +77,22 @@ class GsaClient(
         return response
     }
 
+    @OptIn(ExperimentalEncodingApi::class)
+    private fun resyncSim(response: PlistValue.Dict): ByteArray? {
+        val status = response.dict("Status") ?: return null
+        if (status.int64("hsc") != HSC_RESYNC) return null
+        return when (val sim = status["X-Apple-I-MD-DATA"]) {
+            is PlistValue.Data -> sim.bytes
+            is PlistValue.Str -> Base64.decode(sim.value)
+            else -> null
+        }
+    }
+
     companion object {
         const val ENDPOINT_GSA: String = "https://gsa.apple.com/grandslam/GsService2"
+
+        /** Apple's "resync this machine" status. */
+        private const val HSC_RESYNC = 434L
     }
 }
 

@@ -1,6 +1,6 @@
 package io.github.tieo.taghistory.apple.anisette
 
-import io.github.tieo.taghistory.anisette.AnisetteProvider
+import io.github.tieo.taghistory.anisette.FakeAnisetteProvider
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.delay
@@ -12,14 +12,14 @@ import kotlin.test.assertEquals
 /**
  * Guards against the anisette "thundering herd": a map refresh fans out
  * one fetch per beacon in parallel, and every fetch needs anisette
- * headers. The on-device provider is Apple ADI under Unicorn ARM
- * emulation, allocating ~240MB per call. If N concurrent callers all
+ * headers. The on-device provider is Apple's CoreADI under Unicorn
+ * emulation, an expensive call. If N concurrent callers all
  * miss the cache at once they each spin a provider call, blowing the
  * heap and freezing the UI. Only ONE provider call may serve a burst.
  */
 class AnisetteClientConcurrencyTest {
 
-    private class CountingProvider : AnisetteProvider {
+    private class CountingProvider : FakeAnisetteProvider() {
         val calls = AtomicInteger(0)
         override suspend fun getHeaders(): Map<String, String> {
             calls.incrementAndGet()
@@ -31,8 +31,6 @@ class AnisetteClientConcurrencyTest {
                 "X-Apple-I-MD-M" to "mdm",
             )
         }
-
-        override suspend fun version(): String = "test"
     }
 
     @Test
@@ -41,7 +39,7 @@ class AnisetteClientConcurrencyTest {
         val client = AnisetteClient(provider, clockMillis = { 0L })
 
         val results = (1..17).map {
-            async { client.getHeaders("uid", "dev", "0") }
+            async { client.getHeaders() }
         }.awaitAll()
 
         assertEquals(
