@@ -79,4 +79,4 @@ PRs are welcome. Things that would be great to have, with up-to-date status as o
 * [Material Icons](https://fonts.google.com/icons) by Google.
 * [MapLibre Android](https://github.com/maplibre/maplibre-gl-native) for map rendering.
 
-## License: MIT
+## License: GPL-2.0-or-later
